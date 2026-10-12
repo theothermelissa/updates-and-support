@@ -1,20 +1,14 @@
-import { useEffect, useState } from "react";
+import { FamilyHome } from "./pages/FamilyHome.js";
+import { FamilySignIn } from "./pages/FamilySignIn.js";
+import { NotFound } from "./pages/NotFound.js";
+import { SignIn } from "./pages/SignIn.js";
 
-type HealthState = "checking" | "ok" | "unavailable";
-
+// Routes on the path. A handful of routes don't justify a router dependency.
 export function App() {
-  const [health, setHealth] = useState<HealthState>("checking");
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then((res) => setHealth(res.ok ? "ok" : "unavailable"))
-      .catch(() => setHealth("unavailable"));
-  }, []);
-
-  return (
-    <main>
-      <h1>Updates and Support</h1>
-      <p>Server status: {health}</p>
-    </main>
-  );
+  const match = location.pathname.match(/^\/f\/([a-z0-9-]+)(?:\/(family|sign-in))?\/?$/);
+  if (!match) return <NotFound />;
+  const [, slug, page] = match as unknown as [string, string, string | undefined];
+  if (page === "family") return <FamilySignIn slug={slug} />;
+  if (page === "sign-in") return <SignIn slug={slug} />;
+  return <FamilyHome slug={slug} />;
 }

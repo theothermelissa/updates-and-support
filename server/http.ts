@@ -19,6 +19,8 @@ export async function familyContext(
   req: VercelRequest,
   res: VercelResponse,
 ): Promise<{ family: Family; person: Person | null } | null> {
+  // Family responses are private; no browser or CDN may keep a copy.
+  res.setHeader("Cache-Control", "no-store");
   const slug = param(req, "slug");
   const family = await findFamilyBySlug(db, slug);
   if (!family) {

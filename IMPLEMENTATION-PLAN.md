@@ -138,7 +138,7 @@ Handlers for `auth/request-link`, `auth/sign-in`, `auth/sign-out`, and `me`, plu
 
 **Verify:** run `npm start` and use curl to request a link for the fictional member, copy the token from the console log, post it to `auth/sign-in`, and check that `me` returns the person with that cookie and 401 without it. Then post the token again and check that the second sign-in fails.
 
-### 6. Sign-in pages, `noindex`, `robots.txt`
+### 6. Sign-in pages, `noindex`, `robots.txt` ✅
 
 The three pages (with a placeholder feed), `vercel.json` rewrites, a `<meta name="robots" content="noindex">` tag, an `X-Robots-Tag: noindex` header on every response (set in `vercel.json`), and a `public/robots.txt` that disallows everything.
 
@@ -201,3 +201,4 @@ Integration tests against real Postgres, in `tests/integration/`. Each one guard
 
 - **`vercel dev` refuses to run from a `dev` script.** The CLI treats any `dev` script that calls `vercel dev` as a recursive invocation. The local command is `npm start` instead, and `vercel.json` sets `devCommand` to Vite.
 - **Readline's `question()` drops piped input.** Lines that arrive before a question is asked are lost. The operator script reads lines through an iterator, so it works both typed and piped.
+- **`vercel dev` doesn't apply `vercel.json` headers to pages served by Vite, or let them win over its own `Cache-Control` on functions.** `Cache-Control: no-store` is therefore set in code, in `familyContext`. The page headers (`X-Robots-Tag`, `Referrer-Policy`) are checked on the preview deploy instead.
