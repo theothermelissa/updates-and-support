@@ -36,13 +36,15 @@ What the app should do lives in `spec/`, starting with `spec/MASTER_SPEC.md`. Ho
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Runs the app locally, frontend and API together, via the Vercel CLI. Needs a one-time `npx vercel login` and `npx vercel link`. |
+| `npm start` | Runs the app locally at http://localhost:3000, frontend and API together, via the Vercel CLI. Emails are printed to this terminal instead of sent. Needs a one-time `npx vercel login` and `npx vercel link`. |
 | `npm run typecheck` | Type-checks everything. |
 | `npm test` | Runs all tests. |
 | `npm run test:unit` | Runs the fast unit tests only. |
 | `npm run test:integration` | Runs the tests that use the real test database. |
 | `npm run build` | Builds the production frontend into `dist/`. |
 | `npm run db:migrate` | Creates and applies a migration after editing `prisma/schema.prisma`. |
+| `npm run family:create` | Creates a family and its family members, prompting for each detail, and prints the family's address. Uses `DATABASE_URL`. |
+| `npm run email:test -- you@example.com` | Sends one test email through Resend. Needs `RESEND_API_KEY` and `EMAIL_FROM` set for that command. |
 
 ## Working on a change
 

@@ -132,11 +132,11 @@ Implement `server/tokens.ts` and `server/auth.ts`:
 
 **Verify:** the auth integration tests below pass.
 
-### 5. Sign-in API and cookie
+### 5. Sign-in API and cookie ✅
 
 Handlers for `auth/request-link`, `auth/sign-in`, `auth/sign-out`, and `me`, plus `server/cookies.ts`.
 
-**Verify:** run `npm run dev` and use curl to request a link for the fictional member, copy the token from the console log, post it to `auth/sign-in`, and check that `me` returns the person with that cookie and 401 without it. Then post the token again and check that the second sign-in fails.
+**Verify:** run `npm start` and use curl to request a link for the fictional member, copy the token from the console log, post it to `auth/sign-in`, and check that `me` returns the person with that cookie and 401 without it. Then post the token again and check that the second sign-in fails.
 
 ### 6. Sign-in pages, `noindex`, `robots.txt`
 
@@ -196,3 +196,8 @@ Integration tests against real Postgres, in `tests/integration/`. Each one guard
 - **No session cleanup job.** Expired sessions and links stay in the table and are ignored. A cleanup can come later.
 - **Plain, unstyled pages.** Styling comes after the MVP works end to end.
 - **No notify checkbox on the post form.** There are no supporters to notify until slice 2; the checkbox arrives with notifications in slice 3.
+
+## Discoveries
+
+- **`vercel dev` refuses to run from a `dev` script.** The CLI treats any `dev` script that calls `vercel dev` as a recursive invocation. The local command is `npm start` instead, and `vercel.json` sets `devCommand` to Vite.
+- **Readline's `question()` drops piped input.** Lines that arrive before a question is asked are lost. The operator script reads lines through an iterator, so it works both typed and piped.

@@ -6,7 +6,6 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "vercel dev",
     "build": "prisma generate && vite build",
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run",
@@ -14,7 +13,9 @@
     "test:integration": "vitest run --project integration",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "family:create": "tsx scripts/create-family.ts"
+    "family:create": "tsx scripts/create-family.ts",
+    "email:test": "tsx scripts/send-test-email.ts",
+    "start": "vercel dev"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
