@@ -7,6 +7,7 @@ export default function setup() {
   if (!url) throw new Error("TEST_DATABASE_URL is not set; see .env.example");
   execSync("npx prisma migrate deploy", {
     stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: url },
+    // Both, because prisma.config.ts prefers DATABASE_URL_UNPOOLED when it is set.
+    env: { ...process.env, DATABASE_URL: url, DATABASE_URL_UNPOOLED: url },
   });
 }

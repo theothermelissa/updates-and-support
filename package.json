@@ -6,14 +6,17 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "vercel dev",
     "build": "prisma generate && vite build",
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "family:create": "tsx scripts/create-family.ts",
+    "email:test": "tsx scripts/send-test-email.ts",
+    "start": "vercel dev",
+    "vercel-build": "prisma generate && prisma migrate deploy && vite build"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -31,6 +34,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "dotenv": "^18.0.7",
     "prisma": "^7.10.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vercel": "^63.1.2",
     "vite": "^8.3.4",

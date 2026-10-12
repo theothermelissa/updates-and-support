@@ -10,3 +10,74 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model Family {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  displayName     String
+  question        String
+  acceptedAnswers String[]
+  createdAt       DateTime @default(now())
+
+  people  Person[]
+  updates Update[]
+}
+
+enum Role {
+  family
+  supporter
+}
+
+// Family members and supporters. An email belongs to at most one person in a family.
+model Person {
+  id        String   @id @default(cuid())
+  familyId  String
+  role      Role
+  name      String
+  email     String // lowercased and trimmed
+  createdAt DateTime @default(now())
+
+  family     Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  magicLinks MagicLink[]
+  sessions   Session[]
+  updates    Update[]
+
+  @@unique([familyId, email])
+}
+
+model MagicLink {
+  id        String    @id @default(cuid())
+  personId  String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId, createdAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  personId  String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+}
+
+model Update {
+  id        String    @id @default(cuid())
+  familyId  String
+  authorId  String
+  body      String
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  author Person @relation(fields: [authorId], references: [id])
+
+  @@index([familyId, createdAt])
+}
