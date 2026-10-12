@@ -3,8 +3,9 @@
 import "dotenv/config";
 import { createInterface } from "node:readline/promises";
 import { getDb } from "../server/db.js";
-import { appUrl } from "../server/email.js";
 import { createFamily } from "../server/families.js";
+
+const PRODUCTION_URL = "https://updates.orbul.com";
 
 const rl = createInterface({ input: process.stdin });
 // An iterator rather than rl.question, so piped input works as well as typing.
@@ -17,10 +18,19 @@ async function ask(prompt: string): Promise<string> {
   return line.value.trim();
 }
 
+// Asks until the answer is non-empty.
+async function askRequired(prompt: string): Promise<string> {
+  for (;;) {
+    const answer = await ask(prompt);
+    if (answer) return answer;
+    console.log("  This is required.");
+  }
+}
+
 async function main() {
-  const displayName = await ask('Display name (e.g. "The Rivera Family"): ');
-  const question = await ask("Community question: ");
-  const acceptedAnswers = (await ask("Accepted answers (comma-separated): ")).split(",");
+  const displayName = await askRequired('Display name (e.g. "The Rivera Family"): ');
+  const question = await askRequired("Community question: ");
+  const acceptedAnswers = (await askRequired("Accepted answers (comma-separated): ")).split(",");
 
   const members: { name: string; email: string }[] = [];
   console.log("Family members (blank name to finish):");
@@ -31,12 +41,14 @@ async function main() {
       console.log("  At least one family member is required.");
       continue;
     }
-    members.push({ name, email: await ask("  Email: ") });
+    members.push({ name, email: await askRequired("  Email: ") });
   }
   rl.close();
 
   const family = await createFamily(getDb(), { displayName, question, acceptedAnswers, members });
-  console.log(`\nCreated ${family.displayName}: ${appUrl()}/f/${family.slug}`);
+  // The script can't tell which site uses this database, so it prints the path.
+  console.log(`\nCreated ${family.displayName} at /f/${family.slug}`);
+  console.log(`Production address: ${PRODUCTION_URL}/f/${family.slug}`);
   await getDb().$disconnect();
 }
 
