@@ -1,6 +1,6 @@
 # Updates and Support
 
-A web app that lets a family going through a hard time post updates once, and choose which ring of their support network (close friends, friends, or acquaintances) sees each one.
+A web app that lets a family going through a hard time post updates once.
 
 What the app should do lives in `spec/`, starting with `spec/MASTER_SPEC.md`. How Claude sessions work on it lives in `CLAUDE.md`.
 
