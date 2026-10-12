@@ -53,8 +53,20 @@ export async function signInWithLink(
       where: { tokenHash: hashToken(token) },
       include: { person: { include: { family: true } } },
     });
-    if (!link || link.usedAt || link.expiresAt <= new Date()) return null;
-    if (link.person.family.slug !== slug) return null;
+    // Logs why a link was refused, never the token itself, so stuck sign-ins can be diagnosed.
+    const refusal = !link
+      ? `no link matches the token (${token.length} characters received)`
+      : link.usedAt
+        ? "link already used"
+        : link.expiresAt <= new Date()
+          ? "link expired"
+          : link.person.family.slug !== slug
+            ? "link is for another family"
+            : null;
+    if (refusal || !link) {
+      console.warn(`Sign-in refused at ${slug}: ${refusal}`);
+      return null;
+    }
 
     // Conditional update: if two requests race, only one marks the link used.
     const spent = await tx.magicLink.updateMany({

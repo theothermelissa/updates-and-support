@@ -18,10 +18,11 @@ export const sendEmail: SendEmail = async (email) => {
 
 // The site's own address for links in emails. Never derived from the request, so a
 // forged Host header can't send someone a link to another site. On Vercel previews
-// without APP_URL, VERCEL_URL is the deployment's own address.
+// without APP_URL, the branch's stable address keeps people on the host they started on.
 export function appUrl(): string {
   if (process.env.APP_URL) return process.env.APP_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  const vercelHost = process.env.VERCEL_BRANCH_URL ?? process.env.VERCEL_URL;
+  if (vercelHost) return `https://${vercelHost}`;
   return "http://localhost:3000";
 }
 
