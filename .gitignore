@@ -147,3 +147,12 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# The Node template above ignores any "logs" directory; Claude's session logs are tracked
+!claude/logs/
+
+# Local environment and tooling
+.env*
+!.env.example
+.vercel
+.DS_Store

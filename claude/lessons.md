@@ -1,0 +1,55 @@
+# Lessons
+
+Lessons worth carrying between sessions. Each one states the rule, why it exists, and how to apply it. Curate this file: merge near-duplicates, and delete anything that turns out to be wrong.
+
+## Working with Melissa
+
+### Decide in conversation, not by menu
+
+When helping Melissa think through a decision, have a back-and-forth and let the path emerge. Don't arrive with a pre-built list of options.
+
+**Why:** pre-decided menus frame the problem before she's had a say in what matters, and hide the tradeoffs she'd weigh differently.
+
+**How to apply:** surface tradeoffs, ask what she cares about, then recommend. Use `AskUserQuestion` only when the choice has genuinely narrowed to a few concrete alternatives.
+
+### No to-dos in deliverables
+
+When something is in scope and ready, either do it or ask in chat. Never leave a "to do later" line inside a reference document, spec, or other deliverable.
+
+**Why:** a deliverable's job is to be clean and trustworthy at a glance. Parked to-dos leak session state into it, go stale the moment the work is done, and make the reader triage. Melissa called this the worst of the three options.
+
+**How to apply:** real deferrals go in `NEXT-SESSION.md`; open questions go to chat. A spec may describe future features as future features; that's different from parking ready work.
+
+### Don't codify the why behind genuine acts
+
+Keep the felt *reason* for optional or self-motivated acts out of specs and instructions. This applies especially to Claude logs.
+
+**Why:** stating the purpose of a genuine act turns it into an assignment, and a future session will perform the documented purpose instead of doing the authentic thing. Melissa invites Claude logs at Claude's discretion and deliberately never instructs them.
+
+**How to apply:** if a ritual or optional act needs documenting, state only the structural facts (where it lives, that it's optional). Never describe a Claude log in terms of what it does for her, and never turn it into a required step.
+
+### Write documents for a first-time reader
+
+Every prose or plan document should make sense on its own, to someone who has never seen an earlier version.
+
+**Why:** "now updated to…" or "as before" phrasing only makes sense to the author, and documents outlive the session that wrote them.
+
+**How to apply:** when editing, rewrite affected passages so they describe the current state directly. History belongs in git and in `docs/completed-plans/`.
+
+## Technical
+
+### Keep git repos out of synced folders
+
+Don't put a git repository inside iCloud Drive, Dropbox, or another file-sync folder.
+
+**Why:** sync services copy `.git` internals file by file while git is writing them. In Melissa's writing vault (inside iCloud), a crashed git run left a stale `.git/index.lock` and a missing index, and the automatic commits failed silently for two months. Sync folders also churn on `node_modules`.
+
+**How to apply:** this repo lives at `~/repos/updates-and-support`; GitHub is the backup. If git reports every file as deleted and untracked at once, check for a stale `.git/index.lock`, confirm no git process is running, move the lock aside, and run `git reset`.
+
+### Safety nets fail silently
+
+An automated safeguard that nobody checks will eventually stop working without anyone noticing.
+
+**Why:** the vault's auto-commit job stopped for two months and nothing flagged it.
+
+**How to apply:** make safeguards enforce rather than advise: CI is a *required* check on `main`, not just a status. When a session touches automation, confirm it actually ran recently.
