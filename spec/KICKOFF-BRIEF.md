@@ -58,6 +58,12 @@ The MVP needs the first four.
 - **Hosting:** Vercel — static frontend plus serverless functions in `api/`. Postgres is a managed Neon database through the Vercel marketplace. (GitHub Pages was ruled out: it can't run server code, and a static page talking to the database would expose its credentials.)
 - **Repo:** public on GitHub, so branch protection can require CI. All secrets live in Vercel and GitHub environment settings, never in the repo.
 - **Workflow:** feature branches and pull requests. A small, deliberately chosen set of unit and integration tests must pass before a PR can merge.
+- **Access: unlisted, behind a community question.** Every supporter sees every update; there is no audience granularity in the MVP. The site is unlisted (not indexed, reachable only by link), and the first page is a one- or two-step questionnaire asking something only members of the family's community would know, such as "What's the mascot of the high school nearest where she lives?" The goal is that real community members get in easily while bots, crawlers, and strangers do not. Requirements that follow from it:
+  - **Server-enforced.** No update content reaches the page or the API until the visitor answers correctly. A correct answer sets a signed cookie, so a supporter answers once per device.
+  - **Limited guesses.** Answers like a mascot have a small set of plausible values, so wrong attempts are capped per visitor.
+  - **Forgiving matching.** Ignore case, surrounding whitespace, and a leading "the", so real supporters aren't locked out by phrasing.
+  - **Not indexable.** `noindex` on every page and a `robots.txt` that disallows crawling.
+  - **Stated limits.** The gate stops bots and casual strangers, not a determined person: a community question's answer can often be looked up. The spec should say so plainly.
 - **Spec shape:** a `spec/` directory with one `MASTER_SPEC.md` plus single-area spec files. The exact structure is the first decision of the spec session.
 
 ## What the CaringBridge scan taught us
@@ -70,7 +76,9 @@ CaringBridge is the established free tool for this. Full report: `docs/research/
 
 ## Open questions for the spec
 
-- **Authentication.** How does a supporter get in? How does a Family Member? What happens when an invite link is forwarded?
+- **Family authentication.** Supporters get in through the community question; how does a Family Member sign in to post, edit, and delete? (Neon Auth was enabled alongside the database and is one option.)
+- **Manage supporters view.** With access through the community question, there may be no supporter list to manage in the MVP. Does this view stay in the MVP, change shape, or move later?
+- **Changing the question.** If the answer spreads too widely, can the family change the question, and does that sign everyone out?
 - **Notification.** How does a supporter learn there's a new update — email, or just checking the page?
 - **One family or many.** Does the MVP support a single family's site, or several from the start?
 - **Subject vs. Family Member.** Do they differ in permissions in the MVP, or only in label?
