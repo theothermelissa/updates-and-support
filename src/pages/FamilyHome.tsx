@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Me } from "../api.js";
+import { Feed } from "./Feed.js";
 import { NotFound } from "./NotFound.js";
 
 export function FamilyHome({ slug }: { slug: string }) {
@@ -34,6 +35,7 @@ export function FamilyHome({ slug }: { slug: string }) {
       <p>
         Signed in as {me.person.name}. <button onClick={signOut}>Sign out</button>
       </p>
+      <Feed slug={slug} canEdit={me.person.role === "family"} />
     </main>
   );
 }

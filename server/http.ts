@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getSession } from "./auth.js";
 import { readSessionCookie } from "./cookies.js";
 import type { Db } from "./db.js";
+import { RequestError } from "./errors.js";
 import { findFamilyBySlug } from "./families.js";
 import type { Family, Person } from "./generated/prisma/client.js";
 
@@ -53,4 +54,10 @@ export function unauthorized(res: VercelResponse) {
 // What the client may know about a person.
 export function personView(person: Person) {
   return { id: person.id, name: person.name, role: person.role };
+}
+
+// Replies with the status of a RequestError; anything else is a real failure and rethrows.
+export function sendRequestError(res: VercelResponse, err: unknown) {
+  if (err instanceof RequestError) return res.status(err.status).json({ error: err.message });
+  throw err;
 }

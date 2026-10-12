@@ -144,7 +144,7 @@ The three pages (with a placeholder feed), `vercel.json` rewrites, a `<meta name
 
 **Verify:** in the browser pane, walk through family sign-in → copy the link from the console → press "Sign in" → see "Signed in as …" → sign out → be signed out. Then check `curl -I` for the `X-Robots-Tag` header and fetch `/robots.txt`.
 
-### 7. Updates
+### 7. Updates ✅
 
 `server/updates.ts`, the `updates` endpoints, `src/linkify.ts`, and the feed on `/f/:slug`.
 
