@@ -1,0 +1,12 @@
+// Database schema. Models are added as the spec defines them.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../server/generated/prisma"
+  // .js import extensions keep the generated code runnable in Vercel's Node runtime.
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}

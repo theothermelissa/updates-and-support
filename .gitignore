@@ -156,3 +156,5 @@ vite.config.ts.timestamp-*
 !.env.example
 .vercel
 .DS_Store
+
+/server/generated/prisma
