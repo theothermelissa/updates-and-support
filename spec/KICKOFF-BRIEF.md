@@ -4,7 +4,7 @@ The input for writing the first spec. It records the concept, the user stories a
 
 ## The concept
 
-Families going through a sudden hard time — a diagnosis, an accident — need to keep a wide support network informed without spending their scarce energy on it. **Updates and Support** lets a family post an update once and choose which circle of intimacy sees it: close friends, friends, or acquaintances.
+Families going through a sudden hard time — a diagnosis, an accident — need to keep a wide support network informed without spending their scarce energy on it. **Updates and Support** lets a family post an update once.
 
 That is the core, must-ship-now feature. Later phases let supporters post encouraging messages to the family (visible to other supporters), and coordinate and connect with each other.
 
@@ -15,10 +15,7 @@ That is the core, must-ship-now feature. Later phases let supporters post encour
 - **Family** — the people who post updates and manage the network.
   - **Subject** — the person the updates are about.
   - **Family Members** — others who post and manage on the Subject's behalf.
-- **Supporters** — the network, each placed in exactly one ring:
-  - **Close Friends**
-  - **Friends**
-  - **Acquaintances**
+- **Supporters** — their support network
 
 ## User stories
 
@@ -38,11 +35,9 @@ Family:
 
 - **(MVP)** As a Family, I want to be able to update all of my supporters with the latest information.
 - **(MVP)** As a Family, I want to be able to edit or delete updates.
-- **(MVP)** As a Family, I want to choose which update to share with which ring of supporters.
-- **(MVP)** As a Family, I want to choose which ring a supporter belongs in.
 - As a Family or a Subject, I want to see the messages of support from my loved ones.
 - As a Family or a Subject, I want to see a support message that I have not seen yet.
-- As a Family, I want to be able to filter my support messages by supporter ring and time.
+- As a Family, I want to be able to filter my support messages by supporter and time.
 - As a Family, I want to be able to search for support posts via text.
 
 ## Views (work in progress)
@@ -69,16 +64,12 @@ The MVP needs the first four.
 
 CaringBridge is the established free tool for this. Full report: `docs/research/caringbridge.md`. Lessons that bear on the spec:
 
-- **Per-update audiences are the real gap.** CaringBridge sets privacy once per site. Its default lets any signed-in CaringBridge user read the page.
 - **Sign-in is the top pain point.** The most-viewed help article by far is the password reset. Supporters should not need a password; invite links or magic links are worth weighing.
-- **Ring membership leaks socially.** A friend who sees fewer updates than their spouse will notice, even if the app never names a ring.
-- **Sorting a network into rings is work** for a family in a crisis week. Defaults and bulk actions matter.
 - **No tracking scripts on health content.** CaringBridge faces a lawsuit alleging analytics pixels leaked users' health conditions.
 - **Families need an export.** CarePages shut down in 2017 and its users lost their journals.
 
 ## Open questions for the spec
 
-- **Ring semantics.** Are rings nested — does Close Friends see everything Friends sees? Nesting makes "choose a ring" one choice instead of a checklist, and is likely simpler.
 - **Authentication.** How does a supporter get in? How does a Family Member? What happens when an invite link is forwarded?
 - **Notification.** How does a supporter learn there's a new update — email, or just checking the page?
 - **One family or many.** Does the MVP support a single family's site, or several from the start?
