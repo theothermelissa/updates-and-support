@@ -7,11 +7,13 @@ Who can get into a family's site, how they get in, and how the family controls i
 A family has:
 
 - a **display name**, such as "The Rivera Family"
-- a **slug**: a name plus a random suffix, such as `rivera-k3f9`. The family's site lives at `/f/<slug>`. The suffix keeps family addresses from being guessed or listed.
+- a **slug**: a name plus an 8-character random suffix, such as `rivera-k3f9m2xq`. The family's site lives at `/f/<slug>`. The suffix keeps family addresses from being guessed or listed.
 - a **community question** and one or more **accepted answers**
 - its family members, supporters, and updates
 
-The operator creates a family with a script, giving the display name, the question, the accepted answers, and the first family member's name and email. The script prints the family's address.
+The operator creates a family with a script, giving the display name, the question, the accepted answers, and the name and email of each family member (at least one). The script prints the family's address.
+
+Each email belongs to at most one person in a family: someone is either a family member or a supporter there, never both.
 
 A visit to `/f/<slug>` for a slug that does not exist shows the same generic "not found" page as any other unknown address.
 
@@ -26,7 +28,7 @@ A visitor to a family's address who is not signed in sees the **gate**: the fami
 3. They are signed in on that device immediately and see the feed.
 4. A verification email is sent in the background. It contains a link to a page with a "Confirm my email" button; pressing the button marks the email verified. The button, rather than the link alone, keeps email security scanners that open links from confirming on the person's behalf.
 
-If the email already belongs to a supporter of this family, the visitor is not signed in as that supporter. Instead they are sent a magic link to that email, as in "Returning on a new device." The page says the same thing whether or not the email was already known: "Check your email."
+If the email already belongs to someone in this family, supporter or family member, the visitor is not signed in as that person. Instead a magic link is sent to that email, as in "Returning on a new device." The page says the same thing whether or not the email was already known: "Check your email."
 
 If the email belongs to a removed supporter, joining is refused with "This email can't join this family's updates. Please contact the family."
 
@@ -55,7 +57,7 @@ A signed-in supporter can sign out on the current device and can turn notificati
 
 ### Signing in
 
-Family members always sign in by magic link. The family's gate offers "Family sign-in," which asks for an email. If the email belongs to a family member of that family, a magic link is sent. The page says "Check your email" whether or not the email is known.
+Family members always sign in by magic link. The family's gate offers "Family sign-in," which asks for an email. If the email belongs to anyone in that family, a magic link is sent (see "Magic links"). The page says "Check your email" whether or not the email is known.
 
 A family member never needs to answer the community question.
 
@@ -71,7 +73,7 @@ Magic links are how supporters return on a new device and how family members alw
 - A link expires 15 minutes after it is sent and can be used once.
 - Only a hash of the link's token is stored.
 - Requests are limited to 5 per email address per hour, so the form cannot be used to flood someone's inbox.
-- A link signs the person in to the one family it was sent for.
+- A link signs the person in to the one family it was sent for, as whoever owns that email there. "Family sign-in" and "Already joined? Sign in by email" send the same link, so a supporter who uses the family form simply signs in as a supporter.
 
 ## Sessions
 
