@@ -55,6 +55,17 @@ What the app should do lives in `spec/`, starting with `spec/MASTER_SPEC.md`. Ho
 
 ## Deployment
 
-Vercel deploys `main` to production and every pull request to a preview URL. The production database's connection string lives in the Vercel project's environment variables as `DATABASE_URL`.
+Vercel deploys `main` to production and every pull request to a preview URL. Each preview gets its own Neon database branch, copied from production.
 
-Schema migrations are applied to production with `npm run db:deploy`, run with `DATABASE_URL` set to the production database. Run it before merging a PR that changes the schema.
+**Migrations run during the Vercel build.** Vercel runs the `vercel-build` script, which applies pending migrations (`prisma migrate deploy`) before building the frontend. A PR's preview applies its migrations to its own database branch, and merging to `main` applies them to production. Migrations use Neon's direct connection, `DATABASE_URL_UNPOOLED`; the running app uses the pooled `DATABASE_URL`. Because production migrates before the new code is live, keep migrations backward-compatible with the code already running.
+
+**Environment variables in Vercel:**
+
+| Variable | Where it comes from |
+| --- | --- |
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Set by the Neon integration, per environment and per preview branch. |
+| `RESEND_API_KEY` | A Resend API key with sending access. Production and Preview. |
+| `EMAIL_FROM` | `Updates and Support <updates@mail.orbul.com>`. Production and Preview. |
+| `APP_URL` | The production address. Production only; previews use their own deployment address. |
+
+**Creating a family in production** (or on a preview's database): run `npm run family:create` with `DATABASE_URL` set to that database's connection string from the Neon console.
