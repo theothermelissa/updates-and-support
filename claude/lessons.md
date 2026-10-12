@@ -36,6 +36,14 @@ Every prose or plan document should make sense on its own, to someone who has ne
 
 **How to apply:** when editing, rewrite affected passages so they describe the current state directly. History belongs in git and in `docs/completed-plans/`.
 
+### Keep secrets out of the chat
+
+When Melissa needs to use a secret (API key, database URL), give her a command that reads it from her clipboard or environment, such as `RESEND_API_KEY="$(pbpaste)" npm run …`, and say up front not to paste it into the chat.
+
+**Why:** service dashboards show sample code with the live key embedded, and pasting that sample to ask a question exposed a Resend key, which then had to be revoked. Claude also must not type secrets into files or commands itself.
+
+**How to apply:** whenever a step involves a secret, give the clipboard command, warn that dashboard snippets contain the key, and ask for output with the secret checked out of it.
+
 ## Technical
 
 ### Keep git repos out of synced folders
@@ -61,3 +69,19 @@ Claude's Bash shell starts on Node 20 from nvm, while the repo needs Node 24 (`.
 **Why:** a session lost time suspecting `DATABASE_URL` before spotting the Node version.
 
 **How to apply:** prefix commands with `export PATH=~/.nvm/versions/node/v24.21.0/bin:$PATH &&` (or the current v24 in `~/.nvm/versions/node`).
+
+### Prove each access test can fail
+
+After writing an access-rule test, remove the rule it guards, watch the test fail, and restore the rule.
+
+**Why:** a test that passes with the rule removed guards nothing, and these tests are the main protection for health data. Removing family scoping in the auth and updates code caught exactly the intended tests.
+
+**How to apply:** copy the file to the scratchpad before mutating it and restore from that copy. `git checkout` cannot restore a file that isn't committed yet, which nearly lost `server/auth.ts`.
+
+### Check Vercel headers on a real deploy
+
+`vercel dev` ignores `vercel.json` headers on pages served by Vite and overrides `Cache-Control` on functions with its own. Previews sit behind Vercel's login, so check headers on production with `curl -I`.
+
+**Why:** headers like `X-Robots-Tag` and `Cache-Control: no-store` are privacy rules, and local dev silently shows them missing or wrong.
+
+**How to apply:** set anything privacy-critical in code (as `familyContext` does for `Cache-Control`), and check the rest on production after merging.

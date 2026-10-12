@@ -115,7 +115,7 @@ The script runs through `tsx`, added as a dev dependency. Node 24 can strip Type
 
 **Verify:** run the script against the local database with a fictional family of two members, then confirm the rows in `npx prisma studio`.
 
-### 3. Email sending
+### 3. Email sending ✅
 
 `sendEmail({to, subject, text})` posts to Resend's REST API with `fetch`. Using `fetch` avoids taking on the Resend SDK as a dependency. With no `RESEND_API_KEY` set, it logs the email to the console instead, which is how local dev and tests run. New env vars in `.env.example`: `RESEND_API_KEY`, `EMAIL_FROM`, `APP_URL`.
 
@@ -150,7 +150,7 @@ The three pages (with a placeholder feed), `vercel.json` rewrites, a `<meta name
 
 **Verify:** the updates integration tests and the `linkify` unit tests pass. In the browser pane, sign in as each fictional member; post an update with line breaks and a link, edit it as the other member and see the "edited" mark, then delete it after confirming.
 
-### 8. Preview deploy and migrations
+### 8. Preview deploy and migrations ✅
 
 This settles the backlog item on migrations.
 
@@ -201,4 +201,7 @@ Integration tests against real Postgres, in `tests/integration/`. Each one guard
 
 - **`vercel dev` refuses to run from a `dev` script.** The CLI treats any `dev` script that calls `vercel dev` as a recursive invocation. The local command is `npm start` instead, and `vercel.json` sets `devCommand` to Vite.
 - **Readline's `question()` drops piped input.** Lines that arrive before a question is asked are lost. The operator script reads lines through an iterator, so it works both typed and piped.
-- **`vercel dev` doesn't apply `vercel.json` headers to pages served by Vite, or let them win over its own `Cache-Control` on functions.** `Cache-Control: no-store` is therefore set in code, in `familyContext`. The page headers (`X-Robots-Tag`, `Referrer-Policy`) are checked on the preview deploy instead.
+- **`vercel dev` doesn't apply `vercel.json` headers to pages served by Vite, or let them win over its own `Cache-Control` on functions.** `Cache-Control: no-store` is therefore set in code, in `familyContext`. The page headers (`X-Robots-Tag`, `Referrer-Policy`) are checked on production after merge, since previews sit behind Vercel's login.
+- **Sign-in links to a preview's per-deployment address failed.** A link requested on the branch address (`…-git-feature-…vercel.app`) pointed at the deployment's own address (`VERCEL_URL`), and the server received a token that matched no link. The likely cause is Vercel's preview protection on that second host, but it wasn't confirmed. Preview emails now link to `VERCEL_BRANCH_URL`, which works; production links use `APP_URL`. Refused sign-ins now log their reason and the received token's length, never the token.
+- **New-domain email lands in Gmail spam** even with SPF, DKIM, and DMARC passing. A `p=none` DMARC record at `_dmarc.mail.orbul.com` was added; the rest is domain reputation, tracked in `NEXT-SESSION.md`.
+- **Production runs on `updates.orbul.com`**, a Cloudflare CNAME (DNS only) to Vercel, so links in emails match the sending domain.
