@@ -2,8 +2,6 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
-- **2026-10-12** — Confirm Neon preview branching works.
-  The database was reconnected to Vercel with preview branching on and production branching off. A PR's preview deploy should create a `preview/<git-branch>` branch in the Neon console, and the preview's `/api/health` should report the database up. If no branch appears, preview deploys share the production database, which must be fixed before real data goes in.
 - **2026-10-12** — Decide how production migrations run.
   `npm run db:deploy` is a manual step before merging any schema-changing PR, a shortcut taken for launch speed. Migrations should also use `DATABASE_URL_UNPOOLED` (Neon's direct connection) rather than the pooled `DATABASE_URL`. And each preview deploy gets its own Neon branch copied from production, but it only receives a PR's schema changes if the build runs migrations (for example `prisma migrate deploy` before `vite build`). Settle all three when the first model lands.
 - **2026-10-12** — Run a manual Reddit search on CaringBridge and alternatives.
