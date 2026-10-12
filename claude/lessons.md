@@ -53,3 +53,11 @@ An automated safeguard that nobody checks will eventually stop working without a
 **Why:** the vault's auto-commit job stopped for two months and nothing flagged it.
 
 **How to apply:** make safeguards enforce rather than advise: CI is a *required* check on `main`, not just a status. When a session touches automation, confirm it actually ran recently.
+
+### Use Node 24 in Claude's shell
+
+Claude's Bash shell starts on Node 20 from nvm, while the repo needs Node 24 (`.nvmrc`). Under Node 20, `npm test` fails inside Prisma with `ERR_REQUIRE_ESM`, which looks like a broken setup but isn't.
+
+**Why:** a session lost time suspecting `DATABASE_URL` before spotting the Node version.
+
+**How to apply:** prefix commands with `export PATH=~/.nvm/versions/node/v24.21.0/bin:$PATH &&` (or the current v24 in `~/.nvm/versions/node`).
