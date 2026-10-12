@@ -99,13 +99,13 @@ Update bodies render with line breaks kept (`white-space: pre-wrap`). `linkify` 
 
 ## Milestones
 
-### 1. Schema
+### 1. Schema ✅
 
 Add the five models above and create the migration.
 
 **Verify:** `npm run db:migrate` applies cleanly to the local database; `npm run typecheck` and `npm test` pass.
 
-### 2. Operator script
+### 2. Operator script ✅
 
 `npm run family:create` prompts for the display name, the question, and the accepted answers (comma-separated), then asks for family members' names and emails one at a time until a blank name. It requires at least one. It creates the family and its members in one transaction and prints the family's URL.
 
@@ -121,7 +121,7 @@ The script runs through `tsx`, added as a dev dependency. Node 24 can strip Type
 
 **Verify:** a one-off call with Melissa's Resend key delivers a real email to her inbox from the `mail.orbul.com` sender. This depends on Resend DNS being verified. If it isn't yet, we continue with console logging and do this check before the PR merges.
 
-### 4. Magic links and sessions (server only)
+### 4. Magic links and sessions (server only) ✅
 
 Implement `server/tokens.ts` and `server/auth.ts`:
 
