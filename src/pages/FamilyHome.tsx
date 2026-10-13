@@ -37,6 +37,12 @@ export function FamilyHome({ slug }: { slug: string }) {
       <h1>{me.family.displayName}</h1>
       <p>
         Signed in as {me.person.name}. <button onClick={signOut}>Sign out</button>
+        {me.person.role === "family" && (
+          <>
+            {" "}
+            <a href={`/f/${slug}/people`}>People</a>
+          </>
+        )}
       </p>
       {me.person.role === "supporter" && (
         <p>

@@ -40,7 +40,7 @@ Family members can see their supporters, remove and restore them, and change the
 2. **Removal at every door.** Apply the table above in `auth.ts`, `gate.ts`, and `notifications.ts`.
 3. **`server/people.ts`.** The four functions, with `requireFamilyMember` moved in.
 4. **Integration tests** (below). Prove each access test can fail by removing its rule.
-5. **Endpoints** `people/index.ts`, `people/[id].ts`, and `question.ts`.
+5. **Endpoints** (done) `people/index.ts`, `people/[id].ts`, and `question.ts`.
 6. **UI.** People page, route, feed link. Verify in the browser.
 7. **Ship.** Typecheck, tests, PR, preview check, merge on Melissa's OK.
 
