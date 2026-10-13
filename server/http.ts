@@ -1,10 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getSession } from "./auth.js";
-import { readSessionCookie } from "./cookies.js";
+import { browserId, readSessionCookie } from "./cookies.js";
 import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import { findFamilyBySlug } from "./families.js";
+import type { Client } from "./gate.js";
 import type { Family, Person } from "./generated/prisma/client.js";
+import { networkKey } from "./network.js";
 
 // Shared request plumbing for the handlers in api/f/[slug]/.
 
@@ -60,4 +62,12 @@ export function personView(person: Person) {
 export function sendRequestError(res: VercelResponse, err: unknown) {
   if (err instanceof RequestError) return res.status(err.status).json({ error: err.message });
   throw err;
+}
+
+// Who is answering the gate. Vercel sets x-real-ip itself, so clients can't forge it;
+// local dev has no such header and falls back to the socket's address.
+export function clientOf(req: VercelRequest, res: VercelResponse): Client {
+  const realIp = req.headers["x-real-ip"];
+  const address = (Array.isArray(realIp) ? realIp[0] : realIp) ?? req.socket?.remoteAddress ?? "";
+  return { browserId: browserId(req, res), network: networkKey(address) };
 }

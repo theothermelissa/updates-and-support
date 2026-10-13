@@ -37,7 +37,9 @@ export async function requestSignInLink(
       expiresAt: new Date(Date.now() + LINK_LIFETIME),
     },
   });
-  const link = `${appUrl()}/f/${slug}/sign-in?token=${token}`;
+  // After "#", which browsers never send to a server: the token stays out of request
+  // logs and survives redirects, such as Vercel's login check on previews.
+  const link = `${appUrl()}/f/${slug}/sign-in#token=${token}`;
   await send(signInEmail(person.email, person.family.displayName, link));
 }
 

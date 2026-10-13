@@ -28,7 +28,7 @@ describe("magic links", () => {
     const known = await requestSignInLink(db, mail.send, family.slug, " Ana.Rivera@Example.com ");
     expect(mail.sent).toHaveLength(1);
     expect(mail.sent[0]!.to).toBe("ana.rivera@example.com");
-    expect(mail.sent[0]!.text).toContain(`/f/${family.slug}/sign-in?token=`);
+    expect(mail.sent[0]!.text).toContain(`/f/${family.slug}/sign-in#token=`);
 
     const unknown = await requestSignInLink(db, mail.send, family.slug, "nobody@example.com");
     expect(mail.sent).toHaveLength(1);
