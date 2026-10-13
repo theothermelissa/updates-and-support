@@ -4,7 +4,7 @@ import { createFamily } from "../../server/families.js";
 
 export async function resetDb(db: Db) {
   await db.$executeRawUnsafe(
-    `TRUNCATE "Update", "Session", "MagicLink", "Person", "Family" CASCADE`,
+    `TRUNCATE "GateAttempt", "Update", "Session", "MagicLink", "Person", "Family" CASCADE`,
   );
 }
 

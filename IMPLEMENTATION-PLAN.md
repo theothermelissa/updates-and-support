@@ -87,19 +87,19 @@ The handler goes through `familyContext`, which gives the uniform 404 and sets `
 
 ## Milestones
 
-### 1. Schema
+### 1. Schema ✅
 
 Add `GateAttempt` and create the migration.
 
 **Verify:** `npm run db:migrate` applies cleanly; `npm run typecheck` and `npm test` pass.
 
-### 2. Answer matching and network keys
+### 2. Answer matching and network keys ✅
 
 `server/answers.ts` and `server/network.ts`, with unit tests.
 
 **Verify:** the unit tests below pass.
 
-### 3. Gate logic (server only)
+### 3. Gate logic (server only) ✅
 
 `gateInfo` and `answerGate` in `server/gate.ts`, and `GateAttempt` added to `resetDb` in the test fixtures.
 
@@ -153,3 +153,7 @@ Integration tests against real Postgres, in `tests/integration/gate.test.ts`. Ea
 - **No refusal of removed supporters.** Removal arrives in slice 4, and the refusal comes with it.
 - **The per-browser limit is a speed bump.** It can be reset by clearing cookies; the per-network limit is the real one.
 - **No cleanup of old gate attempts.** Rows older than an hour are ignored. A cleanup can come later.
+
+## Discoveries
+
+- **The unique `(familyId, email)` constraint backs up the known-email check.** With the `findUnique` check removed, joining with a known email still hits Prisma error `P2002` through the Postgres adapter and falls back to sending a sign-in link, so every test still passes. The check stays for the common path; the constraint covers races.

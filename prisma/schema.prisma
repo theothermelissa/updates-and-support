@@ -19,8 +19,9 @@ model Family {
   acceptedAnswers String[]
   createdAt       DateTime @default(now())
 
-  people  Person[]
-  updates Update[]
+  people       Person[]
+  gateAttempts GateAttempt[]
+  updates      Update[]
 }
 
 enum Role {
@@ -80,4 +81,18 @@ model Update {
   author Person @relation(fields: [authorId], references: [id])
 
   @@index([familyId, createdAt])
+}
+
+// A wrong answer at a family's gate, counted against per-browser and per-network limits.
+model GateAttempt {
+  id        String   @id @default(cuid())
+  familyId  String
+  browserId String
+  network   String
+  createdAt DateTime @default(now())
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, browserId, createdAt])
+  @@index([familyId, network, createdAt])
 }
