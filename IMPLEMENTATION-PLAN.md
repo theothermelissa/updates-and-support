@@ -53,7 +53,7 @@ On join, with a correct answer:
 - **New email:** creates the `supporter` and their 180-day session in one nested create, so a failure can't leave a person without a session, and sets the session cookie.
 - **Email already in the family** (supporter or family member): changes nothing about that person, starts no session, sends a magic link through the existing `requestSignInLink`, and says "Check your email." If two joins with the same new email race, the loser hits the unique `(familyId, email)` constraint (Prisma error `P2002`, the only error treated this way) and is handled as a known email.
 
-Names are trimmed and must be 1 to 100 characters. Emails are trimmed, lowercased, must contain an `@`, and may be at most 254 characters.
+Names are trimmed and must be 1 to 100 characters. Emails are trimmed, lowercased, and must look like an address: no spaces, one `@`, a domain with at least one dot and no empty parts, a final part of at least 2 characters, and at most 254 characters in all. The operator script applies the same check.
 
 ### Code layout
 
@@ -145,6 +145,7 @@ Integration tests against real Postgres, in `tests/integration/gate.test.ts`. Ea
 
 **Unit tests**
 - `normalizeAnswer` lowercases, trims, collapses whitespace, and drops a leading "the "; `isCorrectAnswer` matches any accepted answer.
+- `isValidEmail` accepts ordinary addresses, including subdomains and plus addressing, and refuses a missing or dotless domain (`juice@no`), empty domain parts, and spaces.
 - `networkKey` keeps IPv4, reduces full and compressed IPv6 to the `/64`, and treats `::ffff:1.2.3.4` as `1.2.3.4`.
 
 ## Shortcuts taken for speed

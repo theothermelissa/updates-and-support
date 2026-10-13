@@ -5,6 +5,13 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+// A plausible address: no spaces, one @, and a domain with at least one dot, no
+// empty parts, and a final part of 2+ characters. It can't prove the address is
+// real; only a confirmation email can.
+export function isValidEmail(email: string): boolean {
+  return email.length <= 254 && /^[^\s@]+@([^\s@.]+\.)+[^\s@.]{2,}$/.test(email);
+}
+
 export type NewFamily = {
   displayName: string;
   question: string;
@@ -15,6 +22,8 @@ export type NewFamily = {
 // Creates a family and its family members in one transaction.
 export async function createFamily(db: Db, input: NewFamily) {
   if (input.members.length === 0) throw new Error("A family needs at least one family member");
+  const invalid = input.members.find((m) => !isValidEmail(normalizeEmail(m.email)));
+  if (invalid) throw new Error(`Not a valid email: ${invalid.email}`);
   return db.family.create({
     data: {
       slug: makeSlug(input.displayName),

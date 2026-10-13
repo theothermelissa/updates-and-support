@@ -109,8 +109,10 @@ describe("joining", () => {
     const send = fakeMailer().send;
     await expect(answerGate(db, send, family, browserA, { answer: "Biscuit", name: "", email: "a@example.com" }))
       .rejects.toMatchObject({ status: 400 });
-    await expect(answerGate(db, send, family, browserA, { answer: "Biscuit", name: "Sam", email: "not-an-email" }))
-      .rejects.toMatchObject({ status: 400 });
+    for (const email of ["not-an-email", "juice@no"]) {
+      await expect(answerGate(db, send, family, browserA, { answer: "Biscuit", name: "Sam", email }))
+        .rejects.toMatchObject({ status: 400 });
+    }
     expect(await db.person.count({ where: { role: "supporter" } })).toBe(0);
   });
 

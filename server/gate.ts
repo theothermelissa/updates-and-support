@@ -3,7 +3,7 @@ import { requestSignInLink, SESSION_LIFETIME } from "./auth.js";
 import type { Db } from "./db.js";
 import type { SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
-import { normalizeEmail } from "./families.js";
+import { isValidEmail, normalizeEmail } from "./families.js";
 import type { Family, Person } from "./generated/prisma/client.js";
 import { hashToken, newToken } from "./tokens.js";
 
@@ -113,7 +113,7 @@ function validJoiner(name: unknown, email: unknown) {
   if (cleanName.length < 1 || cleanName.length > 100) {
     throw new RequestError(400, "Please enter your name (up to 100 characters).");
   }
-  if (cleanEmail.length > 254 || !/^[^\s@]+@[^\s@]+$/.test(cleanEmail)) {
+  if (!isValidEmail(cleanEmail)) {
     throw new RequestError(400, "Please enter a valid email address.");
   }
   return { name: cleanName, email: cleanEmail };

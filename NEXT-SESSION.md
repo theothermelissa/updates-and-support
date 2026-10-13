@@ -2,6 +2,8 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
+- **2026-10-12** — Stop copying production data into preview databases.
+  Neon creates each preview's database branch as a copy of production, so every preview now holds real families' health updates. Previews sit behind Vercel's login, but the data shouldn't spread further than it must. Have previews branch from an empty, schema-only parent instead, and test there with fictional families.
 - **2026-10-12** — Watch email deliverability through launch week.
   Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in emails reach inboxes, tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
 - **2026-10-12** — Revisit the gate's per-network limit on shared networks.
