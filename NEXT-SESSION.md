@@ -2,6 +2,8 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
+- **2026-10-12** — Build notifications.
+  The second half of the original slice 3, deferred so email verification could ship first: notification emails to verified supporters, the "Notify supporters by email" checkbox, turning notifications on and off, and one-click unsubscribe. Before it launches, send verification emails to supporters who joined before verification shipped.
 - **2026-10-12** — Stop copying production data into preview databases.
   Neon creates each preview's database branch as a copy of production, so every preview now holds real families' health updates. Previews sit behind Vercel's login, but the data shouldn't spread further than it must. Have previews branch from an empty, schema-only parent instead, and test there with fictional families.
 - **2026-10-12** — Watch email deliverability through launch week.
