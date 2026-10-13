@@ -70,11 +70,16 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 | `EMAIL_FROM` | `Updates and Support <updates@mail.orbul.com>`. Production and Preview. |
 | `APP_URL` | The production address. Production only; previews use their own deployment address. |
 
-**Checking a pull request's preview:**
+**Checking a pull request's preview** needs four local settings in `.env` (see `.env.example`): `PREVIEW_FAMILY_EMAIL`, the preview branch's two connection strings, and Vercel's bypass secret. Vercel keeps its own copies of the connection strings Sensitive, so they can't be pulled from there.
 
-1. `npm run preview:seed` makes sure the test family exists on the preview database, with `PREVIEW_FAMILY_EMAIL` from your `.env` as its family member. Run it after a preview has finished building. It refuses to touch a database that holds any other family.
+1. `npm run preview:seed` makes sure the test family exists on the preview database, with `PREVIEW_FAMILY_EMAIL` as its family member. Run it after a preview has finished building. It refuses to touch a database that holds any other family.
 2. `npm run preview` prints the current commit's preview URL and the test family's link, and, with `VERCEL_AUTOMATION_BYPASS_SECRET` in your `.env`, checks the test family's gate through Vercel's preview login.
 
-**When the preview database gets out of step** (for example, after a PR with a migration is abandoned, or two open PRs change the schema): in Neon, delete the `preview` branch, create a new schema-only `preview` branch from production, update the two Preview variables in Vercel, redeploy, and run `npm run preview:seed`.
+**Creating or recreating the preview database** (for example, after a PR with a migration is abandoned, or two open PRs change the schema):
+
+1. In Neon, delete the `preview` branch if it exists, then create a new **schema-only** branch named `preview` from production.
+2. Put its pooled and direct connection strings in Vercel's Preview `DATABASE_URL` and `DATABASE_URL_UNPOOLED`, and in `.env` as `PREVIEW_DATABASE_URL` and `PREVIEW_DATABASE_URL_UNPOOLED`.
+3. `npm run preview:baseline` records `main`'s migrations as applied. A schema-only branch copies production's tables but not Prisma's record of which migrations ran, so without this the next preview build tries to create every table again.
+4. Redeploy the preview, then run `npm run preview:seed`.
 
 **Creating a family in production:** run `npm run family:create` with `DATABASE_URL` set to the production connection string from the Neon console.

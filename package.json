@@ -18,7 +18,8 @@
     "start": "vercel dev",
     "vercel-build": "prisma generate && prisma migrate deploy && vite build",
     "preview": "scripts/preview.sh",
-    "preview:seed": "scripts/seed-preview.sh"
+    "preview:seed": "scripts/with-preview-db.sh npx tsx scripts/seed-preview.ts",
+    "preview:baseline": "scripts/with-preview-db.sh scripts/preview-baseline.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
