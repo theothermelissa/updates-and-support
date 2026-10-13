@@ -159,3 +159,5 @@ Integration tests against real Postgres, in `tests/integration/gate.test.ts`. Ea
 
 - **The unique `(familyId, email)` constraint backs up the known-email check.** With the `findUnique` check removed, joining with a known email still hits Prisma error `P2002` through the Postgres adapter and falls back to sending a sign-in link, so every test still passes. The check stays for the common path; the constraint covers races.
 - **`vercel dev` doesn't pick up new API files.** After adding `api/f/[slug]/gate.ts`, every family route returned Vercel's 404 until the dev server was restarted.
+- **Vercel's preview login drops the query string, and request logs record it.** A family member's first preview sign-in failed with an empty token: the link opened a preview address they hadn't logged in to yet, and Vercel's login redirect dropped `?token=…`. The logs also held every sign-in token in full. Links now carry the token after `#`, which browsers never send to servers and keep across redirects, and the sign-in page says so when a link arrives without a token.
+

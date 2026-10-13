@@ -71,7 +71,7 @@ Magic links are how supporters return on a new device and how family members alw
 
 - The email contains a link to a page with a "Sign in" button. Pressing the button spends the link and signs the person in. The link alone never signs anyone in, because email security scanners open links before the recipient does.
 - A link expires 15 minutes after it is sent and can be used once.
-- Only a hash of the link's token is stored.
+- Only a hash of the link's token is stored. The token sits after the `#` in the link, which browsers never send to a server, so it never appears in request logs.
 - Requests are limited to 5 per email address per hour, so the form cannot be used to flood someone's inbox.
 - A link signs the person in to the one family it was sent for, as whoever owns that email there. "Family sign-in" and "Already joined? Sign in by email" send the same link, so a supporter who uses the family form simply signs in as a supporter.
 
