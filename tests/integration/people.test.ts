@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getSession, requestSignInLink, signInWithLink, verifyEmail } from "../../server/auth.js";
 import { answerGate } from "../../server/gate.js";
 import type { Family, Person } from "../../server/generated/prisma/client.js";
-import { changeQuestion, listPeople, setRemoved } from "../../server/people.js";
+import { addFamilyMember, changeQuestion, listPeople, setRemoved } from "../../server/people.js";
 import { hashToken, newToken } from "../../server/tokens.js";
 import { createTestDb } from "./db.js";
 import { fakeMailer, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
@@ -61,11 +61,10 @@ describe("who may see and change", () => {
     expect(await getSession(db, family.slug, other.sessionToken)).not.toBeNull();
   });
 
-  it("treats another family's supporter, or a family member, as not found", async () => {
+  it("treats another family's supporter or family member as not found", async () => {
     const { ana, chidi, olu } = await setUp();
     await expect(setRemoved(db, ana, olu.person.id, true)).rejects.toMatchObject({ status: 404 });
     await expect(setRemoved(db, ana, chidi.id, true)).rejects.toMatchObject({ status: 404 });
-    await expect(setRemoved(db, ana, ana.id, true)).rejects.toMatchObject({ status: 404 });
     const untouched = await db.person.findMany({ where: { removedAt: { not: null } } });
     expect(untouched).toEqual([]);
   });
@@ -155,7 +154,8 @@ describe("restore", () => {
     const { family, ana, sam } = await setUp();
     await setRemoved(db, ana, sam.person.id, true);
 
-    const restored = await setRemoved(db, ana, sam.person.id, false);
+    await setRemoved(db, ana, sam.person.id, false);
+    const restored = await db.person.findUniqueOrThrow({ where: { id: sam.person.id } });
     expect(restored).toMatchObject({ removedAt: null, notificationsOn: false });
     expect(await db.session.count({ where: { personId: sam.person.id } })).toBe(0);
 
@@ -193,5 +193,180 @@ describe("changing the question", () => {
     const unchanged = await db.family.findUniqueOrThrow({ where: { id: family.id } });
     expect(unchanged.question).toBe("What is the dog's name?");
     expect(unchanged.acceptedAnswers).toEqual(["Biscuit"]);
+  });
+});
+
+// Signs a person in by emailed link. Returns their session token.
+async function signIn(slug: string, email: string) {
+  const mail = fakeMailer();
+  await requestSignInLink(db, mail.send, slug, email);
+  return (await signInWithLink(db, slug, tokenFrom(mail.sent[0]!)))!.sessionToken;
+}
+
+function active(id: string) {
+  return db.person.findFirst({ where: { id, removedAt: null } });
+}
+
+describe("adding family members", () => {
+  it("creates a new family member and emails a link that signs them in as one", async () => {
+    const { family, ana } = await setUp();
+    const mail = fakeMailer();
+    const result = await addFamilyMember(db, mail.send, ana, { name: " Bea Rivera ", email: "Bea@Example.com" });
+
+    expect(result).toEqual({ name: "Bea Rivera", outcome: "added" });
+    expect(mail.sent.map((e) => e.to)).toEqual(["bea@example.com"]);
+    expect(mail.sent[0]!.subject).toBe("You've been added to The Rivera Family's updates");
+    expect(mail.sent[0]!.text).toContain(`/f/${family.slug}/family`);
+    const signedIn = await signInWithLink(db, family.slug, tokenFrom(mail.sent[0]!));
+    expect(signedIn?.person).toMatchObject({ name: "Bea Rivera", role: "family" });
+  });
+
+  it("promotes a supporter: same record, new name, old session ended, family session from the link", async () => {
+    const { family, ana, sam } = await setUp();
+    const mail = fakeMailer();
+    const result = await addFamilyMember(db, mail.send, ana, { name: "Samuel Friend", email: sam.person.email });
+
+    expect(result.outcome).toBe("promoted");
+    expect(await db.person.findUniqueOrThrow({ where: { id: sam.person.id } })).toMatchObject({
+      role: "family",
+      name: "Samuel Friend",
+    });
+    expect(await getSession(db, family.slug, sam.sessionToken)).toBeNull();
+    const signedIn = await signInWithLink(db, family.slug, tokenFrom(mail.sent[0]!));
+    expect(signedIn?.person).toMatchObject({ id: sam.person.id, role: "family" });
+  });
+
+  it("promotes and restores a removed supporter, and restores a removed family member", async () => {
+    const { ana, sam } = await setUp();
+    await setRemoved(db, ana, sam.person.id, true);
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.person.email })).outcome).toBe(
+      "promoted",
+    );
+    expect(await active(sam.person.id)).toMatchObject({ role: "family" });
+
+    await setRemoved(db, ana, sam.person.id, true);
+    expect(await active(sam.person.id)).toBeNull();
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.person.email })).outcome).toBe(
+      "restored",
+    );
+    expect(await active(sam.person.id)).toMatchObject({ role: "family" });
+  });
+
+  it("refuses a current family member's email, sending and changing nothing", async () => {
+    const { ana } = await setUp();
+    const links = await db.magicLink.count();
+    const mail = fakeMailer();
+    await expect(addFamilyMember(db, mail.send, ana, { name: "Someone Else", email: ana.email })).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(mail.sent).toHaveLength(0);
+    expect(await db.person.findUniqueOrThrow({ where: { id: ana.id } })).toMatchObject({ name: ana.name });
+    expect(await db.magicLink.count()).toBe(links);
+  });
+
+  it("is refused to supporters, and only ever adds to the adder's own family", async () => {
+    const { family, okafor, ana, sam, olu } = await setUp();
+    await expect(
+      addFamilyMember(db, fakeMailer().send, sam.person, { name: "Mallory", email: "mallory@example.com" }),
+    ).rejects.toMatchObject({ status: 403 });
+
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Olu", email: olu.person.email })).outcome).toBe(
+      "added",
+    );
+    expect(await db.person.findUniqueOrThrow({ where: { id: olu.person.id } })).toMatchObject({
+      role: "supporter",
+      familyId: okafor.id,
+    });
+    expect(await getSession(db, okafor.slug, olu.sessionToken)).not.toBeNull();
+    expect(await db.person.count({ where: { familyId: family.id, email: olu.person.email, role: "family" } })).toBe(1);
+  });
+
+  it("rejects an invalid name or email", async () => {
+    const { ana } = await setUp();
+    for (const input of [{ name: " ", email: "x@example.com" }, { name: "X", email: "not-an-email" }, {}]) {
+      await expect(addFamilyMember(db, fakeMailer().send, ana, input)).rejects.toMatchObject({ status: 400 });
+    }
+  });
+
+  it("adds them even if the email can't be sent", async () => {
+    const { ana } = await setUp();
+    const failing = async () => {
+      throw new Error("Resend is down");
+    };
+    await addFamilyMember(db, failing, ana, { name: "Bea", email: "bea@example.com" });
+    expect(await db.person.count({ where: { email: "bea@example.com", role: "family" } })).toBe(1);
+  });
+});
+
+describe("removing family members", () => {
+  async function twoMembers() {
+    const { family, people } = await makeFamily(db, "Rivera", ["Ana", "Ben"]);
+    const [ana, ben] = people as [Person, Person];
+    return { family, ana, ben, anaToken: await signIn(family.slug, ana.email), benToken: await signIn(family.slug, ben.email) };
+  }
+
+  it("ends their access and keeps their updates, with their name", async () => {
+    const { family, ana, ben, benToken } = await twoMembers();
+    await db.update.create({ data: { familyId: family.id, authorId: ben.id, body: "From Ben" } });
+    const mail = fakeMailer();
+    await requestSignInLink(db, mail.send, family.slug, ben.email);
+
+    await setRemoved(db, ana, ben.id, true);
+
+    expect(await db.session.count({ where: { personId: ben.id } })).toBe(0);
+    expect(await db.magicLink.count({ where: { personId: ben.id, usedAt: null } })).toBe(0);
+    expect(await getSession(db, family.slug, benToken)).toBeNull();
+    expect(await signInWithLink(db, family.slug, tokenFrom(mail.sent[0]!))).toBeNull();
+    expect((await listPeople(db, ana)).familyMembers.map((m) => m.id)).toEqual([ana.id]);
+    const update = await db.update.findFirstOrThrow({ include: { author: true } });
+    expect(update.author.name).toBe("Ben Rivera");
+
+    const again = fakeMailer();
+    await requestSignInLink(db, again.send, family.slug, ben.email);
+    expect(again.sent).toHaveLength(0);
+    await expect(
+      answerGate(db, fakeMailer().send, family, client, { answer: "Biscuit", name: "Ben", email: ben.email }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("refuses removing yourself, and restoring a family member this way", async () => {
+    const { ana, ben } = await twoMembers();
+    await expect(setRemoved(db, ana, ana.id, true)).rejects.toMatchObject({ status: 400 });
+    await expect(setRemoved(db, ana, ben.id, false)).rejects.toMatchObject({ status: 400 });
+    expect(await active(ana.id)).not.toBeNull();
+    expect(await active(ben.id)).not.toBeNull();
+  });
+
+  it("refuses a request from someone removed a moment ago, so the family keeps a member", async () => {
+    const { ana, ben } = await twoMembers();
+    await setRemoved(db, ana, ben.id, true);
+    // Ben's request was authorized before his removal and arrives after it.
+    await expect(setRemoved(db, ben, ana.id, true)).rejects.toMatchObject({ status: 403 });
+    expect(await active(ana.id)).not.toBeNull();
+  });
+
+  it("leaves exactly one family member when two remove each other at once", async () => {
+    // Repeated because a single race can come out right by timing alone.
+    for (let i = 0; i < 20; i++) {
+      await resetDb(db);
+      const { family, ana, ben } = await twoMembers();
+      const results = await Promise.allSettled([setRemoved(db, ana, ben.id, true), setRemoved(db, ben, ana.id, true)]);
+      expect(results.map((r) => r.status).sort()).toEqual(["fulfilled", "rejected"]);
+      expect(await db.person.count({ where: { familyId: family.id, role: "family", removedAt: null } })).toBe(1);
+    }
+  });
+
+  it("limits a session to the person's current role's lifetime", async () => {
+    const { family, ana } = await setUp();
+    const token = newToken();
+    await db.session.create({
+      data: {
+        personId: ana.id,
+        tokenHash: hashToken(token),
+        createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 149 * 24 * 60 * 60 * 1000),
+      },
+    });
+    expect(await getSession(db, family.slug, token)).toBeNull();
   });
 });

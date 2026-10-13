@@ -1,4 +1,5 @@
 import type { Db } from "./db.js";
+import { RequestError } from "./errors.js";
 import { makeSlug } from "./slug.js";
 
 export function normalizeEmail(email: string): string {
@@ -10,6 +11,19 @@ export function normalizeEmail(email: string): string {
 // real; only a confirmation email can.
 export function isValidEmail(email: string): boolean {
   return email.length <= 254 && /^[^\s@]+@([^\s@.]+\.)+[^\s@.]{2,}$/.test(email);
+}
+
+// A person's name and email from a form, cleaned up, or a 400 saying what's wrong.
+export function validNameAndEmail(name: unknown, email: unknown) {
+  const cleanName = typeof name === "string" ? name.trim() : "";
+  const cleanEmail = typeof email === "string" ? normalizeEmail(email) : "";
+  if (cleanName.length < 1 || cleanName.length > 100) {
+    throw new RequestError(400, "Please enter a name (up to 100 characters).");
+  }
+  if (!isValidEmail(cleanEmail)) {
+    throw new RequestError(400, "Please enter a valid email address.");
+  }
+  return { name: cleanName, email: cleanEmail };
 }
 
 export type NewFamily = {

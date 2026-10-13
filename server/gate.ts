@@ -3,7 +3,7 @@ import { newVerificationLink, requestSignInLink, SESSION_LIFETIME } from "./auth
 import type { Db } from "./db.js";
 import { appUrl, verificationEmail, type SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
-import { isValidEmail, normalizeEmail } from "./families.js";
+import { validNameAndEmail } from "./families.js";
 import type { Family, Person } from "./generated/prisma/client.js";
 import { hashToken, newToken } from "./tokens.js";
 
@@ -34,7 +34,7 @@ export async function answerGate(
   input: { answer?: unknown; name?: unknown; email?: unknown },
 ): Promise<GateResult> {
   const joining = input.name !== undefined || input.email !== undefined;
-  const joiner = joining ? validJoiner(input.name, input.email) : null;
+  const joiner = joining ? validNameAndEmail(input.name, input.email) : null;
   const answer = typeof input.answer === "string" ? input.answer : "";
 
   const outcome = await checkAnswer(db, family, client, answer);
@@ -120,16 +120,4 @@ async function join(
 async function sendLinkInstead(db: Db, send: SendEmail, family: Family, email: string): Promise<GateResult> {
   await requestSignInLink(db, send, family.slug, email);
   return { result: "check-email" };
-}
-
-function validJoiner(name: unknown, email: unknown) {
-  const cleanName = typeof name === "string" ? name.trim() : "";
-  const cleanEmail = typeof email === "string" ? normalizeEmail(email) : "";
-  if (cleanName.length < 1 || cleanName.length > 100) {
-    throw new RequestError(400, "Please enter your name (up to 100 characters).");
-  }
-  if (!isValidEmail(cleanEmail)) {
-    throw new RequestError(400, "Please enter a valid email address.");
-  }
-  return { name: cleanName, email: cleanEmail };
 }
