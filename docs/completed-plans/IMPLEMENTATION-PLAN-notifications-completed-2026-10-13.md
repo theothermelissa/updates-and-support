@@ -94,7 +94,7 @@ The three handlers, the unsubscribe page and route, both checkboxes, and `verifi
 
 **Verify:** in the browser pane, post with the box checked and see one logged email per verified, opted-in supporter, then post with it unchecked and see none. Open a logged unsubscribe link, press the button, and confirm that supporter is opted out. As a supporter, toggle the checkbox off and on. With curl, POST the header's address with a form body and confirm it opts out. Run `verification:send` locally and confirm it sends only to unverified supporters.
 
-### 4. Preview and merge
+### 4. Preview and merge ✅
 
 Open a PR; CI passes. On the preview's test family, join as a supporter with a `+` address and verify it, post as the family member, and confirm the notification arrives with no update text, that Gmail's "Show original" lists `List-Unsubscribe` among the DKIM-signed headers, and whether Gmail shows its own "Unsubscribe" option. Use the email's link to turn notifications off, post again, and confirm nothing arrives. After merging, Melissa runs `verification:send` against production.
 
@@ -122,4 +122,5 @@ Integration tests against real Postgres, in `tests/integration/notifications.tes
 - **`prisma migrate dev` can't confirm warnings without a terminal.** Adding a unique column prompts for confirmation, which fails in a non-interactive shell. The migration was generated with `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` and applied with `prisma migrate deploy`.
 - **The one-time verification send can't use `appUrl()`.** Run locally against production, it would read `APP_URL` from the local `.env` (localhost) and email real supporters localhost links. `sendVerifications` takes the site address explicitly, and the script passes the production address.
 - **A test of "family members aren't notified" needs a verified family member.** With an unverified one, the verified-only filter hid a missing role filter.
+- **Gmail doesn't show its own "Unsubscribe" button for a new sender.** On the preview, the notification arrived with `list-unsubscribe` among the DKIM-signed headers, but Gmail showed no Unsubscribe option. Gmail grants it based on sending history; the link in each email covers everyone meanwhile.
 
