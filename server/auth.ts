@@ -30,18 +30,24 @@ export async function requestSignInLink(
   });
   if (recent >= LINKS_PER_HOUR) return;
 
+  const link = newSignInLink();
+  await db.magicLink.create({ data: { personId: person.id, ...link.data } });
+  await send(signInEmail(person.email, person.family.displayName, signInLinkUrl(slug, link.token)));
+}
+
+// A new sign-in link's data, for creating alongside the person it belongs to.
+export function newSignInLink() {
   const token = newToken();
-  await db.magicLink.create({
-    data: {
-      personId: person.id,
-      tokenHash: hashToken(token),
-      expiresAt: new Date(Date.now() + LINK_LIFETIME),
-    },
-  });
-  // After "#", which browsers never send to a server: the token stays out of request
-  // logs and survives redirects, such as Vercel's login check on previews.
-  const link = `${appUrl()}/f/${slug}/sign-in#token=${token}`;
-  await send(signInEmail(person.email, person.family.displayName, link));
+  return {
+    token,
+    data: { purpose: "sign_in" as const, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + LINK_LIFETIME) },
+  };
+}
+
+// After "#", which browsers never send to a server: the token stays out of request
+// logs and survives redirects, such as Vercel's login check on previews.
+export function signInLinkUrl(slug: string, token: string): string {
+  return `${appUrl()}/f/${slug}/sign-in#token=${token}`;
 }
 
 // Spends an unused, unexpired sign-in link for this family, starts a session, and
@@ -140,6 +146,8 @@ async function markVerified(tx: Prisma.TransactionClient, person: Person): Promi
 
 // The person signed in with this session token in this family, or null. A removed
 // person's sessions are deleted on removal; checking here too covers any that slip past.
+// A session lasts as long as the person's current role allows, so a supporter promoted
+// to family member never keeps a supporter-length session.
 export async function getSession(db: Db, slug: string, token: string): Promise<Person | null> {
   const session = await db.session.findUnique({
     where: { tokenHash: hashToken(token) },
@@ -147,6 +155,7 @@ export async function getSession(db: Db, slug: string, token: string): Promise<P
   });
   if (!session || session.expiresAt <= new Date()) return null;
   if (session.person.family.slug !== slug || session.person.removedAt) return null;
+  if (session.createdAt.getTime() + SESSION_LIFETIME[session.person.role] <= Date.now()) return null;
   const { family: _family, ...person } = session.person;
   return person;
 }

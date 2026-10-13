@@ -11,13 +11,14 @@ type Supporter = {
   joinedAt: string;
   removedAt: string | null;
 };
-type People = { supporters: Supporter[]; removed: Supporter[]; question: string; acceptedAnswers: string[] };
+type FamilyMember = { id: string; name: string; email: string; isYou: boolean };
+type People = { familyMembers: FamilyMember[]; supporters: Supporter[]; removed: Supporter[]; question: string; acceptedAnswers: string[] };
 
 function date(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-// Family members' page for the supporter list and the community question. The server
+// Family members' page for family members, supporters, and the community question. The server
 // refuses the data to anyone else; this page only shows what it's given.
 export function People({ slug }: { slug: string }) {
   const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
@@ -37,14 +38,34 @@ export function People({ slug }: { slug: string }) {
 
   useEffect(load, [slug]);
 
-  async function setRemoved(supporter: Supporter, removed: boolean) {
-    const { status, data } = await api<{ error?: string }>(slug, `people/${supporter.id}`, {
+  async function setRemoved(person: { id: string }, removed: boolean) {
+    const { status, data } = await api<{ error?: string }>(slug, `people/${person.id}`, {
       method: "PATCH",
       body: { removed },
     });
     if (status !== 200) return setMessage({ text: data?.error ?? "Something went wrong. Please try again.", error: true });
     setMessage(null);
     load();
+  }
+
+  async function addFamilyMember(name: string, email: string): Promise<boolean> {
+    const { status, data } = await api<{ name: string; outcome: string; error?: string }>(slug, "people", {
+      method: "POST",
+      body: { name, email },
+    });
+    if (status !== 200) {
+      setMessage({ text: data?.error ?? "Something went wrong. Please try again.", error: true });
+      return false;
+    }
+    setMessage({
+      text:
+        data.outcome === "promoted"
+          ? `Moved ${data.name} from supporters to family members. They'll get an email to sign in.`
+          : `Added ${data.name}. They'll get an email to sign in.`,
+      error: false,
+    });
+    load();
+    return true;
   }
 
   async function saveQuestion(e: FormEvent) {
@@ -80,6 +101,12 @@ export function People({ slug }: { slug: string }) {
       </p>
       <h1>People</h1>
       {message && <p className={message.error ? "error" : undefined}>{message.text}</p>}
+
+      <FamilyMembers
+        members={people.familyMembers}
+        onRemove={(m) => setRemoved(m, true)}
+        onAdd={addFamilyMember}
+      />
 
       <h2>Supporters ({people.supporters.length})</h2>
       {people.supporters.length === 0 ? (
@@ -124,6 +151,99 @@ export function People({ slug }: { slug: string }) {
         <button>Save question</button>
       </form>
     </main>
+  );
+}
+
+function FamilyMembers({
+  members,
+  onRemove,
+  onAdd,
+}: {
+  members: FamilyMember[];
+  onRemove: (m: FamilyMember) => void;
+  onAdd: (name: string, email: string) => Promise<boolean>;
+}) {
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [confirmingAdd, setConfirmingAdd] = useState(false);
+
+  async function add() {
+    setConfirmingAdd(false);
+    if (await onAdd(name, email)) {
+      setName("");
+      setEmail("");
+    }
+  }
+
+  return (
+    <>
+      <h2>Family members ({members.length})</h2>
+      <div style={{ overflowX: "auto" }}>
+        <table>
+          <tbody>
+            {members.map((m) => (
+              <Fragment key={m.id}>
+                <tr>
+                  <td>{m.isYou ? `${m.name} (you)` : m.name}</td>
+                  <td>{m.email}</td>
+                  <td>{!m.isYou && <button onClick={() => setRemoving(m.id)}>Remove</button>}</td>
+                </tr>
+                {removing === m.id && (
+                  <tr>
+                    <td colSpan={3}>
+                      Remove {m.name}? They'll be signed out and can no longer see or post updates.{" "}
+                      <button
+                        onClick={() => {
+                          setRemoving(null);
+                          onRemove(m);
+                        }}
+                      >
+                        Yes, remove
+                      </button>{" "}
+                      <button onClick={() => setRemoving(null)}>Cancel</button>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Add a family member</h3>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setConfirmingAdd(true);
+        }}
+      >
+        <p>
+          <label>
+            Name <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+          </label>
+        </p>
+        <p>
+          <label>
+            Email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </label>
+        </p>
+        {confirmingAdd ? (
+          <p>
+            Add {name} ({email}) as a family member? They'll be able to post, edit, and delete updates and see all
+            supporters.{" "}
+            <button type="button" onClick={add}>
+              Yes, add
+            </button>{" "}
+            <button type="button" onClick={() => setConfirmingAdd(false)}>
+              Cancel
+            </button>
+          </p>
+        ) : (
+          <button>Add</button>
+        )}
+      </form>
+    </>
   );
 }
 

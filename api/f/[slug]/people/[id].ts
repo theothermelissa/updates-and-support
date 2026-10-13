@@ -10,7 +10,8 @@ import {
 } from "../../../../server/http.js";
 import { setRemoved } from "../../../../server/people.js";
 
-// A family member removing ({ removed: true }) or restoring ({ removed: false }) a supporter.
+// A family member removing ({ removed: true }) a supporter or family member, or
+// restoring ({ removed: false }) a supporter.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "PATCH") return methodNotAllowed(res);
   const body = jsonBody(req, res);
@@ -19,7 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!ctx) return;
   if (!ctx.person) return unauthorized(res);
   try {
-    res.status(200).json({ supporter: await setRemoved(getDb(), ctx.person, param(req, "id"), body.removed) });
+    await setRemoved(getDb(), ctx.person, param(req, "id"), body.removed);
+    res.status(200).json({ ok: true });
   } catch (err) {
     sendRequestError(res, err);
   }

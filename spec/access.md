@@ -65,7 +65,20 @@ A family member never needs to answer the community question.
 
 ### Adding family members
 
-Any family member can add another family member by name and email. The new family member gets an email with a magic link to sign in. Any family member can remove another family member, except that a family always keeps at least one family member.
+Any family member can add another family member by name and email, on the People page. The new family member gets an email saying they've been added to the family's updates, with a magic link to sign in (see "Magic links"). The email says that once the link expires, they can sign in any time with "Family sign-in." If the email can't be sent, they are still added.
+
+What happens depends on whom the email already belongs to in this family:
+
+- **No one:** a new family member is created.
+- **A supporter:** the supporter is **promoted**. The same record becomes a family member with the name just entered, and all of their sessions end, so they sign in again with a family member's session. If they had been removed, promotion also restores them.
+- **A removed family member:** they are restored, with the name just entered.
+- **A current family member:** nothing changes and no email is sent; the page says they're already a family member.
+
+### Removing family members
+
+Any family member can remove another family member from the People page, after confirming. A family member cannot remove themselves, and a family always keeps at least one family member: the server refuses a removal that would leave none, even if two removals happen at the same moment.
+
+Removal works as it does for supporters: it ends the person's sessions, cancels their unused sign-in links, and keeps the record, marked removed, so their email can't sign in or join as a supporter. Updates they wrote stay, still showing their name. Removed family members aren't listed; adding their email again restores them.
 
 ## Magic links
 
@@ -86,7 +99,7 @@ Magic links are how supporters return on a new device and how family members alw
 
 ## Managing supporters
 
-Family members have a **People** page, at `/f/<slug>/people` and linked from the feed, listing the family's supporters: name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. Supporters never see this page, this list, or each other's details; the server refuses the list to anyone but a family member of that family.
+Family members have a **People** page, at `/f/<slug>/people` and linked from the feed. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters: name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. Supporters never see this page, this list, or each other's details; the server refuses the list to anyone but a family member of that family.
 
 A family member can **remove** a supporter after confirming. Removal:
 
@@ -99,7 +112,7 @@ A removed supporter cannot sign in by email: "Already joined? Sign in by email" 
 
 A family member can **restore** a removed supporter. Restoring lets them sign in by email again and leaves their notifications **off**; they can turn notifications back on themselves once signed in. Restoring does not sign them in anywhere.
 
-Only supporters can be removed or restored from the People page. Family members are managed under "Adding family members."
+Family members are added and removed under "Adding family members" and "Removing family members."
 
 ## Changing the community question
 

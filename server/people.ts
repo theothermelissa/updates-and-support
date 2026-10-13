@@ -1,6 +1,9 @@
+import { newSignInLink, signInLinkUrl } from "./auth.js";
 import type { Db } from "./db.js";
+import { addedEmail, appUrl, type SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
-import type { Person } from "./generated/prisma/client.js";
+import { validNameAndEmail } from "./families.js";
+import type { Person, Prisma } from "./generated/prisma/client.js";
 
 const MAX_QUESTION = 500;
 const MAX_ANSWER = 200;
@@ -20,16 +23,21 @@ export function requireFamilyMember(person: Person) {
   if (person.role !== "family") throw new RequestError(403, "Only family members can do this");
 }
 
-// The People page: the family's supporters, active and removed, newest first, and the
-// community question. Family members only; supporters never see each other.
+// The People page: the family's members, its supporters (active and removed, newest
+// first), and the community question. Family members only; supporters never see each other.
 export async function listPeople(db: Db, person: Person) {
   requireFamilyMember(person);
   const family = await db.family.findUniqueOrThrow({
     where: { id: person.familyId },
-    include: { people: { where: { role: "supporter" }, orderBy: { createdAt: "desc" } } },
+    include: { people: { orderBy: { createdAt: "desc" } } },
   });
-  const supporters = family.people.map(supporterView);
+  const familyMembers = family.people
+    .filter((p) => p.role === "family" && !p.removedAt)
+    .reverse()
+    .map((p) => ({ id: p.id, name: p.name, email: p.email, isYou: p.id === person.id }));
+  const supporters = family.people.filter((p) => p.role === "supporter").map(supporterView);
   return {
+    familyMembers,
     supporters: supporters.filter((s) => !s.removedAt),
     removed: supporters.filter((s) => s.removedAt),
     question: family.question,
@@ -37,26 +45,111 @@ export async function listPeople(db: Db, person: Person) {
   };
 }
 
-// Removes or restores a supporter in the signed-in family member's own family. Removal
-// ends their sessions, cancels their unused links, and turns notifications off. Restoring
-// only clears the mark, so notifications stay off until the supporter turns them on.
-export async function setRemoved(db: Db, person: Person, id: string, removed: unknown): Promise<SupporterView> {
+// Adds a family member to the signed-in family member's family and emails them a sign-in
+// link. An email already in the family promotes a supporter or restores a removed person,
+// keeping their record; their sessions end so they sign in again as a family member.
+export async function addFamilyMember(
+  db: Db,
+  send: SendEmail,
+  person: Person,
+  input: { name?: unknown; email?: unknown },
+): Promise<{ name: string; outcome: "added" | "promoted" | "restored" }> {
+  requireFamilyMember(person);
+  const { name, email } = validNameAndEmail(input.name, input.email);
+  const family = await db.family.findUniqueOrThrow({ where: { id: person.familyId } });
+  const link = newSignInLink();
+
+  let outcome: "added" | "promoted" | "restored";
+  try {
+    outcome = await db.$transaction(async (tx) => {
+      const existing = await tx.person.findUnique({ where: { familyId_email: { familyId: family.id, email } } });
+      if (existing?.role === "family" && !existing.removedAt) throw alreadyFamily();
+      if (!existing) {
+        await tx.person.create({
+          data: { familyId: family.id, role: "family", name, email, magicLinks: { create: link.data } },
+        });
+        return "added";
+      }
+      await tx.person.update({
+        where: { id: existing.id },
+        data: { role: "family", name, removedAt: null, magicLinks: { create: link.data } },
+      });
+      await tx.session.deleteMany({ where: { personId: existing.id } });
+      return existing.role === "supporter" ? "promoted" : "restored";
+    });
+  } catch (err) {
+    // Another add of the same new email won the race. Caught outside the transaction,
+    // which the unique-constraint error has already aborted.
+    if ((err as { code?: string }).code === "P2002") throw alreadyFamily();
+    throw err;
+  }
+
+  // They're added either way; if the email fails, they can use Family sign-in.
+  try {
+    await send(
+      addedEmail(email, family.displayName, {
+        signIn: signInLinkUrl(family.slug, link.token),
+        signInPage: `${appUrl()}/f/${family.slug}/family`,
+      }),
+    );
+  } catch (err) {
+    console.error(`Added-family-member email failed at ${family.slug}:`, err);
+  }
+  return { name, outcome };
+}
+
+function alreadyFamily() {
+  return new RequestError(409, "That person is already a family member.");
+}
+
+// Removes or restores a supporter, or removes a family member, in the signed-in family
+// member's own family. Another family's people behave like IDs that don't exist.
+export async function setRemoved(db: Db, person: Person, id: string, removed: unknown): Promise<void> {
   requireFamilyMember(person);
   if (typeof removed !== "boolean") throw new RequestError(400, "Expected removed: true or false");
-  return db.$transaction(async (tx) => {
-    // Scoped by family and role: another family's supporter, or a family member, behaves
-    // like an ID that doesn't exist.
+  const target = await db.person.findFirst({ where: { id, familyId: person.familyId } });
+  if (!target) throw new RequestError(404, "Person not found");
+  if (target.role === "supporter") return setSupporterRemoved(db, person.familyId, id, removed);
+  if (!removed) throw new RequestError(400, "To restore a family member, add them again.");
+  if (id === person.id) throw new RequestError(400, "You can't remove yourself.");
+  return removeFamilyMember(db, person, id);
+}
+
+// Removal ends their sessions, cancels their unused links, and turns notifications off.
+// Restoring only clears the mark, so notifications stay off until the supporter turns them on.
+async function setSupporterRemoved(db: Db, familyId: string, id: string, removed: boolean) {
+  await db.$transaction(async (tx) => {
+    // The role stays in the filter: someone promoted since the lookup is no longer a supporter.
     const { count } = await tx.person.updateMany({
-      where: { id, familyId: person.familyId, role: "supporter" },
+      where: { id, familyId, role: "supporter" },
       data: removed ? { removedAt: new Date(), notificationsOn: false } : { removedAt: null },
     });
-    if (count === 0) throw new RequestError(404, "Supporter not found");
-    if (removed) {
-      await tx.session.deleteMany({ where: { personId: id } });
-      await tx.magicLink.deleteMany({ where: { personId: id, usedAt: null } });
-    }
-    return supporterView(await tx.person.findUniqueOrThrow({ where: { id } }));
+    if (count === 0) throw new RequestError(404, "Person not found");
+    if (removed) await endAccess(tx, id);
   });
+}
+
+// A family always keeps at least one family member. Removals in one family take turns on
+// the family's row, and each re-checks that the remover is still an active family member:
+// since no one can remove themselves, the remover always remains. That also stops a request
+// from someone removed a moment ago.
+async function removeFamilyMember(db: Db, person: Person, id: string) {
+  await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT 1 FROM "Family" WHERE id = ${person.familyId} FOR UPDATE`;
+    const remover = await tx.person.findFirst({ where: { id: person.id, role: "family", removedAt: null } });
+    if (!remover) throw new RequestError(403, "Only family members can do this");
+    const { count } = await tx.person.updateMany({
+      where: { id, familyId: person.familyId, role: "family", removedAt: null },
+      data: { removedAt: new Date() },
+    });
+    if (count === 0) throw new RequestError(404, "Person not found");
+    await endAccess(tx, id);
+  });
+}
+
+async function endAccess(tx: Prisma.TransactionClient, personId: string) {
+  await tx.session.deleteMany({ where: { personId } });
+  await tx.magicLink.deleteMany({ where: { personId, usedAt: null } });
 }
 
 // Changes the question and accepted answers. Affects only people joining afterwards.

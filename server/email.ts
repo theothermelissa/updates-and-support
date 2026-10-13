@@ -63,6 +63,14 @@ export function signInEmail(to: string, familyName: string, link: string): Email
   };
 }
 
+export function addedEmail(to: string, familyName: string, links: { signIn: string; signInPage: string }): Email {
+  return {
+    to,
+    subject: `You've been added to ${familyName}'s updates`,
+    text: `You've been added to ${familyName}'s updates as a family member. Sign in here:\n\n${links.signIn}\n\nThe link works once and expires in 15 minutes. After that, you can sign in any time here:\n${links.signInPage}`,
+  };
+}
+
 export function verificationEmail(to: string, familyName: string, link: string): Email {
   return {
     to,

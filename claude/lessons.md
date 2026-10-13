@@ -94,6 +94,8 @@ After writing an access-rule test, remove the rule it guards, watch the test fai
 
 **How to apply:** copy the file to the scratchpad before mutating it and restore from that copy. `git checkout` cannot restore a file that isn't committed yet, which nearly lost `server/auth.ts`.
 
+Two patterns hide a removed rule. A backstop check can mask the cleanup it backs up: removal's session and link deletion passed its test with the deletion gone, because `getSession` and `spendLink` refuse removed people anyway, so assert the cleanup directly. And a single concurrent race can come out right by timing alone: the family-member lock's test passed without the lock until it repeated the race 20 times.
+
 ### Don't use `confirm()`, `alert()`, or `prompt()`
 
 Ask for confirmation in the page itself, for example with inline "Yes / Cancel" buttons.
