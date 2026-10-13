@@ -63,13 +63,13 @@ src/App.tsx                   adds `verify` to the route pattern
 
 ## Milestones
 
-### 1. Schema
+### 1. Schema ✅
 
 Add `Person.emailVerifiedAt` and `MagicLink.purpose`, and create the migration.
 
 **Verify:** `npm run db:migrate` applies cleanly; `npm run typecheck` and `npm test` pass.
 
-### 2. Verification (server only)
+### 2. Verification (server only) ✅
 
 `sendVerification`, `verifyEmail`, the purpose check and verified flag in `signInWithLink`, the email text, and the call from joining.
 

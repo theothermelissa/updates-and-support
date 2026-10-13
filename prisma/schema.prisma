@@ -1,8 +1,8 @@
 // Database schema. Models are added as the spec defines them.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../server/generated/prisma"
+  provider            = "prisma-client"
+  output              = "../server/generated/prisma"
   // .js import extensions keep the generated code runnable in Vercel's Node runtime.
   importFileExtension = "js"
 }
@@ -31,12 +31,14 @@ enum Role {
 
 // Family members and supporters. An email belongs to at most one person in a family.
 model Person {
-  id        String   @id @default(cuid())
-  familyId  String
-  role      Role
-  name      String
-  email     String // lowercased and trimmed
-  createdAt DateTime @default(now())
+  id              String    @id @default(cuid())
+  familyId        String
+  role            Role
+  name            String
+  email           String // lowercased and trimmed
+  // Set when the person confirms their email or signs in by magic link.
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
 
   family     Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
   magicLinks MagicLink[]
@@ -46,13 +48,20 @@ model Person {
   @@unique([familyId, email])
 }
 
+// A sign-in link starts a session; a verify link only confirms the email.
+enum LinkPurpose {
+  sign_in
+  verify
+}
+
 model MagicLink {
-  id        String    @id @default(cuid())
+  id        String      @id @default(cuid())
   personId  String
-  tokenHash String    @unique
+  purpose   LinkPurpose @default(sign_in)
+  tokenHash String      @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime    @default(now())
 
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
