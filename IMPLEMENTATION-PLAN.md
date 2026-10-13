@@ -24,27 +24,30 @@ The work is split into milestones. Each one ends with a **Verify** step that pro
 
 ```
 Person     + emailVerifiedAt?
-MagicLink  + purpose ('sign_in' | 'verify'), default 'sign_in'
+MagicLink  + purpose (enum LinkPurpose: sign_in | verify), default sign_in
 ```
 
 Verification links reuse the magic-link table: same random token, stored only as a hash, single use. The `purpose` column keeps the two kinds apart, so a verification link can never sign anyone in and a sign-in link can never be spent on the verification page.
 
 ### Behavior
 
-- **Joining** creates the supporter and their session, as it does now, then sends a verification link that expires in 7 days. If sending fails, the error is logged and joining still succeeds.
+- **Joining** creates the supporter, their session, and a verification link (expiring in 7 days) in one nested create, then emails the link. If the email fails, the error is logged and joining still succeeds.
 - **Pressing "Confirm my email"** spends an unused, unexpired verification link for this family and sets `emailVerifiedAt`. It starts no session and sets no cookie.
 - **Signing in by magic link** also sets `emailVerifiedAt` if it isn't set yet, in the same transaction that spends the link.
+- **One shared `spendLink(tx, slug, token, purpose)`** finds a link and refuses it if it is missing, used, expired, for another family, or for the other purpose, all **before** marking it used, so a link pressed on the wrong page survives for its own. Both sign-in and verification call it, so their rules can't drift apart. Refusals are logged with their reason, never the token.
 - Verification links count toward the existing limit of 5 links per email per hour, which is harmless: joining creates one.
 
 ### Code layout
 
 ```
-server/auth.ts      signInWithLink() accepts only sign-in links and marks the email verified;
-                    sendVerification() and verifyEmail() added
+server/auth.ts      spendLink() shared by signInWithLink() (which now also marks the email
+                    verified) and verifyEmail()
 server/email.ts     verificationEmail()
-server/gate.ts      join sends the verification after creating the supporter
+server/gate.ts      join creates the verification link with the supporter and sends it,
+                    logging rather than failing if the send fails
 api/f/[slug]/auth/verify.ts   thin handler
 src/pages/Verify.tsx          the "Confirm my email" page
+src/App.tsx                   adds `verify` to the route pattern
 ```
 
 ### API
@@ -88,8 +91,8 @@ Integration tests against real Postgres, in `tests/integration/verify.test.ts`. 
 
 - Joining sends exactly one email, a verification link, to the new supporter, who is unverified until it is used.
 - Pressing confirm with that link marks the email verified and creates no session.
-- A verification link cannot sign anyone in, and a sign-in link cannot verify.
-- A verification link works once; after 7 days it fails; at another family's address it fails.
+- A verification link cannot sign anyone in, and a sign-in link cannot verify; each still works for its own purpose afterwards.
+- A verification link expires 7 days out and works once; once expired it fails; at another family's address it fails and still works at its own.
 - Signing in with a magic link marks the email verified.
 - If the verification email fails to send, joining still succeeds and the supporter is signed in.
 
@@ -97,4 +100,5 @@ Integration tests against real Postgres, in `tests/integration/verify.test.ts`. 
 
 - **No "resend verification" button.** Signing in by email verifies too. A resend can come later if supporters get stuck.
 - **Supporters who joined before this ships stay unverified** until they sign in by email. The notifications slice sends them a verification email before notifications launch.
+- **Local dev logs verification tokens.** Without `RESEND_API_KEY`, emails are printed to the console, token included. That's local only; previews and production send through Resend.
 - **Verification status isn't shown anywhere yet.** The family's supporter list, in the managing-people slice, shows it.
