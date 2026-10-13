@@ -2,6 +2,10 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
+- **2026-10-13** — Confirm the one-time verification send ran on production.
+  Supporters who joined before email verification shipped get no notifications until verified. If Melissa hasn't yet run `DATABASE_URL=<production> npm run verification:send`, remind her; it shows a count and asks before sending.
+- **2026-10-13** — Build slice 5, managing people: the last MVP feature.
+  Adding and removing family members, the family's supporter list (with verified and notification status), removing and restoring supporters (and refusing a removed supporter who tries to rejoin), and changing the community question. See `spec/access.md`. Settle the "supporter added as family member" question below while speccing it.
 - **2026-10-12** — Watch email deliverability through launch week.
   Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in and notification emails reach inboxes, whether Gmail starts showing its own "Unsubscribe" button (it hadn't for the first notifications, though the header is signed), tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
 - **2026-10-12** — Revisit the gate's per-network limit on shared networks.
