@@ -32,7 +32,7 @@ Family members can see their supporters, remove and restore them, and change the
 - `PATCH api/f/[slug]/people/[id]` with `{ removed: true | false }` removes or restores. The ID comes from the path, so it is always a string.
 - `PUT api/f/[slug]/question` with `{ question, answers }` changes the question.
 
-**UI.** `src/pages/People.tsx` at `/f/<slug>/people`, routed in `src/App.tsx`, linked from the feed header for family members only. Two tables (supporters, removed), a Remove button with `window.confirm`, a Restore button, and a form with the question and a textarea of answers, one per line. A supporter or visitor who opens the URL gets what the server allows: the page shows "Only family members can see this page," and the server returns no data.
+**UI.** `src/pages/People.tsx` at `/f/<slug>/people`, routed in `src/App.tsx`, linked from the feed header for family members only. Two tables (supporters, removed), a Remove button that asks inline (not `window.confirm`, which some in-app browsers suppress), a Restore button, and a form with the question and a textarea of answers, one per line. A supporter or visitor who opens the URL gets what the server allows: the page shows "Only family members can see this page," and the server returns no data.
 
 ## Steps
 
@@ -76,7 +76,7 @@ All integration tests against Postgres in `tests/integration/people.test.ts`, ex
 
 - No record of which family member removed whom, and no email to the removed person.
 - No search, sorting, or pagination on the People page. Families have tens of supporters, not thousands.
-- `window.confirm` for removal instead of a styled dialog.
+- A plain inline "Yes, remove / Cancel" for removal instead of a styled dialog.
 - Changing a supporter's name or email: not in the spec, not built.
 
 ## Progress and discoveries
@@ -84,3 +84,5 @@ All integration tests against Postgres in `tests/integration/people.test.ts`, ex
 Steps 1–6 are done. All access rules were removed one at a time to confirm their tests fail. Removal's link cleanup was at first masked by the per-door check in `spendLink`, so the removal test now asserts directly that no unused links remain.
 
 Verified by hand on a local fictional family: a supporter gets 403 on the People data; remove, the refused rejoin (no email sent), the question change, and restore (notifications off, sign-in by email works again) all behave as specified. At phone width the supporter table overflowed the page and hid the Remove button; it now scrolls inside its own container.
+
+Melissa's testing found that Remove did nothing in a browser that suppresses JavaScript dialogs: `confirm()` returned false silently. In-app browsers in email apps can do the same, and family members open sign-in links from email, so removal now asks inline.

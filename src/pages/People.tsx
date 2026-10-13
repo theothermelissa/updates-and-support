@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { api } from "../api.js";
 import { NotFound } from "./NotFound.js";
 
@@ -38,7 +38,6 @@ export function People({ slug }: { slug: string }) {
   useEffect(load, [slug]);
 
   async function setRemoved(supporter: Supporter, removed: boolean) {
-    if (removed && !confirm(`Remove ${supporter.name}? They'll be signed out and can't rejoin with this email.`)) return;
     const { status, data } = await api<{ error?: string }>(slug, `people/${supporter.id}`, {
       method: "PATCH",
       body: { removed },
@@ -86,7 +85,12 @@ export function People({ slug }: { slug: string }) {
       {people.supporters.length === 0 ? (
         <p>No supporters have joined yet.</p>
       ) : (
-        <SupporterTable rows={people.supporters} action="Remove" onAction={(s) => setRemoved(s, true)} />
+        <SupporterTable
+          rows={people.supporters}
+          action="Remove"
+          confirm={(s) => `Remove ${s.name}? They'll be signed out and can't rejoin with this email.`}
+          onAction={(s) => setRemoved(s, true)}
+        />
       )}
 
       {people.removed.length > 0 && (
@@ -126,12 +130,17 @@ export function People({ slug }: { slug: string }) {
 function SupporterTable({
   rows,
   action,
+  confirm,
   onAction,
 }: {
   rows: Supporter[];
   action: string;
+  // Asks inline rather than with confirm(), which some in-app email browsers suppress.
+  confirm?: (s: Supporter) => string;
   onAction: (s: Supporter) => void;
 }) {
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const showRemoved = rows.some((r) => r.removedAt);
   // Scrolls sideways on its own on narrow phones, so the page itself never does.
   return (
     <div style={{ overflowX: "auto" }}>
@@ -143,23 +152,41 @@ function SupporterTable({
             <th>Verified</th>
             <th>Notifications</th>
             <th>Joined</th>
-            {rows.some((r) => r.removedAt) && <th>Removed</th>}
+            {showRemoved && <th>Removed</th>}
             <th />
           </tr>
         </thead>
         <tbody>
           {rows.map((s) => (
-            <tr key={s.id}>
-              <td>{s.name}</td>
-              <td>{s.email}</td>
-              <td>{s.emailVerified ? "Yes" : "Not yet"}</td>
-              <td>{s.notificationsOn ? "On" : "Off"}</td>
-              <td>{date(s.joinedAt)}</td>
-              {s.removedAt && <td>{date(s.removedAt)}</td>}
-              <td>
-                <button onClick={() => onAction(s)}>{action}</button>
-              </td>
-            </tr>
+            <Fragment key={s.id}>
+              <tr>
+                <td>{s.name}</td>
+                <td>{s.email}</td>
+                <td>{s.emailVerified ? "Yes" : "Not yet"}</td>
+                <td>{s.notificationsOn ? "On" : "Off"}</td>
+                <td>{date(s.joinedAt)}</td>
+                {s.removedAt && <td>{date(s.removedAt)}</td>}
+                <td>
+                  <button onClick={() => (confirm ? setConfirming(s.id) : onAction(s))}>{action}</button>
+                </td>
+              </tr>
+              {confirm && confirming === s.id && (
+                <tr>
+                  <td colSpan={showRemoved ? 7 : 6}>
+                    {confirm(s)}{" "}
+                    <button
+                      onClick={() => {
+                        setConfirming(null);
+                        onAction(s);
+                      }}
+                    >
+                      Yes, {action.toLowerCase()}
+                    </button>{" "}
+                    <button onClick={() => setConfirming(null)}>Cancel</button>
+                  </td>
+                </tr>
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>
