@@ -49,7 +49,7 @@ When a limit is reached, the gate says "Too many attempts. Please try again late
 
 ### Returning on a new device
 
-The gate offers "Already joined? Sign in by email." The supporter enters their email and gets a magic link (see "Magic links"). Using the link signs them in on that device and marks their email verified.
+The gate offers "Already joined? Sign in by email." The supporter enters their email and gets a magic link (see "Magic links"), unless they have been removed. Using the link signs them in on that device and marks their email verified.
 
 ### Signing out and notifications
 
@@ -59,7 +59,7 @@ A signed-in supporter can sign out on the current device and can turn notificati
 
 ### Signing in
 
-Family members always sign in by magic link. The family's gate offers "Family sign-in," which asks for an email. If the email belongs to anyone in that family, a magic link is sent (see "Magic links"). The page says "Check your email" whether or not the email is known.
+Family members always sign in by magic link. The family's gate offers "Family sign-in," which asks for an email. If the email belongs to anyone in that family who hasn't been removed, a magic link is sent (see "Magic links"). The page says "Check your email" whether or not the email is known.
 
 A family member never needs to answer the community question.
 
@@ -86,13 +86,24 @@ Magic links are how supporters return on a new device and how family members alw
 
 ## Managing supporters
 
-Family members see a list of the family's supporters: name, email, whether the email is verified, whether notifications are on, and when they joined. Supporters never see this list or each other's details.
+Family members have a **People** page, at `/f/<slug>/people` and linked from the feed, listing the family's supporters: name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. Supporters never see this page, this list, or each other's details; the server refuses the list to anyone but a family member of that family.
 
-A family member can **remove** a supporter. Removal ends the supporter's sessions immediately and stops their notifications. The record is kept, marked removed, so that the same email cannot join again. A family member can restore a removed supporter.
+A family member can **remove** a supporter after confirming. Removal:
+
+- ends all of the supporter's sessions immediately,
+- cancels any unused sign-in links already sent to them,
+- stops their notifications,
+- keeps the record, marked removed, so the same email cannot join again.
+
+A removed supporter cannot sign in by email: "Already joined? Sign in by email" and "Family sign-in" send them nothing, and the page still says "Check your email." Joining with their email shows the refusal described in "Joining."
+
+A family member can **restore** a removed supporter. Restoring lets them sign in by email again and leaves their notifications **off**; they can turn notifications back on themselves once signed in. Restoring does not sign them in anywhere.
+
+Only supporters can be removed or restored from the People page. Family members are managed under "Adding family members."
 
 ## Changing the community question
 
-A family member can change the question and its accepted answers at any time. The change affects only people joining afterwards; no one already signed in is signed out.
+The People page also shows the community question and its accepted answers, and a family member can change them at any time. A question must not be empty and needs at least one non-empty accepted answer; answers are entered one per line. The change affects only people joining afterwards; no one already signed in is signed out.
 
 ## Stated limits
 

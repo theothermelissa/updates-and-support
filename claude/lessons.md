@@ -94,6 +94,14 @@ After writing an access-rule test, remove the rule it guards, watch the test fai
 
 **How to apply:** copy the file to the scratchpad before mutating it and restore from that copy. `git checkout` cannot restore a file that isn't committed yet, which nearly lost `server/auth.ts`.
 
+### Don't use `confirm()`, `alert()`, or `prompt()`
+
+Ask for confirmation in the page itself, for example with inline "Yes / Cancel" buttons.
+
+**Why:** the desktop app's browser pane suppresses JavaScript dialogs, and so do some in-app browsers in email apps, which is where family members open sign-in links. `confirm()` then returns false silently, and the action does nothing. Remove on the People page failed exactly this way in Melissa's testing.
+
+**How to apply:** any destructive action gets an inline confirmation step. When testing in the browser pane, check the console for "Page dialog suppressed".
+
 ### `vercel dev` and previews differ from production
 
 `vercel dev` ignores `vercel.json` headers on pages served by Vite, overrides `Cache-Control` on functions with its own, and doesn't notice newly added files in `api/` until restarted. Previews sit behind Vercel's login, whose redirect drops query strings.

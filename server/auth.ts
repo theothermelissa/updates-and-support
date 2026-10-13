@@ -11,8 +11,8 @@ const LINKS_PER_HOUR = 5;
 export const VERIFY_LINK_LIFETIME = 7 * DAY;
 export const SESSION_LIFETIME = { family: 30 * DAY, supporter: 180 * DAY } as const;
 
-// Sends a magic link if the email belongs to someone in the family, within the rate
-// limit. Returns nothing either way, so callers can't learn who is a member.
+// Sends a magic link if the email belongs to someone in the family who hasn't been
+// removed, within the rate limit. Returns nothing either way, so callers can't learn who is a member.
 export async function requestSignInLink(
   db: Db,
   send: SendEmail,
@@ -20,7 +20,7 @@ export async function requestSignInLink(
   email: string,
 ): Promise<void> {
   const person = await db.person.findFirst({
-    where: { email: normalizeEmail(email), family: { slug } },
+    where: { email: normalizeEmail(email), family: { slug }, removedAt: null },
     include: { family: true },
   });
   if (!person) return;
@@ -115,7 +115,9 @@ async function spendLink(
           ? "link expired"
           : link.person.family.slug !== slug
             ? "link is for another family"
-            : null;
+            : link.person.removedAt
+              ? "person removed"
+              : null;
   if (refusal || !link) {
     console.warn(`${purpose} link refused at ${slug}: ${refusal}`);
     return null;
@@ -136,14 +138,15 @@ async function markVerified(tx: Prisma.TransactionClient, person: Person): Promi
   return tx.person.update({ where: { id: person.id }, data: { emailVerifiedAt: new Date() } });
 }
 
-// The person signed in with this session token in this family, or null.
+// The person signed in with this session token in this family, or null. A removed
+// person's sessions are deleted on removal; checking here too covers any that slip past.
 export async function getSession(db: Db, slug: string, token: string): Promise<Person | null> {
   const session = await db.session.findUnique({
     where: { tokenHash: hashToken(token) },
     include: { person: { include: { family: true } } },
   });
   if (!session || session.expiresAt <= new Date()) return null;
-  if (session.person.family.slug !== slug) return null;
+  if (session.person.family.slug !== slug || session.person.removedAt) return null;
   const { family: _family, ...person } = session.person;
   return person;
 }

@@ -6,14 +6,14 @@ import type { Person } from "./generated/prisma/client.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Emails every verified, opted-in supporter of the family that there's a new update.
-// Family members and unverified or opted-out supporters get nothing.
+// Emails every verified, opted-in, active supporter of the family that there's a new
+// update. Family members and unverified, opted-out, or removed supporters get nothing.
 export async function notifySupporters(db: Db, send: SendEmails, familyId: string): Promise<void> {
   const family = await db.family.findUniqueOrThrow({
     where: { id: familyId },
     include: {
       people: {
-        where: { role: "supporter", emailVerifiedAt: { not: null }, notificationsOn: true },
+        where: { role: "supporter", emailVerifiedAt: { not: null }, notificationsOn: true, removedAt: null },
         select: { email: true, unsubscribeToken: true },
       },
     },
@@ -48,10 +48,10 @@ export async function setNotifications(db: Db, person: Person, on: unknown): Pro
   return db.person.update({ where: { id: person.id }, data: { notificationsOn: on } });
 }
 
-// Supporters who haven't verified their email, for the one-time verification send.
+// Active supporters who haven't verified their email, for the one-time verification send.
 export function unverifiedSupporters(db: Db) {
   return db.person.findMany({
-    where: { role: "supporter", emailVerifiedAt: null },
+    where: { role: "supporter", emailVerifiedAt: null, removedAt: null },
     include: { family: true },
   });
 }

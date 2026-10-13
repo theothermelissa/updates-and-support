@@ -17,7 +17,7 @@ beforeEach(() => resetDb(db));
 
 const SECRET = "Biopsy results came back on Tuesday";
 
-async function supporter(familyId: string, name: string, options: { verified?: boolean; on?: boolean } = {}) {
+async function supporter(familyId: string, name: string, options: { verified?: boolean; on?: boolean; removed?: boolean } = {}) {
   return db.person.create({
     data: {
       familyId,
@@ -26,6 +26,7 @@ async function supporter(familyId: string, name: string, options: { verified?: b
       email: `${name.toLowerCase()}@example.com`,
       emailVerifiedAt: options.verified === false ? null : new Date(),
       notificationsOn: options.on ?? true,
+      removedAt: options.removed ? new Date() : null,
     },
   });
 }
@@ -41,6 +42,8 @@ async function setUp() {
     sam: await supporter(family.id, "Sam"),
     una: await supporter(family.id, "Una", { verified: false }),
     otto: await supporter(family.id, "Otto", { on: false }),
+    // Removed, but still verified and opted in, so only the removed check keeps them out.
+    rex: await supporter(family.id, "Rex", { removed: true }),
     olu: await supporter(okafor.id, "Olu"),
   };
   return { family, okafor, ...people };
@@ -50,7 +53,7 @@ async function notificationsOn(person: Person) {
   return (await db.person.findUniqueOrThrow({ where: { id: person.id } })).notificationsOn;
 }
 
-it("emails only this family's verified, opted-in supporters", async () => {
+it("emails only this family's verified, opted-in, active supporters", async () => {
   const { ana } = await setUp();
   const mail = fakeMailer();
   await createUpdate(db, ana, SECRET, mail.sendMany);
@@ -120,9 +123,10 @@ it("lets a supporter turn their own notifications off and on, but not a family m
   await expect(setNotifications(db, ana, false)).rejects.toMatchObject({ status: 403 });
 });
 
-it("sends one-time verification emails only to unverified supporters", async () => {
-  const { okafor, una } = await setUp();
+it("sends one-time verification emails only to unverified, active supporters", async () => {
+  const { family, okafor, una } = await setUp();
   await supporter(okafor.id, "Uri", { verified: false });
+  await supporter(family.id, "Ula", { verified: false, removed: true });
   const mail = fakeMailer();
 
   const pending = await unverifiedSupporters(db);

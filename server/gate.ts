@@ -76,6 +76,9 @@ async function join(
   const known = await db.person.findUnique({
     where: { familyId_email: { familyId: family.id, email: joiner.email } },
   });
+  if (known?.removedAt) {
+    throw new RequestError(403, "This email can't join this family's updates. Please contact the family.");
+  }
   if (known) return sendLinkInstead(db, send, family, joiner.email);
 
   const sessionToken = newToken();
