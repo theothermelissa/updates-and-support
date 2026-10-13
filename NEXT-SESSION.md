@@ -2,10 +2,10 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
-- **2026-10-12** — Spec the supporter gate (slice 2).
-  Families can post as of this slice, but supporters can't read anything until the gate lands. It's the next feature; slices 3 (notifications) and 4 (managing people) follow, as listed in the completed plan for families and updates.
 - **2026-10-12** — Watch email deliverability through launch week.
   Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in emails reach inboxes, tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
+- **2026-10-12** — Revisit the gate's per-network limit on shared networks.
+  Once a network reaches 30 wrong answers in an hour, every answer from it is refused, correct ones included. So one guesser on hospital or school Wi-Fi can lock out real supporters there for an hour. Watch for reports after the gate ships; if it happens, consider letting a correct answer through for a browser with no wrong answers of its own.
 - **2026-10-12** — Decide what happens when a family adds a supporter as a family member.
   An email belongs to at most one person in a family, so adding a supporter's email as a family member needs a rule: promote the supporter, or refuse. Settle it when speccing slice 4 (managing people).
 - **2026-10-12** — Run a manual Reddit search on CaringBridge and alternatives.
