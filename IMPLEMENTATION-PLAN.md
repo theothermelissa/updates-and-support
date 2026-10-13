@@ -40,7 +40,7 @@ Family members can see their supporters, remove and restore them, and change the
 2. **Removal at every door.** Apply the table above in `auth.ts`, `gate.ts`, and `notifications.ts`.
 3. **`server/people.ts`.** The four functions, with `requireFamilyMember` moved in.
 4. **Integration tests** (below). Prove each access test can fail by removing its rule.
-5. **Endpoints** (done) `people/index.ts`, `people/[id].ts`, and `question.ts`.
+5. **Endpoints** `people/index.ts`, `people/[id].ts`, and `question.ts`.
 6. **UI.** People page, route, feed link. Verify in the browser.
 7. **Ship.** Typecheck, tests, PR, preview check, merge on Melissa's OK.
 
@@ -78,3 +78,9 @@ All integration tests against Postgres in `tests/integration/people.test.ts`, ex
 - No search, sorting, or pagination on the People page. Families have tens of supporters, not thousands.
 - `window.confirm` for removal instead of a styled dialog.
 - Changing a supporter's name or email: not in the spec, not built.
+
+## Progress and discoveries
+
+Steps 1–6 are done. All access rules were removed one at a time to confirm their tests fail. Removal's link cleanup was at first masked by the per-door check in `spendLink`, so the removal test now asserts directly that no unused links remain.
+
+Verified by hand on a local fictional family: a supporter gets 403 on the People data; remove, the refused rejoin (no email sent), the question change, and restore (notifications off, sign-in by email works again) all behave as specified. At phone width the supporter table overflowed the page and hid the Remove button; it now scrolls inside its own container.

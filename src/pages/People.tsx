@@ -23,7 +23,7 @@ export function People({ slug }: { slug: string }) {
   const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   function load() {
     api<People>(slug, "people").then(({ status, data }) => {
@@ -43,8 +43,8 @@ export function People({ slug }: { slug: string }) {
       method: "PATCH",
       body: { removed },
     });
-    if (status !== 200) return setMessage(data?.error ?? "Something went wrong. Please try again.");
-    setMessage("");
+    if (status !== 200) return setMessage({ text: data?.error ?? "Something went wrong. Please try again.", error: true });
+    setMessage(null);
     load();
   }
 
@@ -54,7 +54,11 @@ export function People({ slug }: { slug: string }) {
       method: "PUT",
       body: { question, answers: answers.split("\n") },
     });
-    setMessage(status === 200 ? "Question saved." : (data?.error ?? "Something went wrong. Please try again."));
+    setMessage(
+      status === 200
+        ? { text: "Question saved.", error: false }
+        : { text: data?.error ?? "Something went wrong. Please try again.", error: true },
+    );
     if (status === 200) load();
   }
 
@@ -76,7 +80,7 @@ export function People({ slug }: { slug: string }) {
         <a href={`/f/${slug}`}>Back to updates</a>
       </p>
       <h1>People</h1>
-      {message && <p className="error">{message}</p>}
+      {message && <p className={message.error ? "error" : undefined}>{message.text}</p>}
 
       <h2>Supporters ({people.supporters.length})</h2>
       {people.supporters.length === 0 ? (
@@ -128,34 +132,37 @@ function SupporterTable({
   action: string;
   onAction: (s: Supporter) => void;
 }) {
+  // Scrolls sideways on its own on narrow phones, so the page itself never does.
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Verified</th>
-          <th>Notifications</th>
-          <th>Joined</th>
-          {rows.some((r) => r.removedAt) && <th>Removed</th>}
-          <th />
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((s) => (
-          <tr key={s.id}>
-            <td>{s.name}</td>
-            <td>{s.email}</td>
-            <td>{s.emailVerified ? "Yes" : "Not yet"}</td>
-            <td>{s.notificationsOn ? "On" : "Off"}</td>
-            <td>{date(s.joinedAt)}</td>
-            {s.removedAt && <td>{date(s.removedAt)}</td>}
-            <td>
-              <button onClick={() => onAction(s)}>{action}</button>
-            </td>
+    <div style={{ overflowX: "auto" }}>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Verified</th>
+            <th>Notifications</th>
+            <th>Joined</th>
+            {rows.some((r) => r.removedAt) && <th>Removed</th>}
+            <th />
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((s) => (
+            <tr key={s.id}>
+              <td>{s.name}</td>
+              <td>{s.email}</td>
+              <td>{s.emailVerified ? "Yes" : "Not yet"}</td>
+              <td>{s.notificationsOn ? "On" : "Off"}</td>
+              <td>{date(s.joinedAt)}</td>
+              {s.removedAt && <td>{date(s.removedAt)}</td>}
+              <td>
+                <button onClick={() => onAction(s)}>{action}</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
