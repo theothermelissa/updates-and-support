@@ -1,5 +1,5 @@
 import type { Db } from "../../server/db.js";
-import type { Email, SendEmail } from "../../server/email.js";
+import type { Email, SendEmail, SendEmails } from "../../server/email.js";
 import { createFamily } from "../../server/families.js";
 
 export async function resetDb(db: Db) {
@@ -29,7 +29,10 @@ export function fakeMailer() {
   const send: SendEmail = async (email) => {
     sent.push(email);
   };
-  return { sent, send };
+  const sendMany: SendEmails = async (emails) => {
+    sent.push(...emails);
+  };
+  return { sent, send, sendMany };
 }
 
 export function tokenFrom(email: Email): string {

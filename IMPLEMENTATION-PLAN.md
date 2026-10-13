@@ -76,13 +76,13 @@ src/pages/Unsubscribe.tsx, the post form's checkbox, the supporter's checkbox; s
 
 ## Milestones
 
-### 1. Schema
+### 1. Schema ✅
 
 Add the two `Person` columns and create the migration.
 
 **Verify:** `npm run db:migrate` applies cleanly, existing supporters get distinct tokens, and `npm run typecheck` and `npm test` pass.
 
-### 2. Notifications (server only)
+### 2. Notifications (server only) ✅
 
 `sendEmails`, the email text, `notifySupporters`, `unsubscribe`, `setNotifications`, `sendPendingVerifications`, and the optional sender on `createUpdate`.
 
@@ -116,3 +116,10 @@ Integration tests against real Postgres, in `tests/integration/notifications.tes
 - **Send failures are only logged.** The family isn't told when notifications fail to go out.
 - **Unsubscribe tokens are stored unhashed.** They can only turn off one person's notifications.
 - **No preference beyond on/off.** No digests or per-update choices.
+
+## Discoveries
+
+- **`prisma migrate dev` can't confirm warnings without a terminal.** Adding a unique column prompts for confirmation, which fails in a non-interactive shell. The migration was generated with `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` and applied with `prisma migrate deploy`.
+- **The one-time verification send can't use `appUrl()`.** Run locally against production, it would read `APP_URL` from the local `.env` (localhost) and email real supporters localhost links. `sendVerifications` takes the site address explicitly, and the script passes the production address.
+- **A test of "family members aren't notified" needs a verified family member.** With an unverified one, the verified-only filter hid a missing role filter.
+
