@@ -105,7 +105,7 @@ Add `GateAttempt` and create the migration.
 
 **Verify:** the integration tests below pass, and each access test fails when the rule it guards is removed.
 
-### 4. Gate API
+### 4. Gate API ✅
 
 The `gate` handler, the browser cookie, appending cookies, and `clientOf`.
 
@@ -157,3 +157,4 @@ Integration tests against real Postgres, in `tests/integration/gate.test.ts`. Ea
 ## Discoveries
 
 - **The unique `(familyId, email)` constraint backs up the known-email check.** With the `findUnique` check removed, joining with a known email still hits Prisma error `P2002` through the Postgres adapter and falls back to sending a sign-in link, so every test still passes. The check stays for the common path; the constraint covers races.
+- **`vercel dev` doesn't pick up new API files.** After adding `api/f/[slug]/gate.ts`, every family route returned Vercel's 404 until the dev server was restarted.
