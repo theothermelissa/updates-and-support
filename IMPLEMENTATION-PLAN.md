@@ -88,3 +88,9 @@ Integration tests in `tests/integration/people.test.ts`.
 - The "added" email doesn't say who added them.
 - Renaming on promote or restore relabels that person's earlier updates, since author names are read live. That's acceptable; it's the same person.
 - Promoted supporters stop getting notification emails, as family members never get them.
+
+## Progress and discoveries
+
+Steps 1–5 are done. Each new rule was removed in turn to confirm its test fails. Two passed at first: family-member removal's cleanup, which the per-entry-point removed checks masked, so the test now asserts directly that no sessions or unused links remain; and the row lock, which a single concurrent race can satisfy by timing alone. The race test now repeats 20 times. Without the lock it failed 3 of 3 runs, and with the lock it passed 3 of 3.
+
+Verified by hand on the local Test Family: add with inline confirmation, the "added" email in the server log, the 409 for an existing family member, removal with inline confirmation, and no sideways scrolling at phone width.
