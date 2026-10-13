@@ -75,7 +75,7 @@ Add `Person.emailVerifiedAt` and `MagicLink.purpose`, and create the migration.
 
 **Verify:** the integration tests below pass, and each access test fails when the rule it guards is removed.
 
-### 3. API and page
+### 3. API and page ✅
 
 The `auth/verify` handler, the verify page, and its route.
 
