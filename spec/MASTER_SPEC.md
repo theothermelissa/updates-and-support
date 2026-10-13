@@ -21,7 +21,7 @@ A person who is both a supporter and a family member of different families has a
 ### MVP
 
 - Operator creates a family with a script. → [access.md](access.md)
-- Family members sign in with magic links and can add other family members. → [access.md](access.md)
+- Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
 - Supporters join by answering the family's community question and giving their name and email; they return by magic link on new devices. → [access.md](access.md)
 - Family members manage the supporter list and the community question. → [access.md](access.md)
 - Family members post, edit, and delete text updates; everyone signed in to the family reads them in a feed. → [updates.md](updates.md)
