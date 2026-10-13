@@ -26,7 +26,9 @@ A visitor to a family's address who is not signed in sees the **gate**: the fami
 1. The visitor answers the question.
 2. On a correct answer, they enter their name and email.
 3. They are signed in on that device immediately and see the feed.
-4. A verification email is sent in the background. It contains a link to a page with a "Confirm my email" button; pressing the button marks the email verified. The button, rather than the link alone, keeps email security scanners that open links from confirming on the person's behalf.
+4. A verification email is sent. It contains a link to a page with a "Confirm my email" button; pressing the button marks the email verified. The button, rather than the link alone, keeps email security scanners that open links from confirming on the person's behalf. If the email can't be sent, joining still succeeds; the supporter can verify later by signing in by email.
+
+A verification link works once, for 7 days, and only verifies: it never signs anyone in. Verification emails are the kind people leave in their inbox or forward, so a link that signed people in would hand a long session to whoever received the forward.
 
 If the email already belongs to someone in this family, supporter or family member, the visitor is not signed in as that person. Instead a magic link is sent to that email, as in "Returning on a new device." The page says the same thing whether or not the email was already known: "Check your email."
 

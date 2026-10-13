@@ -34,3 +34,11 @@ export function signInEmail(to: string, familyName: string, link: string): Email
     text: `Use this link to sign in to ${familyName}'s updates:\n\n${link}\n\nIt works once and expires in 15 minutes. If you didn't ask for it, you can ignore this email.`,
   };
 }
+
+export function verificationEmail(to: string, familyName: string, link: string): Email {
+  return {
+    to,
+    subject: `Confirm your email for ${familyName}'s updates`,
+    text: `Thanks for joining ${familyName}'s updates. Please confirm your email so the family can reach you:\n\n${link}\n\nThe link works once and expires in 7 days. If you didn't join, you can ignore this email.`,
+  };
+}

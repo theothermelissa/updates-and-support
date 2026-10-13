@@ -1,7 +1,7 @@
 import { isCorrectAnswer } from "./answers.js";
-import { requestSignInLink, SESSION_LIFETIME } from "./auth.js";
+import { newVerificationLink, requestSignInLink, SESSION_LIFETIME } from "./auth.js";
 import type { Db } from "./db.js";
-import type { SendEmail } from "./email.js";
+import { appUrl, verificationEmail, type SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
 import { isValidEmail, normalizeEmail } from "./families.js";
 import type { Family, Person } from "./generated/prisma/client.js";
@@ -79,8 +79,10 @@ async function join(
   if (known) return sendLinkInstead(db, send, family, joiner.email);
 
   const sessionToken = newToken();
+  const verification = newVerificationLink();
+  let person: Person;
   try {
-    const person = await db.person.create({
+    person = await db.person.create({
       data: {
         familyId: family.id,
         role: "supporter",
@@ -91,14 +93,24 @@ async function join(
             expiresAt: new Date(Date.now() + SESSION_LIFETIME.supporter),
           },
         },
+        magicLinks: { create: verification.data },
       },
     });
-    return { result: "joined", sessionToken, person };
   } catch (err) {
     // Another join with the same email won the race; treat it as a known email.
     if ((err as { code?: string }).code === "P2002") return sendLinkInstead(db, send, family, joiner.email);
     throw err;
   }
+
+  // They've joined either way; a failed email only delays verification, which signing
+  // in by email also does.
+  const link = `${appUrl()}/f/${family.slug}/verify#token=${verification.token}`;
+  try {
+    await send(verificationEmail(person.email, family.displayName, link));
+  } catch (err) {
+    console.error(`Verification email failed at ${family.slug}:`, err);
+  }
+  return { result: "joined", sessionToken, person };
 }
 
 // An email already in the family gets a sign-in link, never a new session.
