@@ -53,7 +53,7 @@ The gate offers "Already joined? Sign in by email." The supporter enters their e
 
 ### Signing out and notifications
 
-A signed-in supporter can sign out on the current device and can turn notification emails off or back on. Every notification email has a one-click unsubscribe link that turns notifications off without signing in.
+A signed-in supporter can sign out on the current device and can turn notification emails off or back on. Every notification email lets them turn notifications off without signing in (see [updates.md](updates.md#notifications)).
 
 ## Family members
 

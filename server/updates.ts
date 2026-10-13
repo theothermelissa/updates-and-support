@@ -1,6 +1,8 @@
 import type { Db } from "./db.js";
+import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
+import { notifySupporters } from "./notifications.js";
 
 const MAX_BODY = 20_000;
 
@@ -22,12 +24,26 @@ export async function listUpdates(db: Db, person: Person): Promise<UpdateView[]>
   return updates.map(view);
 }
 
-export async function createUpdate(db: Db, person: Person, body: unknown): Promise<UpdateView> {
+// With a sender, also emails supporters that there's a new update. The update is saved
+// first and stays posted even if the emails fail.
+export async function createUpdate(
+  db: Db,
+  person: Person,
+  body: unknown,
+  notifyWith?: SendEmails,
+): Promise<UpdateView> {
   requireFamilyMember(person);
   const update = await db.update.create({
     data: { familyId: person.familyId, authorId: person.id, body: validBody(body) },
     include: { author: { select: { name: true } } },
   });
+  if (notifyWith) {
+    try {
+      await notifySupporters(db, notifyWith, person.familyId);
+    } catch (err) {
+      console.error(`Notifications failed for family ${person.familyId}: ${(err as Error).message}`);
+    }
+  }
   return view(update);
 }
 

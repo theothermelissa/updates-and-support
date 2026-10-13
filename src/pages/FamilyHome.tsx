@@ -16,6 +16,14 @@ export function FamilyHome({ slug }: { slug: string }) {
 
   useEffect(load, [slug]);
 
+  async function setNotifications(on: boolean) {
+    const { status, data } = await api<{ person: Me["person"] }>(slug, "notifications", {
+      method: "POST",
+      body: { on },
+    });
+    if (status === 200 && typeof me === "object") setMe({ ...me, person: data.person });
+  }
+
   async function signOut() {
     await api(slug, "auth/sign-out", { method: "POST" });
     setMe("signed-out");
@@ -30,6 +38,25 @@ export function FamilyHome({ slug }: { slug: string }) {
       <p>
         Signed in as {me.person.name}. <button onClick={signOut}>Sign out</button>
       </p>
+      {me.person.role === "supporter" && (
+        <p>
+          <label>
+            <input
+              type="checkbox"
+              checked={me.person.notificationsOn}
+              onChange={(e) => setNotifications(e.target.checked)}
+            />{" "}
+            Email me when there's a new update
+          </label>
+          {me.person.notificationsOn && !me.person.emailVerified && (
+            <>
+              <br />
+              Emails start once you confirm your address: look for a "Confirm your email" message, or sign in
+              by email once.
+            </>
+          )}
+        </p>
+      )}
       <Feed slug={slug} canEdit={me.person.role === "family"} />
     </main>
   );

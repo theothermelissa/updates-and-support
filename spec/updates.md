@@ -33,5 +33,7 @@ A family member can delete any update in their family after confirming. Deletion
 When an update is posted with "Notify supporters by email" checked, every supporter of the family who has a verified email, has notifications on, and has not been removed gets one email.
 
 - The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content.
-- Each email has a one-click unsubscribe link and a `List-Unsubscribe` header.
+- Each email has an unsubscribe link to a page with a "Turn off notifications" button, which works without signing in. The button, rather than the link alone, keeps email security scanners that open links from unsubscribing people.
+- Each email also has `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so mail apps that offer their own "Unsubscribe" button can turn notifications off in one click. Scanners don't send that request.
 - Family members are not notified.
+- If the emails can't be sent, the update is still posted.

@@ -32,7 +32,7 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
 
   return (
     <section>
-      {canEdit && <PostForm onPost={(body) => change("updates", "POST", { body })} />}
+      {canEdit && <PostForm onPost={(body, notify) => change("updates", "POST", { body, notify })} />}
       {error && <p className="error">{error}</p>}
       {updates?.length === 0 && <p>No updates yet.</p>}
       {updates?.map((update) => (
@@ -48,14 +48,18 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
   );
 }
 
-function PostForm({ onPost }: { onPost: (body: string) => Promise<boolean> }) {
+function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promise<boolean> }) {
   const [body, setBody] = useState("");
+  const [notify, setNotify] = useState(true);
   const [posting, setPosting] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setPosting(true);
-    if (await onPost(body)) setBody("");
+    if (await onPost(body, notify)) {
+      setBody("");
+      setNotify(true);
+    }
     setPosting(false);
   }
 
@@ -63,6 +67,12 @@ function PostForm({ onPost }: { onPost: (body: string) => Promise<boolean> }) {
     <form onSubmit={submit}>
       <h2>Post an update</h2>
       <textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
+      <p>
+        <label>
+          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Notify
+          supporters by email
+        </label>
+      </p>
       <button disabled={posting || !body.trim()}>Post</button>
     </form>
   );
