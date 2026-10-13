@@ -36,6 +36,14 @@ Every prose or plan document should make sense on its own, to someone who has ne
 
 **How to apply:** when editing, rewrite affected passages so they describe the current state directly. History belongs in git and in `docs/completed-plans/`.
 
+### Hand Melissa a ready preview link
+
+When a PR's preview has built, run `npm run preview:seed` and `npm run preview` yourself, check the gate result, and give Melissa the test family's link with what to try. Don't send her to Neon, the terminal, or Vercel to set up a test.
+
+**Why:** setting up each preview by hand (copying a connection string, running the family script, finding the URL) was tedious and error-prone, and she asked for it to be automated.
+
+**How to apply:** the scripts are described in README → Deployment. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers.
+
 ### Get a second opinion on plans that touch access
 
 Before building a plan that changes who can see or do what, have a subagent review it against the spec and the existing code for safety gaps and simplifications.

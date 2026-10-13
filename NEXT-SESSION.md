@@ -4,8 +4,6 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 - **2026-10-12** — Build notifications.
   The second half of the original slice 3, deferred so email verification could ship first: notification emails to verified supporters, the "Notify supporters by email" checkbox, turning notifications on and off, and one-click unsubscribe. Before it launches, send verification emails to supporters who joined before verification shipped.
-- **2026-10-12** — Stop copying production data into preview databases.
-  Neon creates each preview's database branch as a copy of production, so every preview now holds real families' health updates. Previews sit behind Vercel's login, but the data shouldn't spread further than it must. Have previews branch from an empty, schema-only parent instead, and test there with fictional families.
 - **2026-10-12** — Watch email deliverability through launch week.
   Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in emails reach inboxes, tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
 - **2026-10-12** — Revisit the gate's per-network limit on shared networks.
@@ -18,3 +16,5 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   The site root shows "Not found" because the spec only defines family addresses. A one-line page naming the app would reassure a stray visitor, without listing or linking any family.
 - **2026-10-12** — Switch database URLs to `sslmode=verify-full`.
   `pg` warns that `sslmode=require` will mean weaker checking in its next major version. Today it already behaves as `verify-full`; saying so explicitly in the Vercel and local connection strings silences the warning and keeps the behavior after upgrades.
+- **2026-10-13** — Give schema-changing PRs their own preview database if the shared one keeps colliding.
+  All previews share the schema-only `preview` branch, which breaks when two open PRs change the schema or a PR's migration is abandoned; the fix today is recreating `preview` by hand (README → Deployment). If that happens often, script a schema-only Neon branch per PR with a branch-scoped Vercel variable and cleanup on merge.

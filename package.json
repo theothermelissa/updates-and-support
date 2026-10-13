@@ -16,7 +16,9 @@
     "family:create": "tsx scripts/create-family.ts",
     "email:test": "tsx scripts/send-test-email.ts",
     "start": "vercel dev",
-    "vercel-build": "prisma generate && prisma migrate deploy && vite build"
+    "vercel-build": "prisma generate && prisma migrate deploy && vite build",
+    "preview": "scripts/preview.sh",
+    "preview:seed": "scripts/seed-preview.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
