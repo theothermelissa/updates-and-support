@@ -41,7 +41,7 @@ An answer is correct if it matches any of the family's accepted answers after bo
 The answer box has a small set of plausible values, so wrong answers are capped:
 
 - **Per browser:** 5 wrong answers per hour.
-- **Per IP address:** 30 wrong answers per hour. This limit is deliberately looser, because many real supporters can share one IP address on hospital, school, or mobile-carrier networks.
+- **Per network:** 30 wrong answers per hour. A network is one IPv4 address, or one IPv6 `/64` block, since a single home connection on IPv6 can use many addresses within its block. This limit is deliberately looser, because many real supporters can share one IP address on hospital, school, or mobile-carrier networks.
 
 When a limit is reached, the gate says "Too many attempts. Please try again later." and refuses answers until the hour has passed.
 
@@ -95,5 +95,7 @@ A family member can change the question and its accepted answers at any time. Th
 ## Stated limits
 
 The gate keeps out bots, crawlers, and casual strangers. It does not stop a determined person, because the answer to a community question can often be looked up or passed along. Anyone who gets in appears in the supporter list with the name and email they gave.
+
+Joining also reveals whether an email already belongs to the family: a new email is signed in at once, while a known one is told to check their email. Someone who knows the answer could use that to learn whether a particular person follows this family. Hiding it would mean making every supporter confirm by email before reading, and that friction isn't worth it for most families.
 
 When the family sees someone they don't recognize, the fix is to remove that supporter **and** change the question. Removal alone blocks only that email, and the person could join again with a different email using the same answer.
