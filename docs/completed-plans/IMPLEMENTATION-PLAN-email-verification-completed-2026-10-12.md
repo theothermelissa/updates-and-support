@@ -81,7 +81,7 @@ The `auth/verify` handler, the verify page, and its route.
 
 **Verify:** in the browser pane, join as a fictional supporter, open the logged verification link, press the button, and see the confirmation. Check in the database that the email is verified and that no new session was created. Press it again and see the expired message.
 
-### 4. Preview and merge
+### 4. Preview and merge ✅
 
 Open a PR; CI passes. On the preview, join with a real address you control, confirm from the emailed link, and confirm you're not signed in by doing so in a private window.
 
