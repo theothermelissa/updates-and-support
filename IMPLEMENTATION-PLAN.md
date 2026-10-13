@@ -24,9 +24,13 @@ Family members can see their supporters, remove and restore them, and change the
 - `restoreSupporter(db, person, id)`: same scoping; clears `removedAt` and writes nothing else. `notificationsOn` is already false from removal, and a removed person has no way to turn it back on.
 - `changeQuestion(db, person, { question, answers })`: trims; question 1–500 characters; answers is an array of strings, trimmed, blanks dropped, at least one left, each ≤ 200 characters, at most 50. 400 otherwise.
 - All four require `person.role === "family"` (403 otherwise). `requireFamilyMember` moves here from `server/updates.ts`, with the generic message "Only family members can do this," and both files share it.
-- Input is checked in `server/people.ts`: an `id` that isn't a non-empty string, or an unknown `action`, is a 400, never a 500 from Prisma.
+- Input is checked in `server/people.ts`: a `removed` that isn't a boolean, or answers that aren't an array of strings, is a 400, never a 500 from Prisma.
 
-**One endpoint, `api/f/[slug]/people.ts`.** `GET` lists. `POST` takes `{ action: "remove" | "restore", id }` or `{ action: "question", question, answers }`. Why one file instead of three: the project has 11 functions, and Vercel's Hobby plan has historically capped deployments at 12; this makes 12. One dispatcher costs a few lines; hitting the cap would block a deploy.
+**Three endpoints**, each a thin handler:
+
+- `GET api/f/[slug]/people` lists.
+- `PATCH api/f/[slug]/people/[id]` with `{ removed: true | false }` removes or restores. The ID comes from the path, so it is always a string.
+- `PUT api/f/[slug]/question` with `{ question, answers }` changes the question.
 
 **UI.** `src/pages/People.tsx` at `/f/<slug>/people`, routed in `src/App.tsx`, linked from the feed header for family members only. Two tables (supporters, removed), a Remove button with `window.confirm`, a Restore button, and a form with the question and a textarea of answers, one per line. A supporter or visitor who opens the URL gets what the server allows: the page shows "Only family members can see this page," and the server returns no data.
 
@@ -36,7 +40,7 @@ Family members can see their supporters, remove and restore them, and change the
 2. **Removal at every door.** Apply the table above in `auth.ts`, `gate.ts`, and `notifications.ts`.
 3. **`server/people.ts`.** The four functions, with `requireFamilyMember` moved in.
 4. **Integration tests** (below). Prove each access test can fail by removing its rule.
-5. **Endpoint** `api/f/[slug]/people.ts`.
+5. **Endpoints** `people/index.ts`, `people/[id].ts`, and `question.ts`.
 6. **UI.** People page, route, feed link. Verify in the browser.
 7. **Ship.** Typecheck, tests, PR, preview check, merge on Melissa's OK.
 
@@ -66,7 +70,7 @@ All integration tests against Postgres in `tests/integration/people.test.ts`, ex
 **Question**
 - After a change, the old answer is wrong and a new one is correct; existing sessions still work.
 - An empty question or no non-blank answers is a 400 and changes nothing.
-- A non-string `id` or unknown `action` is a 400.
+- A non-boolean `removed` or non-array `answers` is a 400.
 
 ## Cut for speed
 

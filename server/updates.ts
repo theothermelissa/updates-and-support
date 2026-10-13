@@ -3,6 +3,7 @@ import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
 import { notifySupporters } from "./notifications.js";
+import { requireFamilyMember } from "./people.js";
 
 const MAX_BODY = 20_000;
 
@@ -69,10 +70,6 @@ export async function deleteUpdate(db: Db, person: Person, id: string): Promise<
   requireFamilyMember(person);
   const { count } = await db.update.deleteMany({ where: { id, familyId: person.familyId } });
   if (count === 0) throw new RequestError(404, "Update not found");
-}
-
-function requireFamilyMember(person: Person) {
-  if (person.role !== "family") throw new RequestError(403, "Only family members can change updates");
 }
 
 function validBody(body: unknown): string {
