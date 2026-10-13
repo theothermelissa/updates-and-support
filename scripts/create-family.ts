@@ -45,6 +45,7 @@ async function main() {
   }
   rl.close();
 
+  console.log("\nCreating the family…");
   const family = await createFamily(getDb(), { displayName, question, acceptedAnswers, members });
   // The script can't tell which site uses this database, so it prints the path.
   console.log(`\nCreated ${family.displayName} at /f/${family.slug}`);

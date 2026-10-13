@@ -111,13 +111,13 @@ The `gate` handler, the browser cookie, appending cookies, and `clientOf`.
 
 **Verify:** with `npm start` and curl, check that `gate` returns only the display name and question, that a wrong answer returns `wrong`, and that the sixth wrong answer returns `limited`. Then join with a new email and check `me` returns a supporter, and join with a family member's email and check an email is logged and no cookie is set.
 
-### 5. Gate pages
+### 5. Gate pages ✅
 
 The gate, the join step, the links, and the retitled sign-in page.
 
 **Verify:** in the browser pane, a signed-out visit shows the gate. A wrong answer shows the message. A correct answer, with "the" and extra spaces, leads to the join step. Joining shows the feed with no post form. Signing out returns to the gate. "Already joined?" sends a link that signs back in.
 
-### 6. Operator script message
+### 6. Operator script message ✅
 
 `family:create` prints "Creating the family…" before it connects to the database, so a slow or failing connection doesn't look like a frozen prompt.
 
