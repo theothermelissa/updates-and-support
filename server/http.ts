@@ -55,7 +55,13 @@ export function unauthorized(res: VercelResponse) {
 
 // What the client may know about a person.
 export function personView(person: Person) {
-  return { id: person.id, name: person.name, role: person.role };
+  return {
+    id: person.id,
+    name: person.name,
+    role: person.role,
+    notificationsOn: person.notificationsOn,
+    emailVerified: person.emailVerifiedAt !== null,
+  };
 }
 
 // Replies with the status of a RequestError; anything else is a real failure and rethrows.

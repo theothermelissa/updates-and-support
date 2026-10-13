@@ -88,7 +88,7 @@ Add the two `Person` columns and create the migration.
 
 **Verify:** the integration tests below pass, and each access test fails when the rule it guards is removed.
 
-### 3. API, pages, and script
+### 3. API, pages, and script ✅
 
 The three handlers, the unsubscribe page and route, both checkboxes, and `verification:send`.
 

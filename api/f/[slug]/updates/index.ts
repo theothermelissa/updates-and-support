@@ -7,7 +7,13 @@ import {
   sendRequestError,
   unauthorized,
 } from "../../../../server/http.js";
+import { sendEmails } from "../../../../server/email.js";
 import { createUpdate, listUpdates } from "../../../../server/updates.js";
+
+// Supporters are emailed only when the post form's checkbox asked for it.
+function notifyWith(body: Record<string, unknown>) {
+  return body.notify === true ? sendEmails : undefined;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET" && req.method !== "POST") return methodNotAllowed(res);
@@ -21,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = jsonBody(req, res);
   if (!body) return;
   try {
-    res.status(201).json({ update: await createUpdate(getDb(), ctx.person, body.body) });
+    res.status(201).json({ update: await createUpdate(getDb(), ctx.person, body.body, notifyWith(body)) });
   } catch (err) {
     sendRequestError(res, err);
   }
