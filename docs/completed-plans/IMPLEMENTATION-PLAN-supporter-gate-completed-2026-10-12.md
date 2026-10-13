@@ -123,7 +123,7 @@ The gate, the join step, the links, and the retitled sign-in page.
 
 **Verify:** run it against the local database.
 
-### 7. Preview and merge
+### 7. Preview and merge ✅
 
 Open a PR; CI passes. On the preview, using the existing test family: join as a supporter with a second email address you control, read the feed, and confirm there is no way to post. Then try joining with the family member's email and confirm a sign-in email arrives instead. After merging, check on production that `GET gate` for a real family returns only the display name and question.
 

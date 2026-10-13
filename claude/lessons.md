@@ -36,6 +36,14 @@ Every prose or plan document should make sense on its own, to someone who has ne
 
 **How to apply:** when editing, rewrite affected passages so they describe the current state directly. History belongs in git and in `docs/completed-plans/`.
 
+### Get a second opinion on plans that touch access
+
+Before building a plan that changes who can see or do what, have a subagent review it against the spec and the existing code for safety gaps and simplifications.
+
+**Why:** Melissa asked for this on the supporter gate, and the review found a race that let a burst of parallel guesses skip the wrong-answer limit entirely, which the plan's author missed.
+
+**How to apply:** give the reviewer the plan, spec, and relevant code; say which decisions are settled; ask for "must fix" versus "simplify" findings; then check each finding against the code before adopting it.
+
 ### Keep secrets out of the chat
 
 When Melissa needs to use a secret (API key, database URL), give her a command that reads it from her clipboard or environment, such as `RESEND_API_KEY="$(pbpaste)" npm run …`, and say up front not to paste it into the chat.
@@ -78,10 +86,10 @@ After writing an access-rule test, remove the rule it guards, watch the test fai
 
 **How to apply:** copy the file to the scratchpad before mutating it and restore from that copy. `git checkout` cannot restore a file that isn't committed yet, which nearly lost `server/auth.ts`.
 
-### Check Vercel headers on a real deploy
+### `vercel dev` and previews differ from production
 
-`vercel dev` ignores `vercel.json` headers on pages served by Vite and overrides `Cache-Control` on functions with its own. Previews sit behind Vercel's login, so check headers on production with `curl -I`.
+`vercel dev` ignores `vercel.json` headers on pages served by Vite, overrides `Cache-Control` on functions with its own, and doesn't notice newly added files in `api/` until restarted. Previews sit behind Vercel's login, whose redirect drops query strings.
 
-**Why:** headers like `X-Robots-Tag` and `Cache-Control: no-store` are privacy rules, and local dev silently shows them missing or wrong.
+**Why:** headers like `X-Robots-Tag` and `Cache-Control: no-store` are privacy rules, and local dev silently shows them missing or wrong. A new route 404ing locally looked like a code bug. Sign-in links with `?token=` failed on previews until the token moved after `#`.
 
-**How to apply:** set anything privacy-critical in code (as `familyContext` does for `Cache-Control`), and check the rest on production after merging.
+**How to apply:** set anything privacy-critical in code (as `familyContext` does for `Cache-Control`) and check the rest on production with `curl -I` after merging. Restart `npm start` after adding an API file. Don't carry anything a page needs in the query string through a preview link.
