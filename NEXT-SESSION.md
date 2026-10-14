@@ -2,6 +2,8 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
+- **2026-10-14** — Lock the person row when signing in by magic link.
+  A sign-in can race promotion or removal and keep a session that `deleteMany` missed. The verify-link sign-in for added supporters gets a `FOR UPDATE` lock; `signInWithLink` should reuse it.
 - **2026-10-12** — Watch email deliverability through launch week.
   Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in and notification emails reach inboxes, whether Gmail starts showing its own "Unsubscribe" button (it hadn't for the first notifications, though the header is signed), tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
 - **2026-10-12** — Revisit the gate's per-network limit on shared networks.
