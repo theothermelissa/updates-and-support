@@ -29,12 +29,11 @@ A person who is both a supporter and a family member of different families has a
 
 ### Later
 
-These are planned but not yet specified. Each gets its own area spec when it becomes the next feature.
+These are planned but not yet specified, in priority order. Each gets its own area spec when it becomes the next feature.
 
-- Self-serve family signup, replacing the operator script.
-- Photos in updates.
 - Export of a family's updates, so they never lose their journal if the app goes away.
 - Supporter messages of support to the family, visible to other supporters (the support wall), including unread markers, filtering by supporter and time, and text search for the family.
+- Photos in updates.
 - Video messages from supporters.
 - Ways for supporters to offer meaningful help, coordinate with each other, share contact details, and reach out for their own support.
 - Supporters deleting their own record.
