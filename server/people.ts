@@ -1,6 +1,6 @@
-import { newSignInLink, signInLinkUrl } from "./auth.js";
+import { newSignInLink, newVerificationLink, signInLinkUrl } from "./auth.js";
 import type { Db } from "./db.js";
-import { addedEmail, appUrl, type SendEmail } from "./email.js";
+import { addedEmail, appUrl, welcomeEmail, type SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
 import { validNameAndEmail } from "./families.js";
 import type { Person, Prisma } from "./generated/prisma/client.js";
@@ -100,6 +100,48 @@ export async function addFamilyMember(
 
 function alreadyFamily() {
   return new RequestError(409, "That person is already a family member.");
+}
+
+// Adds a supporter to the signed-in family member's family and emails them a link to confirm.
+// They get no notifications until they confirm, so a mistyped email gets one email only.
+// An email already in the family changes nothing.
+export async function addSupporter(
+  db: Db,
+  send: SendEmail,
+  person: Person,
+  input: { name?: unknown; email?: unknown },
+): Promise<{ name: string }> {
+  requireFamilyMember(person);
+  const { name, email } = validNameAndEmail(input.name, input.email);
+  const family = await db.family.findUniqueOrThrow({ where: { id: person.familyId } });
+
+  const existing = await db.person.findUnique({ where: { familyId_email: { familyId: family.id, email } } });
+  if (existing?.role === "family") throw new RequestError(409, "That email belongs to a family member.");
+  if (existing?.removedAt) {
+    throw new RequestError(409, "That supporter was removed. You can restore them from the removed list.");
+  }
+  if (existing) throw new RequestError(409, "That person is already a supporter.");
+
+  const verification = newVerificationLink();
+  try {
+    await db.person.create({
+      data: { familyId: family.id, role: "supporter", name, email, magicLinks: { create: verification.data } },
+    });
+  } catch (err) {
+    // Someone with this email was added or joined a moment ago.
+    if ((err as { code?: string }).code === "P2002") {
+      throw new RequestError(409, "That email is already in this family.");
+    }
+    throw err;
+  }
+
+  // They're added either way; if the email fails, they can sign in by email from the gate.
+  try {
+    await send(welcomeEmail(email, family.displayName, `${appUrl()}/f/${family.slug}/verify#token=${verification.token}`));
+  } catch (err) {
+    console.error(`Welcome email failed at ${family.slug}:`, err);
+  }
+  return { name };
 }
 
 // Removes or restores a supporter, or removes a family member, in the signed-in family

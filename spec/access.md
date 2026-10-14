@@ -26,13 +26,35 @@ A visitor to a family's address who is not signed in sees the **gate**: the fami
 1. The visitor answers the question.
 2. On a correct answer, they enter their name and email.
 3. They are signed in on that device immediately and see the feed.
-4. A verification email is sent. It contains a link to a page with a "Confirm my email" button; pressing the button marks the email verified. The button, rather than the link alone, keeps email security scanners that open links from confirming on the person's behalf. If the email can't be sent, joining still succeeds; the supporter can verify later by signing in by email.
-
-A verification link works once, for 7 days, and only verifies: it never signs anyone in. Verification emails are the kind people leave in their inbox or forward, so a link that signed people in would hand a long session to whoever received the forward.
+4. A verification email is sent, with a link to the confirmation page (see "Confirming an email"). If the email can't be sent, joining still succeeds; the supporter can verify later by signing in by email.
 
 If the email already belongs to someone in this family, supporter or family member, the visitor is not signed in as that person. Instead a magic link is sent to that email, as in "Returning on a new device." The page says the same thing whether or not the email was already known: "Check your email."
 
 If the email belongs to a removed supporter, joining is refused with "This email can't join this family's updates. Please contact the family."
+
+### Added by a family member
+
+A family member can add a supporter directly, by name and email, on the People page, so the supporter never has to find the family's address and answer the question unprompted. The form reminds the family member to double-check the email.
+
+What happens depends on whom the email already belongs to in this family:
+
+- **No one:** a new supporter is created, unverified, with notifications on. They get a welcome email naming the family and saying the family added them to its updates, with a link to the confirmation page (see "Confirming an email"). If the email can't be sent, they are still added.
+- **A supporter:** nothing changes and no email is sent; the page says they're already a supporter.
+- **A removed supporter:** nothing changes and no email is sent; the page says they were removed and can be restored from the removed list.
+- **A family member, current or removed:** nothing changes and no email is sent; the page says that email belongs to a family member.
+
+An added supporter receives no notification emails until they confirm their email, so a mistyped address gets one welcome email and nothing more.
+
+### Confirming an email
+
+Verification and welcome emails link to a confirmation page with a "Confirm my email" button. Pressing the button marks the email verified. The button, rather than the link alone, keeps email security scanners that open links from confirming on the person's behalf.
+
+After confirming:
+
+- **Signed in to this family on this device:** the page says "Thanks for confirming your email" with a button to the feed.
+- **Not signed in:** the page says "Thanks for confirming your email" and, if the link can still sign this supporter in, shows the family's community question; otherwise it links to "Sign in by email." A correct answer signs the supporter in on that device, as the person the link was sent to, and shows the feed. Answers count toward the same wrong-answer limits as the gate.
+
+A confirmation link lasts 7 days. Confirming works any number of times while the link lasts, even after the link has been used to sign in; signing in with it works once. Only a supporter can sign in this way: if the person has since become a family member or been removed, the link does nothing. Because these emails are the kind people leave in their inbox or forward, the link alone never signs anyone in; whoever uses it must also know the answer.
 
 ### Answer matching
 
@@ -99,7 +121,7 @@ Magic links are how supporters return on a new device and how family members alw
 
 ## Managing supporters
 
-Family members have a **People** page, at `/f/<slug>/people` and linked from the feed. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters: name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. Supporters never see this page, this list, or each other's details; the server refuses the list to anyone but a family member of that family.
+Family members have a **People** page, at `/f/<slug>/people` and linked from the feed. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters, with a form to add one (see "Added by a family member"): name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. Supporters never see this page, this list, or each other's details; the server refuses the list to anyone but a family member of that family.
 
 A family member can **remove** a supporter after confirming. Removal:
 
@@ -123,5 +145,7 @@ The People page also shows the community question and its accepted answers, and 
 The gate keeps out bots, crawlers, and casual strangers. It does not stop a determined person, because the answer to a community question can often be looked up or passed along. Anyone who gets in appears in the supporter list with the name and email they gave.
 
 Joining also reveals whether an email already belongs to the family: a new email is signed in at once, while a known one is told to check their email. Someone who knows the answer could use that to learn whether a particular person follows this family. Hiding it would mean making every supporter confirm by email before reading, and that friction isn't worth it for most families.
+
+A supporter added by a family member is only as safe as the email typed in. If the address is mistyped and belongs to a real person, that person can sign in by email and read the updates. They appear in the supporter list under the name the family gave, so the family can spot and remove them. Likewise, whoever receives a forwarded welcome email and knows the answer signs in as that supporter rather than under their own name.
 
 When the family sees someone they don't recognize, the fix is to remove that supporter **and** change the question. Removal alone blocks only that email, and the person could join again with a different email using the same answer.

@@ -2,7 +2,8 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getSession, requestSignInLink, signInWithLink, verifyEmail } from "../../server/auth.js";
 import { answerGate } from "../../server/gate.js";
 import type { Family, Person } from "../../server/generated/prisma/client.js";
-import { addFamilyMember, changeQuestion, listPeople, setRemoved } from "../../server/people.js";
+import { addFamilyMember, addSupporter, changeQuestion, listPeople, setRemoved } from "../../server/people.js";
+import { notifySupporters } from "../../server/notifications.js";
 import { hashToken, newToken } from "../../server/tokens.js";
 import { createTestDb } from "./db.js";
 import { fakeMailer, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
@@ -112,7 +113,7 @@ describe("removal", () => {
     await markRemoved(sam.person);
 
     expect(await signInWithLink(db, family.slug, signInToken)).toBeNull();
-    expect(await verifyEmail(db, family.slug, verifyToken)).toBe(false);
+    expect(await verifyEmail(db, family.slug, verifyToken)).toBeNull();
     expect(await db.session.count({ where: { personId: sam.person.id } })).toBe(1); // only the original
   });
 
@@ -295,6 +296,100 @@ describe("adding family members", () => {
     };
     await addFamilyMember(db, failing, ana, { name: "Bea", email: "bea@example.com" });
     expect(await db.person.count({ where: { email: "bea@example.com", role: "family" } })).toBe(1);
+  });
+});
+
+describe("adding supporters", () => {
+  it("creates an unverified supporter with notifications on and emails a link to confirm", async () => {
+    const { family, ana } = await setUp();
+    const mail = fakeMailer();
+    const sessions = await db.session.count();
+    expect(await addSupporter(db, mail.send, ana, { name: " Tess Neighbor ", email: "Tess@Example.com" })).toEqual({
+      name: "Tess Neighbor",
+    });
+
+    expect(await db.person.findFirstOrThrow({ where: { email: "tess@example.com" } })).toMatchObject({
+      familyId: family.id,
+      role: "supporter",
+      name: "Tess Neighbor",
+      emailVerifiedAt: null,
+      notificationsOn: true,
+      removedAt: null,
+    });
+    expect(mail.sent.map((e) => e.to)).toEqual(["tess@example.com"]);
+    expect(mail.sent[0]!.subject).toBe("The Rivera Family added you to their updates");
+    expect(mail.sent[0]!.text).toContain(`/f/${family.slug}/verify#token=`);
+    expect(await db.session.count()).toBe(sessions);
+  });
+
+  it("refuses an email already in the family, sending and changing nothing", async () => {
+    const { family, ana, sam } = await setUp();
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Bea", email: "bea@example.com" });
+    const bea = await db.person.findFirstOrThrow({ where: { email: "bea@example.com" } });
+    await setRemoved(db, ana, bea.id, true);
+    const tess = await join(family, "Tess");
+    await setRemoved(db, ana, tess.person.id, true);
+
+    const before = await db.person.findMany({ orderBy: { id: "asc" } });
+    const links = await db.magicLink.count();
+    const mail = fakeMailer();
+    for (const [email, message] of [
+      [sam.person.email, /already a supporter/],
+      [tess.person.email, /removed/],
+      [ana.email, /family member/],
+      [bea.email, /family member/],
+    ] as const) {
+      await expect(addSupporter(db, mail.send, ana, { name: "Someone", email })).rejects.toMatchObject({
+        status: 409,
+        message: expect.stringMatching(message),
+      });
+    }
+    expect(mail.sent).toHaveLength(0);
+    expect(await db.magicLink.count()).toBe(links);
+    expect(await db.person.findMany({ orderBy: { id: "asc" } })).toEqual(before);
+  });
+
+  it("is refused to supporters, and only ever adds to the adder's own family", async () => {
+    const { family, okafor, ana, sam, olu } = await setUp();
+    await expect(
+      addSupporter(db, fakeMailer().send, sam.person, { name: "Mallory", email: "mallory@example.com" }),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(await db.person.count({ where: { email: "mallory@example.com" } })).toBe(0);
+
+    // An email that's a supporter elsewhere is new here, and the other family's record is untouched.
+    await addSupporter(db, fakeMailer().send, ana, { name: "Olu", email: olu.person.email });
+    expect(await db.person.count({ where: { familyId: family.id, email: olu.person.email, role: "supporter" } })).toBe(1);
+    expect(await db.person.findUniqueOrThrow({ where: { id: olu.person.id } })).toMatchObject({ familyId: okafor.id });
+  });
+
+  it("rejects an invalid name or email", async () => {
+    const { ana } = await setUp();
+    for (const input of [{ name: " ", email: "x@example.com" }, { name: "X", email: "not-an-email" }, {}]) {
+      await expect(addSupporter(db, fakeMailer().send, ana, input)).rejects.toMatchObject({ status: 400 });
+    }
+  });
+
+  it("adds them even if the email can't be sent", async () => {
+    const { ana } = await setUp();
+    const failing = async () => {
+      throw new Error("Resend is down");
+    };
+    await addSupporter(db, failing, ana, { name: "Tess", email: "tess@example.com" });
+    expect(await db.person.count({ where: { email: "tess@example.com", role: "supporter" } })).toBe(1);
+  });
+
+  it("sends an added supporter no notifications until they confirm", async () => {
+    const { family, ana } = await setUp();
+    const mail = fakeMailer();
+    await addSupporter(db, mail.send, ana, { name: "Tess", email: "tess@example.com" });
+
+    const notified = fakeMailer();
+    await notifySupporters(db, notified.sendMany, family.id);
+    expect(notified.sent.map((e) => e.to)).not.toContain("tess@example.com");
+
+    await verifyEmail(db, family.slug, tokenFrom(mail.sent[0]!));
+    await notifySupporters(db, notified.sendMany, family.id);
+    expect(notified.sent.map((e) => e.to)).toContain("tess@example.com");
   });
 });
 

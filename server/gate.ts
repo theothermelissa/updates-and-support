@@ -1,5 +1,12 @@
 import { isCorrectAnswer } from "./answers.js";
-import { newVerificationLink, requestSignInLink, SESSION_LIFETIME } from "./auth.js";
+import {
+  findUsableLink,
+  markVerified,
+  newVerificationLink,
+  requestSignInLink,
+  SESSION_LIFETIME,
+  spendLink,
+} from "./auth.js";
 import type { Db } from "./db.js";
 import { appUrl, verificationEmail, type SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
@@ -44,7 +51,7 @@ export async function answerGate(
 
 // Counts, checks, and records under a per-family lock, so a burst of parallel
 // guesses can't all be counted before any is recorded.
-function checkAnswer(db: Db, family: Family, client: Client, answer: string) {
+export function checkAnswer(db: Db, family: Family, client: Client, answer: string) {
   return db.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${family.id}))`;
@@ -120,4 +127,46 @@ async function join(
 async function sendLinkInstead(db: Db, send: SendEmail, family: Family, email: string): Promise<GateResult> {
   await requestSignInLink(db, send, family.slug, email);
   return { result: "check-email" };
+}
+
+export type VerifySignInResult = { result: "invalid" | "wrong" | "limited" } | { result: "signed-in"; sessionToken: string };
+
+// Signs a supporter in with their verification link and the community question's answer,
+// under the gate's wrong-answer limits. The link alone never signs in, because these emails
+// get forwarded. A bad link is refused before the answer is checked, so it costs no attempt.
+// Only an active supporter can sign in this way, never a family member.
+export async function signInWithVerifyLink(
+  db: Db,
+  family: Family,
+  client: Client,
+  token: string,
+  answer: string,
+): Promise<VerifySignInResult> {
+  const found = await findUsableLink(db, family.slug, token, "verify");
+  if (!found || found.person.role !== "supporter") return { result: "invalid" };
+
+  const outcome = await checkAnswer(db, family, client, answer);
+  if (outcome !== "correct") return { result: outcome };
+
+  return db.$transaction(async (tx) => {
+    // Promotion and removal update this row, so they wait for this transaction, and their
+    // session cleanup then sees the session created here. Without the lock, a promotion
+    // could land between this check and the insert, leaving a family-member session.
+    const [locked] = await tx.$queryRaw<{ role: string; removedAt: Date | null }[]>`
+      SELECT role, "removedAt" FROM "Person" WHERE id = ${found.person.id} FOR UPDATE`;
+    if (locked?.role !== "supporter" || locked.removedAt) return { result: "invalid" as const };
+    const person = await spendLink(tx, family.slug, token, "verify");
+    if (!person) return { result: "invalid" as const };
+
+    const sessionToken = newToken();
+    await tx.session.create({
+      data: {
+        personId: person.id,
+        tokenHash: hashToken(sessionToken),
+        expiresAt: new Date(Date.now() + SESSION_LIFETIME.supporter),
+      },
+    });
+    await markVerified(tx, person);
+    return { result: "signed-in" as const, sessionToken };
+  });
 }
