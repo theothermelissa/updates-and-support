@@ -71,11 +71,19 @@ export function addedEmail(to: string, familyName: string, links: { signIn: stri
   };
 }
 
+export function welcomeEmail(to: string, familyName: string, link: string): Email {
+  return {
+    to,
+    subject: `${familyName} added you to their updates`,
+    text: `${familyName} added you to their updates. Please confirm your email to get an email when they post:\n\n${link}\n\nThe link expires in 7 days. If you don't know this family, you can ignore this email.`,
+  };
+}
+
 export function verificationEmail(to: string, familyName: string, link: string): Email {
   return {
     to,
     subject: `Confirm your email for ${familyName}'s updates`,
-    text: `Thanks for joining ${familyName}'s updates. Please confirm your email so the family can reach you:\n\n${link}\n\nThe link works once and expires in 7 days. If you didn't join, you can ignore this email.`,
+    text: `Thanks for joining ${familyName}'s updates. Please confirm your email so the family can reach you:\n\n${link}\n\nThe link expires in 7 days. If you didn't join, you can ignore this email.`,
   };
 }
 

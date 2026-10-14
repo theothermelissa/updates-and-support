@@ -68,6 +68,20 @@ export function People({ slug }: { slug: string }) {
     return true;
   }
 
+  async function addSupporter(name: string, email: string): Promise<boolean> {
+    const { status, data } = await api<{ name: string; error?: string }>(slug, "supporters", {
+      method: "POST",
+      body: { name, email },
+    });
+    if (status !== 200) {
+      setMessage({ text: data?.error ?? "Something went wrong. Please try again.", error: true });
+      return false;
+    }
+    setMessage({ text: `Added ${data.name}. They'll get an email to confirm.`, error: false });
+    load();
+    return true;
+  }
+
   async function saveQuestion(e: FormEvent) {
     e.preventDefault();
     const { status, data } = await api<{ error?: string }>(slug, "question", {
@@ -109,6 +123,7 @@ export function People({ slug }: { slug: string }) {
       />
 
       <h2>Supporters ({people.supporters.length})</h2>
+      <AddSupporter onAdd={addSupporter} />
       {people.supporters.length === 0 ? (
         <p>No supporters have joined yet.</p>
       ) : (
@@ -242,6 +257,43 @@ function FamilyMembers({
         ) : (
           <button>Add</button>
         )}
+      </form>
+    </>
+  );
+}
+
+// Adds one supporter. They get a welcome email, and no notifications until they confirm it.
+function AddSupporter({ onAdd }: { onAdd: (name: string, email: string) => Promise<boolean> }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    if (await onAdd(name, email)) {
+      setName("");
+      setEmail("");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <>
+      <h3>Add a supporter</h3>
+      <form onSubmit={submit}>
+        <p>
+          <label>
+            Name <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+          </label>
+        </p>
+        <p>
+          <label>
+            Email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </label>
+        </p>
+        <p>Double-check the email: whoever owns it will be able to read the updates.</p>
+        <button disabled={busy}>Add supporter</button>
       </form>
     </>
   );
