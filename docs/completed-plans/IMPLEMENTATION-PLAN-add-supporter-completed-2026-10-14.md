@@ -108,3 +108,5 @@ The first draft of the "unusable link" test used the correct answer, which never
 - a wrong answer is refused
 - the correct answer reaches the feed as the supporter
 - confirming again while signed in shows "Go to the updates"
+
+Melissa verified the full flow on the PR preview, and the PR was merged.

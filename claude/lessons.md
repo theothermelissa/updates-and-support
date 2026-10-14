@@ -42,7 +42,7 @@ When a PR's preview has built, run `npm run preview:seed` and `npm run preview` 
 
 **Why:** setting up each preview by hand (copying a connection string, running the family script, finding the URL) was tedious and error-prone, and she asked for it to be automated.
 
-**How to apply:** the scripts are described in README → Deployment. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers.
+**How to apply:** the scripts are described in README → Deployment. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
 
 ### Get a second opinion on plans that touch access
 
@@ -94,7 +94,7 @@ After writing an access-rule test, remove the rule it guards, watch the test fai
 
 **How to apply:** copy the file to the scratchpad before mutating it and restore from that copy. `git checkout` cannot restore a file that isn't committed yet, which nearly lost `server/auth.ts`.
 
-Two patterns hide a removed rule. A backstop check can mask the cleanup it backs up: removal's session and link deletion passed its test with the deletion gone, because `getSession` and `spendLink` refuse removed people anyway, so assert the cleanup directly. And a single concurrent race can come out right by timing alone: the family-member lock's test passed without the lock until it repeated the race 20 times.
+Three patterns hide a removed rule. A test can take a path that never reaches the rule: the check that a bad link costs no gate attempt passed with the order reversed, because it sent the *correct* answer, which never records an attempt. Next, a backstop check can mask the cleanup it backs up: removal's session and link deletion passed its test with the deletion gone, because `getSession` and `spendLink` refuse removed people anyway, so assert the cleanup directly. Last, a single concurrent race can come out right by timing alone: the family-member lock's test passed without the lock until it repeated the race 20 times.
 
 ### Don't use `confirm()`, `alert()`, or `prompt()`
 
