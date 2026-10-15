@@ -1,12 +1,20 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getSession, requestSignInLink, signInWithLink, verifyEmail } from "../../server/auth.js";
-import { answerGate } from "../../server/gate.js";
+import { addEmail, answerGate, lockGate } from "../../server/gate.js";
 import type { Family, Person } from "../../server/generated/prisma/client.js";
 import { addFamilyMember, addSupporter, changeQuestion, listPeople, setRemoved } from "../../server/people.js";
 import { notifySupporters } from "../../server/notifications.js";
 import { hashToken, newToken } from "../../server/tokens.js";
 import { createTestDb } from "./db.js";
-import { fakeMailer, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
+import {
+  answerCorrectly,
+  fakeMailer,
+  joinWithEmail,
+  makeFamily,
+  queuedOrDone,
+  resetDb,
+  tokenFrom,
+} from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -14,16 +22,9 @@ beforeEach(() => resetDb(db));
 
 const client = { browserId: "browser-a", network: "203.0.113.1" };
 
-// Joins a family through the gate as a fictional supporter. Returns them and their session token.
-async function join(family: Family, name: string) {
-  const email = `${name.toLowerCase()}@example.com`;
-  const result = await answerGate(db, fakeMailer().send, family, client, {
-    answer: "Biscuit",
-    name,
-    email,
-  });
-  if (result.result !== "joined") throw new Error(`Expected to join, got ${result.result}`);
-  return { person: result.person, sessionToken: result.sessionToken };
+// A fictional supporter who answered the question and gave their name and email, unverified.
+function join(family: Family, name: string) {
+  return joinWithEmail(db, family, name);
 }
 
 // The Rivera family (Ana) with supporter Sam, and the Okafor family (Chidi) with supporter Olu.
@@ -44,10 +45,27 @@ describe("who may see and change", () => {
   it("lists only the family member's own family's supporters, with the question", async () => {
     const { ana, sam } = await setUp();
     const people = await listPeople(db, ana);
-    expect(people.supporters.map((s) => s.email)).toEqual([sam.person.email]);
+    expect(people.supporters.map((s) => s.email)).toEqual([sam.email]);
     expect(people.removed).toEqual([]);
     expect(people.question).toBe("What is the dog's name?");
     expect(people.acceptedAnswers).toEqual(["Biscuit"]);
+  });
+
+  it("lists no one without an email, and counts only this family's devices without a verified email", async () => {
+    const { family, okafor, ana, sam } = await setUp();
+    const reader = await answerCorrectly(db, family);
+    await answerCorrectly(db, okafor);
+    const vera = await join(family, "Vera");
+    await db.person.update({ where: { id: vera.person.id }, data: { emailVerifiedAt: new Date() } });
+    // An expired session doesn't count.
+    await db.session.create({
+      data: { personId: reader.person.id, tokenHash: hashToken(newToken()), expiresAt: new Date(Date.now() - 1000) },
+    });
+
+    const people = await listPeople(db, ana);
+    expect(people.supporters.map((s) => s.email).sort()).toEqual([sam.email, vera.email]);
+    // The reader without an email and Sam, whose email isn't verified yet.
+    expect(people.devicesWithoutVerifiedEmail).toBe(2);
   });
 
   it("refuses supporters everything", async () => {
@@ -80,7 +98,7 @@ describe("removal", () => {
   it("ends sessions, cancels unused links, turns notifications off, and lists them as removed", async () => {
     const { family, ana, sam } = await setUp();
     const mail = fakeMailer();
-    await requestSignInLink(db, mail.send, family.slug, sam.person.email);
+    await requestSignInLink(db, mail.send, family.slug, sam.email);
 
     await setRemoved(db, ana, sam.person.id, true);
 
@@ -121,32 +139,8 @@ describe("removal", () => {
     const { family, sam } = await setUp();
     await markRemoved(sam.person);
     const mail = fakeMailer();
-    await requestSignInLink(db, mail.send, family.slug, sam.person.email);
+    await requestSignInLink(db, mail.send, family.slug, sam.email);
     expect(mail.sent).toHaveLength(0);
-  });
-
-  it("refuses a removed email at the gate, sending and creating nothing", async () => {
-    const { family, sam } = await setUp();
-    await markRemoved(sam.person);
-    const before = {
-      people: await db.person.count(),
-      sessions: await db.session.count(),
-      links: await db.magicLink.count(),
-    };
-    const mail = fakeMailer();
-
-    await expect(
-      answerGate(db, mail.send, family, client, { answer: "Biscuit", name: "Sam Again", email: " SAM@example.com " }),
-    ).rejects.toMatchObject({
-      status: 403,
-      message: "This email can't join this family's updates. Please contact the family.",
-    });
-    expect(mail.sent).toHaveLength(0);
-    expect({
-      people: await db.person.count(),
-      sessions: await db.session.count(),
-      links: await db.magicLink.count(),
-    }).toEqual(before);
   });
 });
 
@@ -161,7 +155,7 @@ describe("restore", () => {
     expect(await db.session.count({ where: { personId: sam.person.id } })).toBe(0);
 
     const mail = fakeMailer();
-    await requestSignInLink(db, mail.send, family.slug, sam.person.email);
+    await requestSignInLink(db, mail.send, family.slug, sam.email);
     const signedIn = await signInWithLink(db, family.slug, tokenFrom(mail.sent[0]!));
     expect(signedIn?.person.id).toBe(sam.person.id);
     expect(signedIn?.person.notificationsOn).toBe(false);
@@ -169,16 +163,73 @@ describe("restore", () => {
 });
 
 describe("changing the question", () => {
-  it("applies to new answers only and signs no one out", async () => {
-    const { family, ana, sam } = await setUp();
-    await changeQuestion(db, ana, { question: "  Where did we honeymoon? ", answers: ["Lisbon", "  ", " Portugal "] });
+  // In the Rivera family: a reader without an email, Sam with an unverified email, Vera with a
+  // verified one, and Ana, signed in as a family member. Olu reads the Okafor family's updates.
+  async function signedIn() {
+    const { family, okafor, ana, sam } = await setUp();
+    const reader = await answerCorrectly(db, family);
+    const vera = await join(family, "Vera");
+    await db.person.update({ where: { id: vera.person.id }, data: { emailVerifiedAt: new Date() } });
+    const anaToken = await signIn(family.slug, ana.email);
+    // Like a family member who signed in before emails were verified, so only the supporter
+    // check keeps her signed in.
+    await db.person.update({ where: { id: ana.id }, data: { emailVerifiedAt: null } });
+    const olu = await answerCorrectly(db, okafor);
+    const isSignedIn = async (slug: string, token: string) => (await getSession(db, slug, token)) !== null;
+    const state = async () => ({
+      reader: await isSignedIn(family.slug, reader.sessionToken),
+      sam: await isSignedIn(family.slug, sam.sessionToken),
+      vera: await isSignedIn(family.slug, vera.sessionToken),
+      ana: await isSignedIn(family.slug, anaToken),
+      olu: await isSignedIn(okafor.slug, olu.sessionToken),
+    });
+    return { family, ana, state };
+  }
 
-    const updated = await db.family.findUniqueOrThrow({ where: { id: family.id } });
-    expect(updated.question).toBe("Where did we honeymoon?");
-    expect(updated.acceptedAnswers).toEqual(["Lisbon", "Portugal"]);
-    expect(await answerGate(db, fakeMailer().send, updated, client, { answer: "Biscuit" })).toEqual({ result: "wrong" });
-    expect(await answerGate(db, fakeMailer().send, updated, client, { answer: "lisbon" })).toEqual({ result: "correct" });
-    expect(await getSession(db, family.slug, sam.sessionToken)).not.toBeNull();
+  it("signs out everyone without a verified email, in this family only, when an answer stops working", async () => {
+    const { family, ana, state } = await signedIn();
+    const result = await changeQuestion(db, ana, {
+      question: "  Where did we honeymoon? ",
+      answers: ["Lisbon", "  ", " Portugal "],
+    });
+
+    expect(result).toEqual({ question: "Where did we honeymoon?", acceptedAnswers: ["Lisbon", "Portugal"], signedOut: 2 });
+    expect(await state()).toEqual({ reader: false, sam: false, vera: true, ana: true, olu: true });
+    expect(await answerGate(db, family, client, { answer: "Biscuit" })).toEqual({ result: "wrong" });
+    expect((await answerGate(db, family, client, { answer: "lisbon" })).result).toBe("joined");
+  });
+
+  it("signs no one out when every answer that worked still works", async () => {
+    const { ana, state } = await signedIn();
+    for (const answers of [["Biscuit", "Biscuit the dog"], ["  the BISCUIT ", "BISCUIT the  dog"]]) {
+      const result = await changeQuestion(db, ana, { question: "What's our dog called?", answers });
+      expect(result.signedOut).toBe(0);
+    }
+    expect(await state()).toEqual({ reader: true, sam: true, vera: true, ana: true, olu: true });
+  });
+
+  it("waits for an answer being checked, then signs out the reader it let in", async () => {
+    const { family, people: [ana] } = await makeFamily(db, "Rivera");
+    const token = newToken();
+    let change!: Promise<{ signedOut: number }>;
+    await db.$transaction(
+      async (tx) => {
+        // Stands in for answerGate after it has accepted the old answer and before it commits.
+        await lockGate(tx, family.id);
+        await tx.person.create({
+          data: {
+            familyId: family.id,
+            role: "supporter",
+            sessions: { create: { tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 60_000) } },
+          },
+        });
+        change = changeQuestion(db, ana!, { question: "Where?", answers: ["Lisbon"] });
+        await queuedOrDone(db, change);
+      },
+      { timeout: 10_000 },
+    );
+    expect((await change).signedOut).toBe(1);
+    expect(await getSession(db, family.slug, token)).toBeNull();
   });
 
   it("rejects an empty question or no usable answers, changing nothing", async () => {
@@ -198,9 +249,9 @@ describe("changing the question", () => {
 });
 
 // Signs a person in by emailed link. Returns their session token.
-async function signIn(slug: string, email: string) {
+async function signIn(slug: string, email: string | null) {
   const mail = fakeMailer();
-  await requestSignInLink(db, mail.send, slug, email);
+  await requestSignInLink(db, mail.send, slug, email!);
   return (await signInWithLink(db, slug, tokenFrom(mail.sent[0]!)))!.sessionToken;
 }
 
@@ -225,7 +276,7 @@ describe("adding family members", () => {
   it("promotes a supporter: same record, new name, old session ended, family session from the link", async () => {
     const { family, ana, sam } = await setUp();
     const mail = fakeMailer();
-    const result = await addFamilyMember(db, mail.send, ana, { name: "Samuel Friend", email: sam.person.email });
+    const result = await addFamilyMember(db, mail.send, ana, { name: "Samuel Friend", email: sam.email });
 
     expect(result.outcome).toBe("promoted");
     expect(await db.person.findUniqueOrThrow({ where: { id: sam.person.id } })).toMatchObject({
@@ -240,14 +291,14 @@ describe("adding family members", () => {
   it("promotes and restores a removed supporter, and restores a removed family member", async () => {
     const { ana, sam } = await setUp();
     await setRemoved(db, ana, sam.person.id, true);
-    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.person.email })).outcome).toBe(
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email })).outcome).toBe(
       "promoted",
     );
     expect(await active(sam.person.id)).toMatchObject({ role: "family" });
 
     await setRemoved(db, ana, sam.person.id, true);
     expect(await active(sam.person.id)).toBeNull();
-    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.person.email })).outcome).toBe(
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email })).outcome).toBe(
       "restored",
     );
     expect(await active(sam.person.id)).toMatchObject({ role: "family" });
@@ -271,7 +322,7 @@ describe("adding family members", () => {
       addFamilyMember(db, fakeMailer().send, sam.person, { name: "Mallory", email: "mallory@example.com" }),
     ).rejects.toMatchObject({ status: 403 });
 
-    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Olu", email: olu.person.email })).outcome).toBe(
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Olu", email: olu.email })).outcome).toBe(
       "added",
     );
     expect(await db.person.findUniqueOrThrow({ where: { id: olu.person.id } })).toMatchObject({
@@ -279,7 +330,7 @@ describe("adding family members", () => {
       familyId: okafor.id,
     });
     expect(await getSession(db, okafor.slug, olu.sessionToken)).not.toBeNull();
-    expect(await db.person.count({ where: { familyId: family.id, email: olu.person.email, role: "family" } })).toBe(1);
+    expect(await db.person.count({ where: { familyId: family.id, email: olu.email, role: "family" } })).toBe(1);
   });
 
   it("rejects an invalid name or email", async () => {
@@ -334,7 +385,7 @@ describe("adding supporters", () => {
     const links = await db.magicLink.count();
     const mail = fakeMailer();
     for (const [email, message] of [
-      [sam.person.email, /already a supporter/],
+      [sam.email, /already a supporter/],
       [tess.person.email, /removed/],
       [ana.email, /family member/],
       [bea.email, /family member/],
@@ -357,8 +408,8 @@ describe("adding supporters", () => {
     expect(await db.person.count({ where: { email: "mallory@example.com" } })).toBe(0);
 
     // An email that's a supporter elsewhere is new here, and the other family's record is untouched.
-    await addSupporter(db, fakeMailer().send, ana, { name: "Olu", email: olu.person.email });
-    expect(await db.person.count({ where: { familyId: family.id, email: olu.person.email, role: "supporter" } })).toBe(1);
+    await addSupporter(db, fakeMailer().send, ana, { name: "Olu", email: olu.email });
+    expect(await db.person.count({ where: { familyId: family.id, email: olu.email, role: "supporter" } })).toBe(1);
     expect(await db.person.findUniqueOrThrow({ where: { id: olu.person.id } })).toMatchObject({ familyId: okafor.id });
   });
 
@@ -404,7 +455,7 @@ describe("removing family members", () => {
     const { family, ana, ben, benToken } = await twoMembers();
     await db.update.create({ data: { familyId: family.id, authorId: ben.id, body: "From Ben" } });
     const mail = fakeMailer();
-    await requestSignInLink(db, mail.send, family.slug, ben.email);
+    await requestSignInLink(db, mail.send, family.slug, ben.email!);
 
     await setRemoved(db, ana, ben.id, true);
 
@@ -417,10 +468,11 @@ describe("removing family members", () => {
     expect(update.author.name).toBe("Ben Rivera");
 
     const again = fakeMailer();
-    await requestSignInLink(db, again.send, family.slug, ben.email);
+    await requestSignInLink(db, again.send, family.slug, ben.email!);
     expect(again.sent).toHaveLength(0);
+    const reader = await answerCorrectly(db, family);
     await expect(
-      answerGate(db, fakeMailer().send, family, client, { answer: "Biscuit", name: "Ben", email: ben.email }),
+      addEmail(db, fakeMailer().send, family, reader.person, { name: "Ben", email: ben.email }),
     ).rejects.toMatchObject({ status: 403 });
   });
 

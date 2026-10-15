@@ -19,8 +19,9 @@ export async function requestSignInLink(
   slug: string,
   email: string,
 ): Promise<void> {
+  const address = normalizeEmail(email);
   const person = await db.person.findFirst({
-    where: { email: normalizeEmail(email), family: { slug }, removedAt: null },
+    where: { email: address, family: { slug }, removedAt: null },
     include: { family: true },
   });
   if (!person) return;
@@ -32,7 +33,7 @@ export async function requestSignInLink(
 
   const link = newSignInLink();
   await db.magicLink.create({ data: { personId: person.id, ...link.data } });
-  await send(signInEmail(person.email, person.family.displayName, signInLinkUrl(slug, link.token)));
+  await send(signInEmail(address, person.family.displayName, signInLinkUrl(slug, link.token)));
 }
 
 // A new sign-in link's data, for creating alongside the person it belongs to.

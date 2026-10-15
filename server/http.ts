@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getSession } from "./auth.js";
-import { browserId, readSessionCookie } from "./cookies.js";
+import { getSession, signOut } from "./auth.js";
+import { browserId, readSessionCookie, setSessionCookie } from "./cookies.js";
 import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import { findFamilyBySlug } from "./families.js";
@@ -53,15 +53,31 @@ export function unauthorized(res: VercelResponse) {
   res.status(401).json({ error: "Not signed in" });
 }
 
-// What the client may know about a person.
+// What the client may know about the signed-in person: only ever their own record.
 export function personView(person: Person) {
   return {
     id: person.id,
     name: person.name,
+    email: person.email,
     role: person.role,
     notificationsOn: person.notificationsOn,
     emailVerified: person.emailVerifiedAt !== null,
   };
+}
+
+// Signs this browser in to the family with a new session, ending the browser's previous
+// session there, if any, so a reader who signs in as themselves isn't left counted twice.
+export async function startSession(
+  db: Db,
+  req: VercelRequest,
+  res: VercelResponse,
+  slug: string,
+  sessionToken: string,
+  lifetimeMs: number,
+) {
+  const previous = readSessionCookie(req, slug);
+  if (previous) await signOut(db, previous);
+  setSessionCookie(res, slug, sessionToken, lifetimeMs);
 }
 
 // Replies with the status of a RequestError; anything else is a real failure and rethrows.

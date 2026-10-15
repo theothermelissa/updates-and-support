@@ -6,26 +6,37 @@ import type { Person } from "./generated/prisma/client.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Emails every verified, opted-in, active supporter of the family that there's a new
-// update. Family members and unverified, opted-out, or removed supporters get nothing.
+// Emails every verified, opted-in, active supporter of the family that there's a new update.
+// Family members, supporters without an email, and unverified, opted-out, or removed
+// supporters get nothing.
 export async function notifySupporters(db: Db, send: SendEmails, familyId: string): Promise<void> {
   const family = await db.family.findUniqueOrThrow({
     where: { id: familyId },
     include: {
       people: {
-        where: { role: "supporter", emailVerifiedAt: { not: null }, notificationsOn: true, removedAt: null },
+        where: {
+          role: "supporter",
+          email: { not: null },
+          emailVerifiedAt: { not: null },
+          notificationsOn: true,
+          removedAt: null,
+        },
         select: { email: true, unsubscribeToken: true },
       },
     },
   });
   const base = `${appUrl()}/f/${family.slug}`;
   await send(
-    family.people.map((supporter) =>
-      notificationEmail(supporter.email, family.displayName, {
-        site: base,
-        unsubscribePage: `${base}/unsubscribe#token=${supporter.unsubscribeToken}`,
-        oneClickUnsubscribe: `${appUrl()}/api/f/${family.slug}/unsubscribe?token=${supporter.unsubscribeToken}`,
-      }),
+    family.people.flatMap(({ email, unsubscribeToken }) =>
+      email
+        ? [
+            notificationEmail(email, family.displayName, {
+              site: base,
+              unsubscribePage: `${base}/unsubscribe#token=${unsubscribeToken}`,
+              oneClickUnsubscribe: `${appUrl()}/api/f/${family.slug}/unsubscribe?token=${unsubscribeToken}`,
+            }),
+          ]
+        : [],
     ),
   );
 }
@@ -48,10 +59,10 @@ export async function setNotifications(db: Db, person: Person, on: unknown): Pro
   return db.person.update({ where: { id: person.id }, data: { notificationsOn: on } });
 }
 
-// Active supporters who haven't verified their email, for the one-time verification send.
+// Active supporters with an email they haven't verified, for the one-time verification send.
 export function unverifiedSupporters(db: Db) {
   return db.person.findMany({
-    where: { role: "supporter", emailVerifiedAt: null, removedAt: null },
+    where: { role: "supporter", email: { not: null }, emailVerifiedAt: null, removedAt: null },
     include: { family: true },
   });
 }
@@ -65,6 +76,7 @@ export async function sendVerifications(
 ): Promise<void> {
   const emails = [];
   for (const person of people) {
+    if (!person.email) continue;
     const link = newVerificationLink();
     await db.magicLink.create({ data: { personId: person.id, ...link.data } });
     const url = `${siteUrl}/f/${person.family.slug}/verify#token=${link.token}`;

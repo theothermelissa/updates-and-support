@@ -165,6 +165,8 @@ Anyone who knows the answer can read without giving a name or email. The family 
 
 Supporters who give an email appear in the supporter list with the name and email they gave. When the family sees someone there they don't recognize, the fix is to remove that supporter **and** change the answer, because removal blocks only that email and the person could keep reading without one.
 
+Someone who knows the answer can also give the email of a real person who isn't on the family's list yet. If that person confirms the email, the device that gave it becomes a supporter with a verified email: it stays signed in when the answer changes, and it appears in the supporter list under whatever name it gave. The verification email tells anyone who didn't ask for it to ignore it.
+
 Giving an email reveals whether it already belongs to the family: a new email goes on the supporter's record, while a known one gets a sign-in link. Someone who knows the answer could use that to learn whether a particular person follows this family. Each check leaves a trace, since a new email appears in the supporter list and a known one receives an email. Hiding it would mean holding every new email until it's verified, which isn't worth the complexity for most families.
 
 A supporter added by a family member is only as safe as the email typed in. If the address is mistyped and belongs to a real person, that person can sign in by email and read the updates. They appear in the supporter list under the name the family gave, so the family can spot and remove them. Likewise, whoever receives a forwarded welcome email and knows the answer signs in as that supporter rather than under their own name.

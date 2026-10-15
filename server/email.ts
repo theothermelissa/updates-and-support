@@ -83,7 +83,7 @@ export function verificationEmail(to: string, familyName: string, link: string):
   return {
     to,
     subject: `Confirm your email for ${familyName}'s updates`,
-    text: `Thanks for joining ${familyName}'s updates. Please confirm your email so the family can reach you:\n\n${link}\n\nThe link expires in 7 days. If you didn't join, you can ignore this email.`,
+    text: `Please confirm your email to get an email when ${familyName} posts an update:\n\n${link}\n\nThe link expires in 7 days. If you didn't ask for this, you can ignore this email.`,
   };
 }
 

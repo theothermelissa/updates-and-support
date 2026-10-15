@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { isCorrectAnswer, normalizeAnswer } from "./answers.js";
+import { dropsAnAnswer, isCorrectAnswer, normalizeAnswer } from "./answers.js";
 
 it("normalizes case, spacing, and a leading 'the'", () => {
   expect(normalizeAnswer("  The   Maple\tStreet ")).toBe("maple street");
@@ -15,4 +15,11 @@ it("accepts any accepted answer after normalization", () => {
 
 it("never accepts an empty answer", () => {
   expect(isCorrectAnswer("   ", ["", "Maple"])).toBe(false);
+});
+
+it("notices an answer that stops working, and nothing else", () => {
+  expect(dropsAnAnswer(["Maple"], ["Oak"])).toBe(true);
+  expect(dropsAnAnswer(["Maple", "Oak"], ["Oak"])).toBe(true);
+  expect(dropsAnAnswer(["Maple"], ["Maple", "Maple Street"])).toBe(false);
+  expect(dropsAnAnswer(["Maple", "Oak"], ["oak", " the MAPLE "])).toBe(false);
 });

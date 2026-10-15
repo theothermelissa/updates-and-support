@@ -1,9 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { SESSION_LIFETIME, verifyEmail } from "../../../../server/auth.js";
-import { setSessionCookie } from "../../../../server/cookies.js";
 import { getDb } from "../../../../server/db.js";
 import { signInWithVerifyLink } from "../../../../server/gate.js";
-import { clientOf, familyContext, jsonBody, methodNotAllowed } from "../../../../server/http.js";
+import { clientOf, familyContext, jsonBody, methodNotAllowed, startSession } from "../../../../server/http.js";
 
 // { token }: marks an email verified, and says whether the link can still sign in.
 // { token, answer }: signs a supporter in with the link and the community question's answer.
@@ -27,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const outcome = await signInWithVerifyLink(getDb(), ctx.family, clientOf(req, res), token, answer);
   if (outcome.result === "invalid") return expired();
   if (outcome.result === "signed-in") {
-    setSessionCookie(res, ctx.family.slug, outcome.sessionToken, SESSION_LIFETIME.supporter);
+    await startSession(getDb(), req, res, ctx.family.slug, outcome.sessionToken, SESSION_LIFETIME.supporter);
     return res.status(200).json({ result: "signed-in" });
   }
   res.status(200).json({ result: outcome.result });

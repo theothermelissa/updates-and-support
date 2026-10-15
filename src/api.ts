@@ -13,5 +13,13 @@ export async function api<T>(
   return { status: res.status, data: data as T };
 }
 
-export type PersonView = { id: string; name: string; role: "family" | "supporter"; notificationsOn: boolean; emailVerified: boolean };
+// A supporter who has only answered the question has no name or email yet.
+export type PersonView = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: "family" | "supporter";
+  notificationsOn: boolean;
+  emailVerified: boolean;
+};
 export type Me = { family: { displayName: string }; person: PersonView };

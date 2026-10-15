@@ -1,8 +1,10 @@
+import { dropsAnAnswer } from "./answers.js";
 import { newSignInLink, newVerificationLink, signInLinkUrl } from "./auth.js";
 import type { Db } from "./db.js";
 import { addedEmail, appUrl, welcomeEmail, type SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
 import { validNameAndEmail } from "./families.js";
+import { lockGate, QUEUE } from "./gate.js";
 import type { Person, Prisma } from "./generated/prisma/client.js";
 
 const MAX_QUESTION = 500;
@@ -23,25 +25,38 @@ export function requireFamilyMember(person: Person) {
   if (person.role !== "family") throw new RequestError(403, "Only family members can do this");
 }
 
-// The People page: the family's members, its supporters (active and removed, newest
-// first), and the community question. Family members only; supporters never see each other.
+// The People page: the family's members, its supporters with an email (active and removed,
+// newest first), how many devices are signed in without a verified email, and the community
+// question. Family members only; supporters never see each other.
 export async function listPeople(db: Db, person: Person) {
   requireFamilyMember(person);
   const family = await db.family.findUniqueOrThrow({
     where: { id: person.familyId },
-    include: { people: { orderBy: { createdAt: "desc" } } },
+    include: { people: { where: { email: { not: null } }, orderBy: { createdAt: "desc" } } },
   });
   const familyMembers = family.people
     .filter((p) => p.role === "family" && !p.removedAt)
     .reverse()
     .map((p) => ({ id: p.id, name: p.name, email: p.email, isYou: p.id === person.id }));
   const supporters = family.people.filter((p) => p.role === "supporter").map(supporterView);
+  const devicesWithoutVerifiedEmail = await db.session.count({ where: unverifiedSessions(person.familyId) });
   return {
     familyMembers,
     supporters: supporters.filter((s) => !s.removedAt),
     removed: supporters.filter((s) => s.removedAt),
+    devicesWithoutVerifiedEmail,
     question: family.question,
     acceptedAnswers: family.acceptedAnswers,
+  };
+}
+
+// The live sessions of the family's supporters who have no verified email, either none given
+// yet or one not yet confirmed. Changing the answers signs these out. Never family members,
+// some of whom signed in before emails were verified.
+function unverifiedSessions(familyId: string) {
+  return {
+    expiresAt: { gt: new Date() },
+    person: { familyId, role: "supporter" as const, emailVerifiedAt: null },
   };
 }
 
@@ -194,12 +209,15 @@ async function endAccess(tx: Prisma.TransactionClient, personId: string) {
   await tx.magicLink.deleteMany({ where: { personId, usedAt: null } });
 }
 
-// Changes the question and accepted answers. Affects only people joining afterwards.
+// Changes the question and accepted answers. When an answer that worked stops working, every
+// supporter without a verified email is signed out, so whoever got in with the old answer
+// must answer again; supporters with a verified email can be seen and removed one by one.
+// Holds the gate lock, so no answer is checked against the old answers once this commits.
 export async function changeQuestion(
   db: Db,
   person: Person,
   input: { question?: unknown; answers?: unknown },
-): Promise<{ question: string; acceptedAnswers: string[] }> {
+): Promise<{ question: string; acceptedAnswers: string[]; signedOut: number }> {
   requireFamilyMember(person);
   const question = typeof input.question === "string" ? input.question.trim() : "";
   if (question.length === 0 || question.length > MAX_QUESTION) {
@@ -215,18 +233,26 @@ export async function changeQuestion(
       `Please give 1 to ${MAX_ANSWERS} accepted answers, each up to ${MAX_ANSWER} characters.`,
     );
   }
-  const family = await db.family.update({
-    where: { id: person.familyId },
-    data: { question, acceptedAnswers: answers },
-  });
-  return { question: family.question, acceptedAnswers: family.acceptedAnswers };
+  return db.$transaction(async (tx) => {
+    await lockGate(tx, person.familyId);
+    const before = await tx.family.findUniqueOrThrow({ where: { id: person.familyId } });
+    const family = await tx.family.update({
+      where: { id: person.familyId },
+      data: { question, acceptedAnswers: answers },
+    });
+    const { count: signedOut } = dropsAnAnswer(before.acceptedAnswers, answers)
+      ? await tx.session.deleteMany({ where: unverifiedSessions(person.familyId) })
+      : { count: 0 };
+    return { question: family.question, acceptedAnswers: family.acceptedAnswers, signedOut };
+  }, QUEUE);
 }
 
+// Listed supporters always have a name and email.
 function supporterView(p: Person): SupporterView {
   return {
     id: p.id,
-    name: p.name,
-    email: p.email,
+    name: p.name ?? "",
+    email: p.email ?? "",
     emailVerified: p.emailVerifiedAt !== null,
     notificationsOn: p.notificationsOn,
     joinedAt: p.createdAt,

@@ -12,10 +12,21 @@ type Supporter = {
   removedAt: string | null;
 };
 type FamilyMember = { id: string; name: string; email: string; isYou: boolean };
-type People = { familyMembers: FamilyMember[]; supporters: Supporter[]; removed: Supporter[]; question: string; acceptedAnswers: string[] };
+type People = {
+  familyMembers: FamilyMember[];
+  supporters: Supporter[];
+  removed: Supporter[];
+  devicesWithoutVerifiedEmail: number;
+  question: string;
+  acceptedAnswers: string[];
+};
 
 function date(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function devices(count: number) {
+  return count === 1 ? "1 device" : `${count} devices`;
 }
 
 // Family members' page for family members, supporters, and the community question. The server
@@ -84,13 +95,17 @@ export function People({ slug }: { slug: string }) {
 
   async function saveQuestion(e: FormEvent) {
     e.preventDefault();
-    const { status, data } = await api<{ error?: string }>(slug, "question", {
+    const { status, data } = await api<{ signedOut?: number; error?: string }>(slug, "question", {
       method: "PUT",
       body: { question, answers: answers.split("\n") },
     });
+    const signedOut = data?.signedOut ?? 0;
     setMessage(
       status === 200
-        ? { text: "Question saved.", error: false }
+        ? {
+            text: signedOut > 0 ? `Question saved. Signed out ${devices(signedOut)} without a verified email.` : "Question saved.",
+            error: false,
+          }
         : { text: data?.error ?? "Something went wrong. Please try again.", error: true },
     );
     if (status === 200) load();
@@ -123,14 +138,23 @@ export function People({ slug }: { slug: string }) {
       />
 
       <h2>Supporters ({people.supporters.length})</h2>
+      {people.devicesWithoutVerifiedEmail > 0 && (
+        <p>
+          Signed in without a verified email: {devices(people.devicesWithoutVerifiedEmail)}, including anyone reading
+          without giving an email, whom you can't see here. Removing or changing an accepted answer (below) signs them
+          all out.
+        </p>
+      )}
       <AddSupporter onAdd={addSupporter} />
       {people.supporters.length === 0 ? (
-        <p>No supporters have joined yet.</p>
+        <p>No supporters have given an email yet.</p>
       ) : (
         <SupporterTable
           rows={people.supporters}
           action="Remove"
-          confirm={(s) => `Remove ${s.name}? They'll be signed out and can't rejoin with this email.`}
+          confirm={(s) =>
+            `Remove ${s.name}? They'll be signed out, and this email can't be used here again. If they know the answer, they can still read without an email until you change it.`
+          }
           onAction={(s) => setRemoved(s, true)}
         />
       )}
@@ -138,15 +162,17 @@ export function People({ slug }: { slug: string }) {
       {people.removed.length > 0 && (
         <>
           <h2>Removed ({people.removed.length})</h2>
-          <p>Removed supporters can't sign in or rejoin with their email. Restoring lets them sign in again, with notifications off.</p>
+          <p>Removed supporters can't sign in or give their email again. Restoring lets them sign in again, with notifications off.</p>
           <SupporterTable rows={people.removed} action="Restore" onAction={(s) => setRemoved(s, false)} />
         </>
       )}
 
       <h2>Community question</h2>
       <p>
-        New supporters answer this to join. Changing it doesn't sign anyone out. If someone you don't recognize got in,
-        remove them <em>and</em> change the question.
+        Anyone who answers this can read the updates. Removing or changing an accepted answer signs out everyone without
+        a verified email ({devices(people.devicesWithoutVerifiedEmail)} right now); supporters with a verified email stay
+        signed in. Adding an answer or rewording the question signs no one out. If someone you don't recognize got in,
+        remove them <em>and</em> change the answer.
       </p>
       <form onSubmit={saveQuestion}>
         <p>

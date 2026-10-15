@@ -85,12 +85,13 @@ function view(update: {
   body: string;
   createdAt: Date;
   editedAt: Date | null;
-  author: { name: string };
+  author: { name: string | null };
 }): UpdateView {
   return {
     id: update.id,
     body: update.body,
-    authorName: update.author.name,
+    // Authors are family members, who always have a name.
+    authorName: update.author.name ?? "",
     createdAt: update.createdAt,
     editedAt: update.editedAt,
   };
