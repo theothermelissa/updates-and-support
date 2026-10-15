@@ -44,6 +44,14 @@ When a PR's preview has built, run `npm run preview:seed` and `npm run preview` 
 
 **How to apply:** the scripts are described in README → Deployment. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
 
+### The community question keeps casual observers out, nothing more
+
+Don't add friction, such as confirmation steps or forced sign-outs, to defend against someone who already knows the answer. Server-side authorization, family isolation, and access tests stay non-negotiable.
+
+**Why:** the users are family and friends, many elderly. Melissa cut a planned confirm step and sign-out from family-side Verify: "The password isn't for security as much as it is to just keep casual observers away."
+
+**How to apply:** when a safeguard only matters against an insider who knows the answer, propose it as an option with its cost to real users, and default to leaving it out; Remove plus changing the answer is the remedy.
+
 ### Get a second opinion on plans that touch access
 
 Before building a plan that changes who can see or do what, have a subagent review it against the spec and the existing code for safety gaps and simplifications.

@@ -38,7 +38,7 @@ model Person {
   // give an email. Family members always have both.
   name             String?
   email            String? // lowercased and trimmed
-  // Set when the person confirms their email or signs in by magic link.
+  // Set when the person confirms their email, signs in by magic link, or a family member verifies it.
   emailVerifiedAt  DateTime?
   // Supporters only: whether new updates are emailed to them.
   notificationsOn  Boolean   @default(true)

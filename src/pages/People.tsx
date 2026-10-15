@@ -59,6 +59,19 @@ export function People({ slug }: { slug: string }) {
     load();
   }
 
+  async function verify(s: Supporter) {
+    const { status, data } = await api<{ error?: string }>(slug, `people/${s.id}`, {
+      method: "PATCH",
+      body: { verified: true },
+    });
+    setMessage(
+      status === 200
+        ? { text: `Verified ${s.name}'s email.`, error: false }
+        : { text: data?.error ?? "Something went wrong. Please try again.", error: true },
+    );
+    if (status === 200) load();
+  }
+
   async function addFamilyMember(name: string, email: string): Promise<boolean> {
     const { status, data } = await api<{ name: string; outcome: string; error?: string }>(slug, "people", {
       method: "POST",
@@ -156,6 +169,7 @@ export function People({ slug }: { slug: string }) {
             `Remove ${s.name}? They'll be signed out, and this email can't be used here again. If they know the answer, they can still read without an email until you change it.`
           }
           onAction={(s) => setRemoved(s, true)}
+          onVerify={verify}
         />
       )}
 
@@ -330,12 +344,14 @@ function SupporterTable({
   action,
   confirm,
   onAction,
+  onVerify,
 }: {
   rows: Supporter[];
   action: string;
   // Asks inline rather than with confirm(), which some in-app email browsers suppress.
   confirm?: (s: Supporter) => string;
   onAction: (s: Supporter) => void;
+  onVerify?: (s: Supporter) => void;
 }) {
   const [confirming, setConfirming] = useState<string | null>(null);
   const showRemoved = rows.some((r) => r.removedAt);
@@ -360,7 +376,21 @@ function SupporterTable({
               <tr>
                 <td>{s.name}</td>
                 <td>{s.email}</td>
-                <td>{s.emailVerified ? "Yes" : "Not yet"}</td>
+                <td>
+                  {s.emailVerified ? (
+                    "Yes"
+                  ) : (
+                    <>
+                      Not yet
+                      {onVerify && (
+                        <>
+                          {" "}
+                          <button onClick={() => onVerify(s)}>Verify</button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </td>
                 <td>{s.notificationsOn ? "On" : "Off"}</td>
                 <td>{date(s.joinedAt)}</td>
                 {s.removedAt && <td>{date(s.removedAt)}</td>}

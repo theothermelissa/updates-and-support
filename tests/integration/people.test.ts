@@ -2,7 +2,14 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getSession, requestSignInLink, signInWithLink, verifyEmail } from "../../server/auth.js";
 import { addEmail, answerGate, lockGate } from "../../server/gate.js";
 import type { Family, Person } from "../../server/generated/prisma/client.js";
-import { addFamilyMember, addSupporter, changeQuestion, listPeople, setRemoved } from "../../server/people.js";
+import {
+  addFamilyMember,
+  addSupporter,
+  changeQuestion,
+  listPeople,
+  setRemoved,
+  verifySupporter,
+} from "../../server/people.js";
 import { notifySupporters } from "../../server/notifications.js";
 import { hashToken, newToken } from "../../server/tokens.js";
 import { createTestDb } from "./db.js";
@@ -159,6 +166,65 @@ describe("restore", () => {
     const signedIn = await signInWithLink(db, family.slug, tokenFrom(mail.sent[0]!));
     expect(signedIn?.person.id).toBe(sam.person.id);
     expect(signedIn?.person.notificationsOn).toBe(false);
+  });
+});
+
+describe("verifying a supporter's email", () => {
+  const verifiedAt = async (id: string) => (await db.person.findUniqueOrThrow({ where: { id } })).emailVerifiedAt;
+
+  it("is refused to supporters", async () => {
+    const { family, sam } = await setUp();
+    const tess = await join(family, "Tess");
+    await expect(verifySupporter(db, sam.person, tess.person.id, true)).rejects.toMatchObject({ status: 403 });
+    expect(await verifiedAt(tess.person.id)).toBeNull();
+  });
+
+  it("treats another family's supporter as not found", async () => {
+    const { ana, olu } = await setUp();
+    await expect(verifySupporter(db, ana, olu.person.id, true)).rejects.toMatchObject({ status: 404 });
+    expect(await verifiedAt(olu.person.id)).toBeNull();
+  });
+
+  it("treats a removed supporter, a reader without an email, and a family member as not found", async () => {
+    const { family, ana } = await setUp();
+    const tess = await join(family, "Tess");
+    await setRemoved(db, ana, tess.person.id, true);
+    const reader = await answerCorrectly(db, family);
+    const ben = await db.person.create({
+      data: { familyId: family.id, role: "family", name: "Ben Rivera", email: "ben.rivera@example.com" },
+    });
+
+    for (const id of [tess.person.id, reader.person.id, ben.id]) {
+      await expect(verifySupporter(db, ana, id, true)).rejects.toMatchObject({ status: 404 });
+      expect(await verifiedAt(id)).toBeNull();
+    }
+  });
+
+  it("verifies, keeps the supporter signed in, and leaves their confirmation link working", async () => {
+    const { family, ana, sam } = await setUp();
+    await verifySupporter(db, ana, sam.person.id, true);
+
+    expect((await listPeople(db, ana)).supporters).toMatchObject([{ id: sam.person.id, emailVerified: true }]);
+    expect(await getSession(db, family.slug, sam.sessionToken)).not.toBeNull();
+    const first = await verifiedAt(sam.person.id);
+    expect(await verifyEmail(db, family.slug, tokenFrom(sam.sent[0]!))).toEqual({ canSignIn: true });
+    expect(await verifiedAt(sam.person.id)).toEqual(first);
+  });
+
+  it("changes nothing for an email that's already verified", async () => {
+    const { ana, sam } = await setUp();
+    await verifySupporter(db, ana, sam.person.id, true);
+    const first = await verifiedAt(sam.person.id);
+    await verifySupporter(db, ana, sam.person.id, true);
+    expect(await verifiedAt(sam.person.id)).toEqual(first);
+  });
+
+  it("rejects anything but verified: true", async () => {
+    const { ana, sam } = await setUp();
+    for (const value of ["yes", false, undefined]) {
+      await expect(verifySupporter(db, ana, sam.person.id, value)).rejects.toMatchObject({ status: 400 });
+    }
+    expect(await verifiedAt(sam.person.id)).toBeNull();
   });
 });
 
