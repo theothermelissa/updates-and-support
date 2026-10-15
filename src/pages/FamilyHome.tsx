@@ -115,7 +115,7 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
         </label>
       </p>
       <p>The family will see your name and email.</p>
-      <button disabled={busy}>Email me</button>
+      <button disabled={busy}>Keep me updated</button>
       {error && <p className="error">{error}</p>}
     </form>
   );
