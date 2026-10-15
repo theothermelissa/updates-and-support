@@ -55,12 +55,31 @@ export async function createFamily(db: Db, input: NewFamily) {
   });
 }
 
+// The family at this address, following a redirect from an old address (see familyRedirects).
 export function findFamilyBySlug(db: Db, slug: string) {
-  return db.family.findUnique({ where: { slug } });
+  return db.family.findUnique({ where: { slug: familyRedirects().get(slug) ?? slug } });
+}
+
+// Old addresses that lead to a family's current one, from FAMILY_REDIRECTS ("old=new,…"). A
+// deployment setting rather than code, so real family addresses stay out of the repository.
+// Malformed pairs are ignored.
+export function familyRedirects(setting = process.env.FAMILY_REDIRECTS ?? ""): Map<string, string> {
+  const redirects = new Map<string, string>();
+  for (const pair of setting.split(",")) {
+    const [from = "", to = "", ...rest] = pair.split("=").map((part) => part.trim().toLowerCase());
+    if (rest.length === 0 && isValidSlug(from) && isValidSlug(to) && from !== to) redirects.set(from, to);
+  }
+  return redirects;
+}
+
+// The address of the family shown at the site's root, from ROOT_FAMILY_SLUG, or null.
+export function rootFamilySlug(setting = process.env.ROOT_FAMILY_SLUG ?? ""): string | null {
+  const slug = setting.trim().toLowerCase();
+  return isValidSlug(slug) ? slug : null;
 }
 
 // A family's address: words of lowercase letters and numbers joined by single hyphens, such
-// as "for-ginger" or "rivera-k3f9m2xq".
+// as "for-sam" or "rivera-k3f9m2xq".
 export function isValidSlug(slug: string): boolean {
   return slug.length >= 3 && slug.length <= 60 && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug);
 }

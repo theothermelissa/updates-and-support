@@ -2,6 +2,9 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
+- **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
+  A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
+
 - **2026-10-15** — End a supporter's other sessions when their email is first verified.
   Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.

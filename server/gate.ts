@@ -28,9 +28,10 @@ export type GateResult =
   | { result: "wrong" | "limited" }
   | { result: "joined"; sessionToken: string; person: Person };
 
-// All a visitor who isn't signed in may learn about a family.
+// All a visitor who isn't signed in may learn about a family. The slug is the family's current
+// address, so a page reached at an old address can move to it.
 export function gateInfo(family: Family) {
-  return { displayName: family.displayName, question: family.question };
+  return { displayName: family.displayName, question: family.question, slug: family.slug };
 }
 
 // The family's gate lock, held until the transaction ends. Answer checks take it so a burst

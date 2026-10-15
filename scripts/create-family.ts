@@ -28,7 +28,7 @@ async function askRequired(prompt: string): Promise<string> {
 }
 
 async function main() {
-  const displayName = await askRequired(`Display name (e.g. "Ginger's Updates" or "The Rivera Family"): `);
+  const displayName = await askRequired(`Display name (e.g. "Sam's Updates" or "The Rivera Family"): `);
   const question = await askRequired("Community question: ");
   const acceptedAnswers = (await askRequired("Accepted answers (comma-separated): ")).split(",");
 

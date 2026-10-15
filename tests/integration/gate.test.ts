@@ -39,10 +39,12 @@ function created() {
 }
 
 describe("answering", () => {
-  it("shows a visitor only the display name and question", async () => {
-    expect(gateInfo(await rivera())).toEqual({
+  it("shows a visitor only the display name, the question, and the family's address", async () => {
+    const family = await rivera();
+    expect(gateInfo(family)).toEqual({
       displayName: "The Rivera Family",
       question: "What is the dog's name?",
+      slug: family.slug,
     });
   });
 

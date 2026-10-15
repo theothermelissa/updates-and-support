@@ -60,6 +60,14 @@ When Melissa needs to use a secret (API key, database URL), give her a command t
 
 **How to apply:** whenever a step involves a secret, give the clipboard command, warn that dashboard snippets contain the key, and ask for output with the secret checked out of it.
 
+### Real families' names and addresses never go in the repository
+
+When Melissa names a real family, person, or address in chat, everything committed uses fictional stand-ins: spec examples, plans, tests, code comments, commit messages, and PR text. Real addresses go only in Vercel's settings (`ROOT_FAMILY_SLUG`, `FAMILY_REDIRECTS`) or the database.
+
+**Why:** the repo is public. A rename PR used the real person's name, the family's surname, and their address as examples in the spec, an archived plan, tests, and a commit message. That tied a real family to its health-updates site in public, and the commit message stays in `main`'s history.
+
+**How to apply:** before every commit and PR, grep the diff and the message for names and addresses from the conversation. Use "Sam's Updates", `for-sam`, or the Rivera and Okafor families from the test fixtures instead.
+
 ## Technical
 
 ### Keep git repos out of synced folders

@@ -70,6 +70,8 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 | `RESEND_API_KEY` | A Resend API key with sending access. Production and Preview. |
 | `EMAIL_FROM` | `Updates and Support <updates@mail.orbul.com>`. Production and Preview. |
 | `APP_URL` | The production address. Production only; previews use their own deployment address. |
+| `ROOT_FAMILY_SLUG` | Optional. The address of the family shown at the site's root, `/`. Production only. |
+| `FAMILY_REDIRECTS` | Optional. Old family addresses that lead to current ones, as `old=new` pairs separated by commas. Production only. |
 
 **Checking a pull request's preview** needs four local settings in `.env` (see `.env.example`): `PREVIEW_FAMILY_EMAIL`, the preview branch's two connection strings, and Vercel's bypass secret. Vercel keeps its own copies of the connection strings Sensitive, so they can't be pulled from there.
 
@@ -85,4 +87,4 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 
 **Creating a family in production:** run `npm run family:create` with `DATABASE_URL` set to the production connection string from the Neon console.
 
-**Renaming a family in production:** copy the production connection string from the Neon console and run `DATABASE_URL="$(pbpaste)" npm run family:rename`. Everyone signs in again at the new address: supporters by answering the question, family members with Family sign-in.
+**Renaming a family in production:** copy the production connection string from the Neon console and run `DATABASE_URL="$(pbpaste)" npm run family:rename`. Everyone signs in again at the new address: supporters by answering the question, family members with Family sign-in. To keep links to the old address working, add `old=new` to `FAMILY_REDIRECTS` in Vercel's Production variables and redeploy. Real family addresses go only there, never in this repository.
