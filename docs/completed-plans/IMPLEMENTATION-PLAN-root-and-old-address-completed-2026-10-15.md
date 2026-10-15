@@ -16,8 +16,9 @@ Both settings are environment variables, because they name real families and the
 
 - **`ROOT_FAMILY_SLUG`:**
   - `GET /api/root` returns the configured address, or 404.
-  - At `/`, the app shows that family's home page; the address bar stays `/`.
-  - Links inside the page lead to the family's own address.
+  - `/` is that family's home page: the gate's info reports `home: "/"` for it, so its own address's home page moves to `/`.
+  - Notification emails link to `/`.
+  - Its other pages (sign-in, confirmation, unsubscribe, People) stay under its own address and come back to `/` when they finish.
 - **`FAMILY_REDIRECTS`** (`old=new,…`):
   - `findFamilyBySlug` follows a redirect, so every API route, including one-click unsubscribe from mail apps, treats an old address as the new one.
   - `gateInfo` now includes the family's current slug. Every family page looks the family up through the gate before rendering, which also sets the tab title. A page at an old address moves to the same page at the current one, keeping the token after the "#".
@@ -32,11 +33,15 @@ Both settings are environment variables, because they name real families and the
 
 ## Progress and discoveries
 
-All implemented. `npm run typecheck`, `npm test` (116 tests), and `npm run build` pass.
+All implemented. `npm run typecheck`, `npm test` (118 tests), and `npm run build` pass.
+
+**A change to the first version.** The first version showed the family at `/` but left its own address as its home. Melissa wanted `/` to be the page itself, so the family's own address and the old address now both move to `/`. The tests for the root home path and the notification link fail when the root check is removed.
 
 **By hand, against a local server with both settings:**
-- the root showed the family, with its heading and tab title, at `/`;
-- an old confirmation link moved to the new address with its token intact;
+- `/`, the family's own address, and the old address, with or without a trailing slash, all end at `/`, with the family's heading and tab title;
+- an old confirmation link moved to the matching page at the new address with its token intact;
 - one-click unsubscribe at the old address turned the supporter's notifications off.
 
-The container had restarted between turns, which stopped local Postgres. `pg_ctlcluster 16 main start` fixed it.
+**Two environment gotchas:**
+- The container restarted between turns, which stopped local Postgres. `pg_ctlcluster 16 main start` fixed it.
+- One check first ran against a stale local server that was still holding the port with the old API code. It looked like a bug until the server was restarted.

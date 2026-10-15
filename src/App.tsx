@@ -33,25 +33,27 @@ function Root() {
   return <FamilyPage slug={slug} />;
 }
 
-// Looks up the family's address first. A page at an old address moves to the same page at the
-// family's current one, keeping a link's token after the "#". Otherwise the browser tab takes
-// the family's display name, which the gate shows to anyone at the address anyway.
+// Looks up the family first, and moves the page to where it lives, keeping a link's token after
+// the "#": the home page to the family's home (the site's root, for the root family), and any
+// other page to the family's current address. Then the browser tab takes the family's display
+// name, which the gate shows to anyone at the address anyway.
 function FamilyPage({ slug, page }: { slug: string; page?: string }) {
   const [current, setCurrent] = useState<string | null>(null);
   useEffect(() => {
-    api<{ displayName?: string; slug?: string }>(slug, "gate").then(
+    api<{ displayName?: string; slug?: string; home?: string }>(slug, "gate").then(
       ({ status, data }) => {
-        const moved = status === 200 && data?.slug && data.slug !== slug;
-        if (moved && location.pathname.startsWith(`/f/${slug}`)) {
-          location.replace(location.pathname.replace(`/f/${slug}`, `/f/${data.slug}`) + location.hash);
+        if (status !== 200 || !data?.slug) return setCurrent(slug);
+        const target = page ? `/f/${data.slug}/${page}` : (data.home ?? `/f/${data.slug}`);
+        if (withoutTrailingSlash(location.pathname) !== withoutTrailingSlash(target)) {
+          location.replace(target + location.hash);
           return;
         }
-        if (status === 200 && data?.displayName) document.title = data.displayName;
-        setCurrent(moved ? data.slug! : slug);
+        if (data.displayName) document.title = data.displayName;
+        setCurrent(data.slug);
       },
       () => setCurrent(slug),
     );
-  }, [slug]);
+  }, [slug, page]);
   if (!current) return null;
   if (page === "family") return <FamilySignIn slug={current} />;
   if (page === "sign-in") return <SignIn slug={current} />;
@@ -59,4 +61,8 @@ function FamilyPage({ slug, page }: { slug: string; page?: string }) {
   if (page === "unsubscribe") return <Unsubscribe slug={current} />;
   if (page === "people") return <People slug={current} />;
   return <FamilyHome slug={current} />;
+}
+
+function withoutTrailingSlash(path: string) {
+  return path.length > 1 ? path.replace(/\/$/, "") : path;
 }

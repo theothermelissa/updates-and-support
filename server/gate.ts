@@ -10,7 +10,7 @@ import {
 import type { Db } from "./db.js";
 import { appUrl, verificationEmail, type SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
-import { validNameAndEmail } from "./families.js";
+import { familyHomePath, validNameAndEmail } from "./families.js";
 import type { Family, Person, Prisma } from "./generated/prisma/client.js";
 import { hashToken, newToken } from "./tokens.js";
 
@@ -29,9 +29,14 @@ export type GateResult =
   | { result: "joined"; sessionToken: string; person: Person };
 
 // All a visitor who isn't signed in may learn about a family. The slug is the family's current
-// address, so a page reached at an old address can move to it.
+// address and home its home page's path, so a page reached elsewhere can move to where it lives.
 export function gateInfo(family: Family) {
-  return { displayName: family.displayName, question: family.question, slug: family.slug };
+  return {
+    displayName: family.displayName,
+    question: family.question,
+    slug: family.slug,
+    home: familyHomePath(family.slug),
+  };
 }
 
 // The family's gate lock, held until the transaction ends. Answer checks take it so a burst

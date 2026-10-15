@@ -20,7 +20,10 @@ The operator can rename a family with another script, giving a new display name,
 
 Two settings name real families, so they live in the hosting's settings rather than in this repository:
 
-- **`ROOT_FAMILY_SLUG`** shows that family's home page at the site's root address, `/`, as well as at its own address. Without it, `/` shows "not found."
+- **`ROOT_FAMILY_SLUG`** makes the site's root address, `/`, that family's home page.
+  - Its own address's home page moves to `/`, and its notification emails link there.
+  - Its other pages, such as sign-in and confirmation links and the People page, stay under its own address.
+  - Without the setting, `/` shows "not found."
 - **`FAMILY_REDIRECTS`** keeps old addresses working after a rename, as `old=new` pairs separated by commas.
   - A page at an old address moves to the same page at the new one, keeping a link's token.
   - The server treats requests to an old address as the new one, so one-click unsubscribe links in old emails still work.

@@ -2,6 +2,7 @@ import { newVerificationLink } from "./auth.js";
 import type { Db } from "./db.js";
 import { appUrl, notificationEmail, verificationEmail, type SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
+import { familyHomePath } from "./families.js";
 import type { Person } from "./generated/prisma/client.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,7 +32,7 @@ export async function notifySupporters(db: Db, send: SendEmails, familyId: strin
       email
         ? [
             notificationEmail(email, family.displayName, {
-              site: base,
+              site: `${appUrl()}${familyHomePath(family.slug)}`,
               unsubscribePage: `${base}/unsubscribe#token=${unsubscribeToken}`,
               oneClickUnsubscribe: `${appUrl()}/api/f/${family.slug}/unsubscribe?token=${unsubscribeToken}`,
             }),

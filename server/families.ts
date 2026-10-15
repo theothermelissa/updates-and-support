@@ -78,6 +78,11 @@ export function rootFamilySlug(setting = process.env.ROOT_FAMILY_SLUG ?? ""): st
   return isValidSlug(slug) ? slug : null;
 }
 
+// The path of a family's home page: the site's root for the root family, otherwise its address.
+export function familyHomePath(slug: string): string {
+  return rootFamilySlug() === slug ? "/" : `/f/${slug}`;
+}
+
 // A family's address: words of lowercase letters and numbers joined by single hyphens, such
 // as "for-sam" or "rivera-k3f9m2xq".
 export function isValidSlug(slug: string): boolean {
