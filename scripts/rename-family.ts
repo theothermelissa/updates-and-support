@@ -6,7 +6,7 @@ import { createInterface } from "node:readline/promises";
 import { getDb } from "../server/db.js";
 import { findFamilyBySlug, renameFamily } from "../server/families.js";
 
-const PRODUCTION_URL = "https://updates.orbul.com";
+const PRODUCTION_URL = "https://orbul.com";
 
 const rl = createInterface({ input: process.stdin });
 // An iterator rather than rl.question, so piped input works as well as typing.

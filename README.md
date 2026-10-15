@@ -69,7 +69,7 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Production: set by the Neon integration. Preview: set by hand to the `preview` branch's pooled and direct connection strings. |
 | `RESEND_API_KEY` | A Resend API key with sending access. Production and Preview. |
 | `EMAIL_FROM` | `Updates and Support <updates@mail.orbul.com>`. Production and Preview. |
-| `APP_URL` | The production address. Production only; previews use their own deployment address. |
+| `APP_URL` | The production address, `https://orbul.com`. Production only; previews use their own deployment address. |
 | `ROOT_FAMILY_SLUG` | Optional. The address of the family shown at the site's root, `/`. Production only. |
 | `FAMILY_REDIRECTS` | Optional. Old family addresses that lead to current ones, as `old=new` pairs separated by commas. Production only. |
 
