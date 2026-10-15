@@ -163,3 +163,5 @@ Its remaining finding is the first cut above.
 - the People page count and explanations;
 - a stale gate answer leaving the family member signed in;
 - changing the answer signing out the unverified reader and reporting "Signed out 1 device."
+
+**No preview.** CI passed on the PR, but Vercel refused its preview, almost certainly because commits from this cloud session are authored by the `claude` GitHub account, which isn't on the Vercel team. Melissa approved merging once the checks passed, without a preview.
