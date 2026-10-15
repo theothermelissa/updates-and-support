@@ -12,7 +12,7 @@ The app hosts many families. Each family has its own private site, its own suppo
 
 - **Family Member**: posts, edits, and deletes updates, and manages the family's supporters and family members. Every family member has the same permissions; the person the updates are about is simply one of the family members.
 - **Supporter**: someone in the family's support network. Reads updates and can get an email when a new one is posted.
-- **Operator**: the person running the app (Melissa). Creates families with a command-line script. The operator is not a role inside the app.
+- **Operator**: the person running the app (Melissa). Creates and renames families with command-line scripts. The operator is not a role inside the app.
 
 A person who is both a supporter and a family member of different families has a separate, unrelated record in each.
 
@@ -20,7 +20,7 @@ A person who is both a supporter and a family member of different families has a
 
 ### MVP
 
-- Operator creates a family with a script. → [access.md](access.md)
+- Operator creates and renames families with scripts. → [access.md](access.md)
 - Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
 - Family members add supporters directly, manage the supporter list, and change the community question. → [access.md](access.md)

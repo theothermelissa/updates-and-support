@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "family:create": "tsx scripts/create-family.ts",
+    "family:rename": "tsx scripts/rename-family.ts",
     "email:test": "tsx scripts/send-test-email.ts",
     "start": "vercel dev",
     "vercel-build": "prisma generate && prisma migrate deploy && vite build",

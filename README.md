@@ -44,6 +44,7 @@ What the app should do lives in `spec/`, starting with `spec/MASTER_SPEC.md`. Ho
 | `npm run build` | Builds the production frontend into `dist/`. |
 | `npm run db:migrate` | Creates and applies a migration after editing `prisma/schema.prisma`. |
 | `npm run family:create` | Creates a family and its family members, prompting for each detail, and prints the family's address. Uses `DATABASE_URL`. |
+| `npm run family:rename` | Gives a family a new display name, address, or both, asking before changing anything. The old address stops working at once. Uses `DATABASE_URL`. |
 | `npm run email:test -- you@example.com` | Sends one test email through Resend. Needs `RESEND_API_KEY` and `EMAIL_FROM` set for that command. |
 
 ## Working on a change
@@ -83,3 +84,5 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 4. Redeploy the preview, then run `npm run preview:seed`.
 
 **Creating a family in production:** run `npm run family:create` with `DATABASE_URL` set to the production connection string from the Neon console.
+
+**Renaming a family in production:** copy the production connection string from the Neon console and run `DATABASE_URL="$(pbpaste)" npm run family:rename`. Everyone signs in again at the new address: supporters by answering the question, family members with Family sign-in.

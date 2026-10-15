@@ -54,36 +54,37 @@ export function appUrl(): string {
   return "http://localhost:3000";
 }
 
-// Emails name the family and carry a link, nothing more: no update content.
+// Emails name the family and carry a link, nothing more: no update content. The wording
+// reads naturally with a display name like "Ginger's Updates" or "The Rivera Family".
 export function signInEmail(to: string, familyName: string, link: string): Email {
   return {
     to,
     subject: `Your sign-in link for ${familyName}`,
-    text: `Use this link to sign in to ${familyName}'s updates:\n\n${link}\n\nIt works once and expires in 15 minutes. If you didn't ask for it, you can ignore this email.`,
+    text: `Use this link to sign in to ${familyName}:\n\n${link}\n\nIt works once and expires in 15 minutes. If you didn't ask for it, you can ignore this email.`,
   };
 }
 
 export function addedEmail(to: string, familyName: string, links: { signIn: string; signInPage: string }): Email {
   return {
     to,
-    subject: `You've been added to ${familyName}'s updates`,
-    text: `You've been added to ${familyName}'s updates as a family member. Sign in here:\n\n${links.signIn}\n\nThe link works once and expires in 15 minutes. After that, you can sign in any time here:\n${links.signInPage}`,
+    subject: `You've been added to ${familyName}`,
+    text: `You've been added to ${familyName} as a family member. Sign in here:\n\n${links.signIn}\n\nThe link works once and expires in 15 minutes. After that, you can sign in any time here:\n${links.signInPage}`,
   };
 }
 
 export function welcomeEmail(to: string, familyName: string, link: string): Email {
   return {
     to,
-    subject: `${familyName} added you to their updates`,
-    text: `${familyName} added you to their updates. Please confirm your email to get an email when they post:\n\n${link}\n\nThe link expires in 7 days. If you don't know this family, you can ignore this email.`,
+    subject: `You've been added to ${familyName}`,
+    text: `You've been added to ${familyName}. Please confirm your email to get an email when there's a new update:\n\n${link}\n\nThe link expires in 7 days. If you don't know this family, you can ignore this email.`,
   };
 }
 
 export function verificationEmail(to: string, familyName: string, link: string): Email {
   return {
     to,
-    subject: `Confirm your email for ${familyName}'s updates`,
-    text: `Please confirm your email to get an email when ${familyName} posts an update:\n\n${link}\n\nThe link expires in 7 days. If you didn't ask for this, you can ignore this email.`,
+    subject: `Confirm your email for ${familyName}`,
+    text: `Please confirm your email to get an email when ${familyName} has a new update:\n\n${link}\n\nThe link expires in 7 days. If you didn't ask for this, you can ignore this email.`,
   };
 }
 
@@ -96,8 +97,8 @@ export function notificationEmail(
 ): Email {
   return {
     to,
-    subject: `New update from ${familyName}`,
-    text: `${familyName} posted a new update. Read it here:\n\n${links.site}\n\nTo stop these emails, turn them off here:\n${links.unsubscribePage}`,
+    subject: `${familyName} has a new update`,
+    text: `${familyName} has a new update. Read it here:\n\n${links.site}\n\nTo stop these emails, turn them off here:\n${links.unsubscribePage}`,
     headers: {
       "List-Unsubscribe": `<${links.oneClickUnsubscribe}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

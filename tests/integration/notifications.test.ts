@@ -68,7 +68,7 @@ it("names the family and carries the recipient's own unsubscribe links, never th
   await createUpdate(db, ana, SECRET, mail.sendMany);
   const [email] = mail.sent;
 
-  expect(email!.subject).toBe("New update from The Rivera Family");
+  expect(email!.subject).toBe("The Rivera Family has a new update");
   expect(email!.text).toContain(`/f/${family.slug}`);
   expect(email!.text).toContain(`/f/${family.slug}/unsubscribe#token=${sam.unsubscribeToken}`);
   expect(email!.headers).toEqual({
