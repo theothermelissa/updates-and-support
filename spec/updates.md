@@ -30,27 +30,20 @@ A family member can delete any update in their family after confirming. Deletion
 
 ## Reactions
 
-Everyone signed in to the family can react to an update: family members and supporters, including readers who haven't given a name or email. There are six reactions:
+Everyone signed in to the family can react to an update: family members and supporters, including readers who haven't given a name or email. There are six reactions, shown only as emoji, with no labels: ❤️ 🙏 🤗 💪 🎉 😂.
 
-- ❤️ Love
-- 🙏 Thinking of you
-- 🤗 Hug
-- 💪 You've got this
-- 🎉 Celebrate
-- 😂 That made me laugh
+Each person has at most one reaction per update. Picking a different emoji replaces it; picking the same one again removes it. Editing an update keeps its reactions.
 
-Each person can give each reaction once per update, and can give several different reactions to the same update. Pressing a reaction they've already given takes it back. Editing an update keeps its reactions.
+Under each update, side by side:
 
-Under each update:
+- **A React button.** It says "React" until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
+- **A summary**, once anyone has reacted, such as "7 Reacted: ❤️🙏😂": how many people reacted, then up to three of the emoji used, most-used first. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under the reactions, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
 
-- **All six reactions as buttons**, each showing its count once anyone has given it. The viewer's own reactions are highlighted. The buttons are large enough to tap easily on a phone, and need no hovering or pop-ups. On a computer, pointing at a button lists who gave that reaction.
-- **A line naming who reacted**, once anyone has, such as "Ana Rivera, Sam Friend and 4 others." It names up to two people; when the viewer has reacted, they come first as "You," as in "You, Ana Rivera and 4 others." Each person counts once however many reactions they gave. Pressing the line shows, under it, who gave each reaction; pressing it again hides them.
-
-**Everyone who can read the feed sees who reacted.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record, and the viewer appears as "You." A reader who hasn't given a name is never named: they're counted in each reaction's count and in "and N others." Once they give a name, their earlier reactions show it.
+**Everyone who can read the feed sees who reacted.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it.
 
 A removed person's reactions are neither shown nor counted, and a removed person can't react, since they can't sign in. Restoring a supporter brings their reactions back.
 
-Reactions send no emails or notifications. Others' new reactions appear when the page is reloaded.
+Reacting never asks for confirmation, and reactions send no emails or notifications. Others' new reactions appear when the page is reloaded.
 
 ## Notifications
 
