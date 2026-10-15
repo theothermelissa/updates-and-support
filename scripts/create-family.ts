@@ -5,7 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { getDb } from "../server/db.js";
 import { createFamily } from "../server/families.js";
 
-const PRODUCTION_URL = "https://updates.orbul.com";
+const PRODUCTION_URL = "https://orbul.com";
 
 const rl = createInterface({ input: process.stdin });
 // An iterator rather than rl.question, so piped input works as well as typing.
@@ -28,7 +28,7 @@ async function askRequired(prompt: string): Promise<string> {
 }
 
 async function main() {
-  const displayName = await askRequired(`Display name (e.g. "Ginger's Updates" or "The Rivera Family"): `);
+  const displayName = await askRequired(`Display name (e.g. "Sam's Updates" or "The Rivera Family"): `);
   const question = await askRequired("Community question: ");
   const acceptedAnswers = (await askRequired("Accepted answers (comma-separated): ")).split(",");
 

@@ -39,11 +39,26 @@ function created() {
 }
 
 describe("answering", () => {
-  it("shows a visitor only the display name and question", async () => {
-    expect(gateInfo(await rivera())).toEqual({
+  it("shows a visitor only the display name, the question, and where the family lives", async () => {
+    const family = await rivera();
+    expect(gateInfo(family)).toEqual({
       displayName: "The Rivera Family",
       question: "What is the dog's name?",
+      slug: family.slug,
+      home: `/f/${family.slug}`,
     });
+  });
+
+  it("gives the root family the site's root as its home, and no other family", async () => {
+    const family = await rivera();
+    const { family: other } = await makeFamily(db, "Okafor");
+    process.env.ROOT_FAMILY_SLUG = family.slug;
+    try {
+      expect(gateInfo(family).home).toBe("/");
+      expect(gateInfo(other).home).toBe(`/f/${other.slug}`);
+    } finally {
+      delete process.env.ROOT_FAMILY_SLUG;
+    }
   });
 
   it("signs a correct answer in at once, as a new supporter of this family only, with no name or email", async () => {

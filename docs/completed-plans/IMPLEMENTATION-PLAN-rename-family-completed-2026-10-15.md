@@ -6,8 +6,8 @@ Implements, in `spec/access.md`:
 
 It also brings in the operator lines in `spec/MASTER_SPEC.md`. One small PR, no schema change.
 
-The first use renames the Stone family to "Ginger's Updates" at `/f/for-ginger`. Melissa decided:
-- **Address:** `for-ginger`, with no random suffix.
+Its first use renames a real family, whose names stay out of this repository. Melissa decided:
+- **Address:** a chosen address with no random suffix.
 - **Old address:** it can break; no one relies on it.
 - **Name:** the new display name heads the site and appears in emails and the browser tab, with the email wording updated to read naturally.
 
@@ -24,19 +24,19 @@ The first use renames the Stone family to "Ginger's Updates" at `/f/for-ginger`.
    - Prompts for the current address, the new display name, and the new address. Enter keeps the current value.
    - Shows the change and warns that the old address stops working and everyone signs in again.
    - Asks yes/no, then prints the production address.
-3. **`server/email.ts`:** reword so a display name like "Ginger's Updates" reads naturally, and "The Rivera Family" still does.
-   - **Sign-in:** "Use this link to sign in to Ginger's Updates".
-   - **Added family member:** subject "You've been added to Ginger's Updates", body "…as a family member."
-   - **Welcome (supporter added):** "You've been added to Ginger's Updates. Please confirm your email to get an email when there's a new update".
-   - **Verification:** subject "Confirm your email for Ginger's Updates", body "…when Ginger's Updates has a new update".
-   - **Notification:** "Ginger's Updates has a new update", in both the subject and the body.
+3. **`server/email.ts`:** reword so a display name like "Sam's Updates" reads naturally, and "The Rivera Family" still does.
+   - **Sign-in:** "Use this link to sign in to Sam's Updates".
+   - **Added family member:** subject "You've been added to Sam's Updates", body "…as a family member."
+   - **Welcome (supporter added):** "You've been added to Sam's Updates. Please confirm your email to get an email when there's a new update".
+   - **Verification:** subject "Confirm your email for Sam's Updates", body "…when Sam's Updates has a new update".
+   - **Notification:** "Sam's Updates has a new update", in both the subject and the body.
 4. **`src/App.tsx`:** on a family's pages, set the browser tab's title to the display name from `GET gate`, which already shows it to anyone at the address. Other pages keep "Updates and Support".
 5. **`scripts/create-family.ts`:** the display-name prompt's example shows both styles.
 6. **README:** add `npm run family:rename` to the commands table, and "Renaming a family in production" under Deployment.
 
 ## Tests
 
-- **Unit:** `isValidSlug` accepts `for-ginger` and `rivera-k3f9m2xq`, and refuses capitals, spaces, leading, trailing, or doubled hyphens, and slugs that are too short or too long.
+- **Unit:** `isValidSlug` accepts `for-sam` and `rivera-k3f9m2xq`, and refuses capitals, spaces, leading, trailing, or doubled hyphens, and slugs that are too short or too long.
 - **Integration (`families` access):**
   - Renaming changes the name and address.
   - The old slug no longer finds the family.
@@ -52,7 +52,7 @@ After merging, Melissa copies the production connection string from Neon and run
 DATABASE_URL="$(pbpaste)" npm run family:rename
 ```
 
-At the prompts she enters the current address (`stone-…`), "Ginger's Updates", and `for-ginger`. The family member then signs in again at `/f/for-ginger` with Family sign-in.
+At the prompts she enters the family's current address, its new display name, and its new address. The family member then signs in again at the new address with Family sign-in.
 
 ## Cut for speed
 
@@ -74,5 +74,5 @@ All steps are implemented. `npm run typecheck`, `npm test` (113 tests), and `npm
   - declining changes nothing;
   - confirming renames the family and prints the production address;
   - an unknown address exits with an error.
-- **In Chromium:** the renamed family's gate and feed show "Ginger's Updates" as both the heading and the tab title, and the old address shows "not found" with the default tab title.
-- **Email:** the verification email reads "Confirm your email for Ginger's Updates" and links to the new address.
+- **In Chromium:** the renamed family's gate and feed show "Sam's Updates" as both the heading and the tab title, and the old address shows "not found" with the default tab title.
+- **Email:** the verification email reads "Confirm your email for Sam's Updates" and links to the new address.

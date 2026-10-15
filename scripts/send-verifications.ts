@@ -8,7 +8,7 @@ import { sendEmails } from "../server/email.js";
 import { sendVerifications, unverifiedSupporters } from "../server/notifications.js";
 
 // Links always point at production; the local APP_URL is localhost.
-const PRODUCTION_URL = "https://updates.orbul.com";
+const PRODUCTION_URL = "https://orbul.com";
 
 async function main() {
   const db = getDb();

@@ -55,7 +55,7 @@ export function appUrl(): string {
 }
 
 // Emails name the family and carry a link, nothing more: no update content. The wording
-// reads naturally with a display name like "Ginger's Updates" or "The Rivera Family".
+// reads naturally with a display name like "Sam's Updates" or "The Rivera Family".
 export function signInEmail(to: string, familyName: string, link: string): Email {
   return {
     to,

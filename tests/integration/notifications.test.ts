@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, expect, it } from "vitest";
-import type { SendEmails } from "../../server/email.js";
+import { appUrl, type SendEmails } from "../../server/email.js";
 import type { Person } from "../../server/generated/prisma/client.js";
 import {
   sendVerifications,
@@ -77,6 +77,18 @@ it("names the family and carries the recipient's own unsubscribe links, never th
   });
   for (const part of [email!.subject, email!.text, JSON.stringify(email!.headers)]) {
     expect(part).not.toContain("Biopsy");
+  }
+});
+
+it("links the root family's notification emails to the site's root", async () => {
+  const { family, ana } = await setUp();
+  process.env.ROOT_FAMILY_SLUG = family.slug;
+  try {
+    const mail = fakeMailer();
+    await createUpdate(db, ana, SECRET, mail.sendMany);
+    expect(mail.sent[0]!.text).toContain(`Read it here:\n\n${appUrl()}/\n`);
+  } finally {
+    delete process.env.ROOT_FAMILY_SLUG;
   }
 });
 
