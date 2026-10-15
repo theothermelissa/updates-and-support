@@ -88,12 +88,12 @@ Claude's Bash shell starts on Node 20 from nvm, while the repo needs Node 24 (`.
 
 ### Cloud sessions differ from Melissa's Mac
 
-A cloud session can run the tests but can't produce or seed a Vercel preview, and its local setup starts from nothing.
+A cloud session can run the tests and its pushes build Vercel previews, but it can't read Vercel's logs or seed the preview, and its local setup starts from nothing.
 
-**Why:** on PR #13, Vercel refused the preview within seconds of the push, almost certainly because cloud commits are authored by the GitHub account `claude`, which isn't on the Vercel team. Melissa's own commits build. The preview database strings and Vercel bypass secret live only in her local `.env`, and `vercel dev` needs a Vercel login.
+**Why:** on PR #13, the first preview failed and its logs needed a Vercel login. The guess that Vercel refuses commits authored by the `claude` GitHub account was wrong: the session's next commits built normally. The preview database strings and Vercel's bypass secret live only in Melissa's local `.env`, and `vercel dev` needs a Vercel login.
 
 **How to apply:**
-- Tell Melissa early that she'll need to deploy the preview from her machine (`npx vercel --scope theothermelissa-s-team` on the branch), or agree to test after merging.
+- Don't name a cause for a failed preview without its logs. Give Melissa `npx vercel inspect <deployment> --logs --scope theothermelissa-s-team`, and note whether a later push built.
 - Postgres 16 is installed but stopped: `pg_ctlcluster 16 main start`, create a role with a password, and point a gitignored `.env` at local databases.
 - For browser checks, a small scratchpad server that runs the `api/` handlers behind Vite in middleware mode works with the Playwright install in `/opt/node-tools`.
 - Prisma refuses `migrate reset` from an agent without Melissa's explicit consent. After editing an unmerged migration, apply it to a fresh `createdb` database instead.

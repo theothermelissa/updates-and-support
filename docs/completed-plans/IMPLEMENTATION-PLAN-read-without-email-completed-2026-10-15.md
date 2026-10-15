@@ -164,4 +164,4 @@ Its remaining finding is the first cut above.
 - a stale gate answer leaving the family member signed in;
 - changing the answer signing out the unverified reader and reporting "Signed out 1 device."
 
-**No preview.** CI passed on the PR, but Vercel refused its preview, almost certainly because commits from this cloud session are authored by the `claude` GitHub account, which isn't on the Vercel team. Melissa approved merging once the checks passed, without a preview.
+**Preview.** The PR's first Vercel preview failed for a reason the cloud session couldn't see, since the logs need a Vercel login. The next commits built normally, which also applied the migration to the preview database. Melissa approved merging once the checks passed.
