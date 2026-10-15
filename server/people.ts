@@ -204,6 +204,22 @@ async function removeFamilyMember(db: Db, person: Person, id: string) {
   });
 }
 
+// Marks an active supporter's email verified on a family member's word, for supporters who
+// never manage the emailed confirmation. Their sessions and any confirmation link stay as they are.
+// The update's filter is the whole rule; the lookup after it only tells a repeat from a refusal.
+export async function verifySupporter(db: Db, person: Person, id: string, verified: unknown): Promise<void> {
+  requireFamilyMember(person);
+  if (verified !== true) throw new RequestError(400, "Expected verified: true");
+  const active = { id, familyId: person.familyId, role: "supporter" as const, email: { not: null }, removedAt: null };
+  const { count } = await db.person.updateMany({
+    where: { ...active, emailVerifiedAt: null },
+    data: { emailVerifiedAt: new Date() },
+  });
+  if (count === 1) return;
+  const alreadyVerified = await db.person.findFirst({ where: { ...active, emailVerifiedAt: { not: null } } });
+  if (!alreadyVerified) throw new RequestError(404, "Person not found");
+}
+
 async function endAccess(tx: Prisma.TransactionClient, personId: string) {
   await tx.session.deleteMany({ where: { personId } });
   await tx.magicLink.deleteMany({ where: { personId, usedAt: null } });

@@ -6,7 +6,7 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
 
 - **2026-10-15** — End a supporter's other sessions when their email is first verified.
-  Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser.
+  Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser. A family member's Verify on the People page deliberately signs no one out, so this applies only when the email's owner confirms.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
   A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
 - **2026-10-14** — Lock the person row when signing in by magic link.
@@ -15,8 +15,6 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. It came up while testing the new add-supporter form.
 - **2026-10-15** — Fit the People page's question form on a phone.
   The question input (`size={50}`) and answers textarea (`cols={50}`) make the page scroll sideways at phone width. Seen while checking the new device count.
-- **2026-10-15** — Decide how a family can help a supporter whose email is stuck at "Not yet".
-  Several supporters on the People page hadn't confirmed, possibly because the confirm email went to spam. A family-side "Verify" button would skip the proof that the address belongs to the person who typed it, so it must sign out that record's existing devices; a "Resend confirmation" button may fix the real cause instead. Find out first whether the emails arrived.
 - **2026-10-12** — Watch email deliverability through launch week.
   Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in and notification emails reach inboxes, whether Gmail starts showing its own "Unsubscribe" button (it hadn't for the first notifications, though the header is signed), tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
 - **2026-10-12** — Revisit the gate's per-network limit on shared networks.
