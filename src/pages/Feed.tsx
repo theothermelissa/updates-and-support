@@ -1,8 +1,18 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api.js";
 import { linkify } from "../linkify.js";
+import { REACTIONS, whoReacted } from "../reactions.js";
 
-type Update = { id: string; body: string; authorName: string; createdAt: string; editedAt: string | null };
+type Reaction = { kind: string; count: number; names: string[]; mine: boolean };
+type Update = {
+  id: string;
+  body: string;
+  authorName: string;
+  createdAt: string;
+  editedAt: string | null;
+  reactions: Reaction[];
+  reactors: { count: number; names: string[]; you: boolean };
+};
 
 export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
   const [updates, setUpdates] = useState<Update[] | null>(null);
@@ -42,6 +52,7 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
           canEdit={canEdit}
           onEdit={(body) => change(`updates/${update.id}`, "PATCH", { body })}
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
+          onReact={(kind, on) => change("reactions", "POST", { updateId: update.id, kind, on })}
         />
       ))}
     </section>
@@ -83,6 +94,7 @@ function UpdateItem(props: {
   canEdit: boolean;
   onEdit: (body: string) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
+  onReact: (kind: string, on: boolean) => Promise<boolean>;
 }) {
   const { update } = props;
   const [draft, setDraft] = useState<string | null>(null);
@@ -135,6 +147,64 @@ function UpdateItem(props: {
             <button onClick={() => setDraft(null)}>Cancel</button>
           </p>
         ))}
+      <Reactions update={update} onReact={props.onReact} />
     </article>
+  );
+}
+
+// All six reactions as buttons, then a line naming who reacted that opens a list per reaction.
+// Nothing depends on hovering; `title` only adds the names on a computer.
+function Reactions({ update, onReact }: { update: Update; onReact: (kind: string, on: boolean) => Promise<boolean> }) {
+  const [pending, setPending] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const given = (kind: string) => update.reactions.find((r) => r.kind === kind);
+
+  async function press(kind: string) {
+    setPending(kind);
+    await onReact(kind, !given(kind)?.mine);
+    setPending(null);
+  }
+
+  return (
+    <>
+      <p className="reactions">
+        {REACTIONS.map(({ kind, emoji, label }) => {
+          const r = given(kind);
+          return (
+            <button
+              key={kind}
+              className="reaction"
+              aria-pressed={r?.mine ?? false}
+              aria-label={r ? `${label}, ${r.count}` : label}
+              title={r ? `${label}: ${whoReacted(r.names, r.mine, r.count)}` : label}
+              disabled={pending !== null}
+              onClick={() => press(kind)}
+            >
+              {emoji}
+              {r && ` ${r.count}`}
+            </button>
+          );
+        })}
+      </p>
+      {update.reactors.count > 0 && (
+        <p>
+          <button className="link" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {whoReacted(update.reactors.names, update.reactors.you, update.reactors.count, 2)}
+          </button>
+        </p>
+      )}
+      {open && (
+        <ul>
+          {update.reactions.map((r) => {
+            const { emoji, label } = REACTIONS.find((x) => x.kind === r.kind)!;
+            return (
+              <li key={r.kind}>
+                {emoji} {label}: {whoReacted(r.names, r.mine, r.count)}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
   );
 }

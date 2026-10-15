@@ -30,4 +30,4 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 - **2026-10-13** — Give schema-changing PRs their own preview database if the shared one keeps colliding.
   All previews share the schema-only `preview` branch, which breaks when two open PRs change the schema or a PR's migration is abandoned; the fix today is recreating `preview` by hand (README → Deployment). If that happens often, script a schema-only Neon branch per PR with a branch-scoped Vercel variable and cleanup on merge.
 - **2026-10-15** — Prune anonymous supporter records with no live sessions.
-  Each correct answer creates a record, so they pile up, one per device per answer. They're never listed, loaded, or counted, so this is only tidiness until the table grows large.
+  Each correct answer creates a record, so they pile up, one per device per answer. They're never listed, but their reactions stay counted (unnamed) after the reader is signed out, for example by an answer change; pruning a record cascades to its reactions.

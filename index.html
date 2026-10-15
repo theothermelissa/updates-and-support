@@ -10,6 +10,10 @@
       body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 40rem; margin: 0 auto; padding: 1rem; }
       textarea { width: 100%; box-sizing: border-box; font: inherit; }
       .error { color: #b00020; }
+      .reactions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+      .reaction { font: inherit; font-size: 1.3rem; min-width: 44px; min-height: 44px; padding: 0 0.6rem; border: 1px solid #bbb; border-radius: 22px; background: #fff; }
+      .reaction[aria-pressed="true"] { background: #e3efff; border-color: #2563eb; }
+      .link { font: inherit; padding: 0.5rem 0; border: 0; background: none; color: #2563eb; text-decoration: underline; cursor: pointer; }
     </style>
   </head>
   <body>
