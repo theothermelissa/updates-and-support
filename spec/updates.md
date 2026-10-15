@@ -1,6 +1,6 @@
 # Updates
 
-How a family posts updates, how everyone reads them, and how supporters learn a new one is up. Who may see an update is defined in [access.md](access.md): anyone signed in to the family, as a family member or a supporter.
+How a family posts updates, how everyone reads and reacts to them, and how supporters learn a new one is up. Who may see an update is defined in [access.md](access.md): anyone signed in to the family, as a family member or a supporter.
 
 ## An update
 
@@ -26,7 +26,31 @@ A family member can edit any update in their family, including one written by an
 
 ## Deleting
 
-A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden.
+A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions.
+
+## Reactions
+
+Everyone signed in to the family can react to an update: family members and supporters, including readers who haven't given a name or email. There are six reactions:
+
+- ❤️ Love
+- 🙏 Thinking of you
+- 🤗 Hug
+- 💪 You've got this
+- 🎉 Celebrate
+- 😂 That made me laugh
+
+Each person can give each reaction once per update, and can give several different reactions to the same update. Pressing a reaction they've already given takes it back. Editing an update keeps its reactions.
+
+Under each update:
+
+- **All six reactions as buttons**, each showing its count once anyone has given it. The viewer's own reactions are highlighted. The buttons are large enough to tap easily on a phone, and need no hovering or pop-ups. On a computer, pointing at a button lists who gave that reaction.
+- **A line naming who reacted**, once anyone has, such as "Ana Rivera, Sam Friend and 4 others." Each person counts once however many reactions they gave. Pressing the line shows, under it, the names who gave each reaction; pressing it again hides them.
+
+**Everyone who can read the feed sees who reacted.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name appears as "Someone"; once they give one, their earlier reactions show it.
+
+A removed person's reactions are neither shown nor counted, and a removed person can't react, since they can't sign in. Restoring a supporter brings their reactions back.
+
+Reactions send no emails or notifications. Others' new reactions appear when the page is reloaded.
 
 ## Notifications
 
