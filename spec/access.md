@@ -6,12 +6,17 @@ Who can get into a family's site, how they get in, and how the family controls i
 
 A family has:
 
-- a **display name**, such as "The Rivera Family"
-- a **slug**: a name plus an 8-character random suffix, such as `rivera-k3f9m2xq`. The family's site lives at `/f/<slug>`. The suffix keeps family addresses from being guessed or listed.
+- a **display name**, such as "Ginger's Updates" or "The Rivera Family". It heads the family's pages, is the browser tab's title on them, and names the family in emails, in phrases like "Ginger's Updates has a new update."
+- a **slug**: the family's address. The family's site lives at `/f/<slug>`. A new family's slug is a name plus an 8-character random suffix, such as `rivera-k3f9m2xq`. The suffix keeps family addresses from being guessed or listed.
 - a **community question** and one or more **accepted answers**
 - its family members, supporters, and updates
 
 The operator creates a family with a script, giving the display name, the question, the accepted answers, and the name and email of each family member (at least one). The script prints the family's address.
+
+The operator can rename a family with another script, giving a new display name, a new slug, or both.
+- A new slug is words of lowercase letters and numbers joined by single hyphens, such as `for-ginger`, and no other family may have it.
+- It may leave out the random suffix (see "Stated limits").
+- The old address stops working at once. Links already shared show "not found," and everyone signs in again at the new address.
 
 Each email belongs to at most one person in a family: someone is either a family member or a supporter there, never both. A supporter who has only answered the question has no name or email (see "Joining").
 
@@ -160,6 +165,8 @@ Next to the form, the page explains this, with the number of devices a change to
 ## Stated limits
 
 The gate keeps out bots, crawlers, and casual strangers. It does not stop a determined person, because the answer to a community question can often be looked up or passed along.
+
+A slug chosen without the random suffix, such as `for-ginger`, can be guessed. Anyone who guesses it sees the family's display name and question, and can try answers within the wrong-answer limits.
 
 Anyone who knows the answer can read without giving a name or email. The family sees how many devices are signed in without a verified email, but not who is behind them. If the number looks too high, or the family suspects the answer has spread, the fix is to change the answer, which signs all of them out.
 
