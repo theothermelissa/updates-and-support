@@ -46,7 +46,7 @@ Giving an email is optional, and reading never waits on it. A signed-in supporte
 
 What happens depends on whom the email already belongs to in this family:
 
-- **No one:** the name and email go on the supporter's own record, unverified, and a verification email is sent with a link to the confirmation page (see "Confirming an email"). The page tells them to check their email. Notifications start once they confirm. If the email can't be sent, the email is still added; the supporter can verify later by signing in by email.
+- **No one:** the name and email go on the supporter's own record, unverified, and a verification email is sent with a link to the confirmation page (see "Confirming an email"). The page tells them to check their email. Notifications start once the email is verified: they confirm it, or a family member verifies it for them (see "Managing supporters"). If the email can't be sent, the email is still added; the supporter can verify later by signing in by email.
 - **A supporter or family member:** nothing changes. The email is never attached to the supporter's record, because knowing the answer must not let anyone act as someone else. Instead that address gets a magic link (see "Magic links"), and the page says the email is already on the family's list and has been sent a link to sign in. Using the link signs them in on that device as the person who owns the email. Until then, they keep reading.
 - **A removed supporter or family member:** nothing changes and nothing is sent; the page says "This email can't join this family's updates. Please contact the family." They can still read, because they answered the question (see "Stated limits").
 
@@ -63,7 +63,7 @@ What happens depends on whom the email already belongs to in this family:
 - **A removed supporter:** nothing changes and no email is sent; the page says they were removed and can be restored from the removed list.
 - **A family member, current or removed:** nothing changes and no email is sent; the page says that email belongs to a family member.
 
-An added supporter receives no notification emails until they confirm their email, so a mistyped address gets one welcome email and nothing more.
+An added supporter receives no notification emails until their email is verified, either by confirming it or by a family member verifying it (see "Managing supporters"), so a mistyped address gets one welcome email and nothing more unless a family member verifies it.
 
 ### Confirming an email
 
@@ -160,6 +160,14 @@ Removal doesn't stop someone who knows the answer from reading without an email.
 
 A family member can **restore** a removed supporter. Restoring lets them sign in by email again and leaves their notifications **off**; they can turn notifications back on themselves once signed in. Restoring does not sign them in anywhere.
 
+A family member can **verify** a listed supporter whose email isn't verified yet, for supporters who never manage the emailed confirmation. A "Verify" button appears only on those rows, and only the server's check decides who may use it. Pressing it asks first, naming the supporter and their full email: "Verify only if {name} told you {email} is their email." That guards against both an entry made by someone posing as {name} and a mistyped address. Verifying:
+
+- marks the email verified, exactly as confirming it would: notifications start if they're on, and the supporter stays signed in when an accepted answer changes,
+- leaves their sessions and notification setting as they are, so no one is signed out,
+- leaves any confirmation link already sent to them working as before; confirming with it again changes nothing.
+
+Only an active supporter with an unverified email in the family member's own family can be verified. Verifying an email that's already verified changes nothing.
+
 Family members are added and removed under "Adding family members" and "Removing family members."
 
 ## Changing the community question
@@ -183,6 +191,8 @@ Anyone who knows the answer can read without giving a name or email. The family 
 Supporters who give an email appear in the supporter list with the name and email they gave. When the family sees someone there they don't recognize, the fix is to remove that supporter **and** change the answer, because removal blocks only that email and the person could keep reading without one.
 
 Someone who knows the answer can also give the email of a real person who isn't on the family's list yet. If that person confirms the email, the device that gave it becomes a supporter with a verified email: it stays signed in when the answer changes, and it appears in the supporter list under whatever name it gave. The verification email tells anyone who didn't ask for it to ignore it.
+
+A verified email means either its owner confirmed it or a family member vouched for it. A family member who verifies an entry made by someone posing as a person they know gives that device the same lasting access: it stays signed in when the answer changes and gets notification emails. Likewise, verifying a mistyped address sends notification emails to whoever owns it. The confirmation step asks the family member to verify only an email the supporter told them is theirs. If they verify the wrong entry, the fix is to remove that supporter **and** change the answer, as for any supporter they don't recognize.
 
 Giving an email reveals whether it already belongs to the family: a new email goes on the supporter's record, while a known one gets a sign-in link. Someone who knows the answer could use that to learn whether a particular person follows this family. Each check leaves a trace, since a new email appears in the supporter list and a known one receives an email. Hiding it would mean holding every new email until it's verified, which isn't worth the complexity for most families.
 
