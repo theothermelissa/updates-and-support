@@ -267,7 +267,7 @@ describe("adding family members", () => {
 
     expect(result).toEqual({ name: "Bea Rivera", outcome: "added" });
     expect(mail.sent.map((e) => e.to)).toEqual(["bea@example.com"]);
-    expect(mail.sent[0]!.subject).toBe("You've been added to The Rivera Family's updates");
+    expect(mail.sent[0]!.subject).toBe("You've been added to The Rivera Family");
     expect(mail.sent[0]!.text).toContain(`/f/${family.slug}/family`);
     const signedIn = await signInWithLink(db, family.slug, tokenFrom(mail.sent[0]!));
     expect(signedIn?.person).toMatchObject({ name: "Bea Rivera", role: "family" });
@@ -368,7 +368,7 @@ describe("adding supporters", () => {
       removedAt: null,
     });
     expect(mail.sent.map((e) => e.to)).toEqual(["tess@example.com"]);
-    expect(mail.sent[0]!.subject).toBe("The Rivera Family added you to their updates");
+    expect(mail.sent[0]!.subject).toBe("You've been added to The Rivera Family");
     expect(mail.sent[0]!.text).toContain(`/f/${family.slug}/verify#token=`);
     expect(await db.session.count()).toBe(sessions);
   });

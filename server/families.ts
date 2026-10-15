@@ -58,3 +58,31 @@ export async function createFamily(db: Db, input: NewFamily) {
 export function findFamilyBySlug(db: Db, slug: string) {
   return db.family.findUnique({ where: { slug } });
 }
+
+// A family's address: words of lowercase letters and numbers joined by single hyphens, such
+// as "for-ginger" or "rivera-k3f9m2xq".
+export function isValidSlug(slug: string): boolean {
+  return slug.length >= 3 && slug.length <= 60 && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug);
+}
+
+// Gives the family at currentSlug a new display name and address. The old address stops
+// working at once, and because session cookies are named for the address, everyone signs in
+// again at the new one. Refuses an address another family has, changing nothing.
+export async function renameFamily(db: Db, currentSlug: string, input: { displayName: string; slug: string }) {
+  const displayName = input.displayName.trim();
+  const slug = input.slug.trim().toLowerCase();
+  if (displayName.length < 1 || displayName.length > 100) {
+    throw new Error("A display name must be 1 to 100 characters.");
+  }
+  if (!isValidSlug(slug)) {
+    throw new Error(`Not a valid address: "${slug}". Use lowercase letters and numbers joined by single hyphens.`);
+  }
+  try {
+    return await db.family.update({ where: { slug: currentSlug }, data: { displayName, slug } });
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === "P2025") throw new Error(`No family at /f/${currentSlug}.`);
+    if (code === "P2002") throw new Error("That address belongs to another family.");
+    throw err;
+  }
+}

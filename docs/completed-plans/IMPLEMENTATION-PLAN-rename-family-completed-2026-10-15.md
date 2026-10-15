@@ -60,3 +60,19 @@ At the prompts she enters the current address (`stone-…`), "Ginger's Updates",
 - **Notification emails already sent** keep linking to the old address.
 
 ## Progress and discoveries
+
+All steps are implemented. `npm run typecheck`, `npm test` (113 tests), and `npm run build` pass.
+
+**Proving the tests can fail.** A test caught each of these when it was removed in turn:
+- the address check;
+- the display-name check;
+- the taken-address message;
+- updating the address at all.
+
+**By hand:**
+- **The script,** against a local database with piped answers:
+  - declining changes nothing;
+  - confirming renames the family and prints the production address;
+  - an unknown address exits with an error.
+- **In Chromium:** the renamed family's gate and feed show "Ginger's Updates" as both the heading and the tab title, and the old address shows "not found" with the default tab title.
+- **Email:** the verification email reads "Confirm your email for Ginger's Updates" and links to the new address.
