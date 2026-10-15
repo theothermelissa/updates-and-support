@@ -15,6 +15,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. It came up while testing the new add-supporter form.
 - **2026-10-15** — Fit the People page's question form on a phone.
   The question input (`size={50}`) and answers textarea (`cols={50}`) make the page scroll sideways at phone width. Seen while checking the new device count.
+- **2026-10-15** — Decide how a family can help a supporter whose email is stuck at "Not yet".
+  Several supporters on the People page hadn't confirmed, possibly because the confirm email went to spam. A family-side "Verify" button would skip the proof that the address belongs to the person who typed it, so it must sign out that record's existing devices; a "Resend confirmation" button may fix the real cause instead. Find out first whether the emails arrived.
 - **2026-10-12** — Watch email deliverability through launch week.
   Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in and notification emails reach inboxes, whether Gmail starts showing its own "Unsubscribe" button (it hadn't for the first notifications, though the header is signed), tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
 - **2026-10-12** — Revisit the gate's per-network limit on shared networks.
