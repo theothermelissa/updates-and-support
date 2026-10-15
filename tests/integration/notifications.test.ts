@@ -45,6 +45,8 @@ async function setUp() {
     // Removed, but still verified and opted in, so only the removed check keeps them out.
     rex: await supporter(family.id, "Rex", { removed: true }),
     olu: await supporter(okafor.id, "Olu"),
+    // A reader who never gave an email, with notifications on by default.
+    reader: await db.person.create({ data: { familyId: family.id, role: "supporter" } }),
   };
   return { family, okafor, ...people };
 }
@@ -123,16 +125,17 @@ it("lets a supporter turn their own notifications off and on, but not a family m
   await expect(setNotifications(db, ana, false)).rejects.toMatchObject({ status: 403 });
 });
 
-it("sends one-time verification emails only to unverified, active supporters", async () => {
+it("sends one-time verification emails only to unverified, active supporters with an email", async () => {
   const { family, okafor, una } = await setUp();
   await supporter(okafor.id, "Uri", { verified: false });
   await supporter(family.id, "Ula", { verified: false, removed: true });
+  await db.person.create({ data: { familyId: family.id, role: "supporter" } });
   const mail = fakeMailer();
 
   const pending = await unverifiedSupporters(db);
   await sendVerifications(db, mail.sendMany, pending, "https://updates.example.org");
 
   expect(mail.sent.map((e) => e.to).sort()).toEqual(["uri@example.com", una.email].sort());
-  expect(mail.sent[0]!.text).toMatch(/^Thanks for joining .*https:\/\/updates\.example\.org\/f\/[a-z0-9-]+\/verify#token=/s);
+  expect(mail.sent[0]!.text).toMatch(/^Please confirm your email .*https:\/\/updates\.example\.org\/f\/[a-z0-9-]+\/verify#token=/s);
   expect(await db.magicLink.count({ where: { purpose: "verify" } })).toBe(2);
 });

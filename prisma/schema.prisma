@@ -34,8 +34,10 @@ model Person {
   id               String    @id @default(cuid())
   familyId         String
   role             Role
-  name             String
-  email            String // lowercased and trimmed
+  // Both empty for a supporter who has only answered the question; both set once they
+  // give an email. Family members always have both.
+  name             String?
+  email            String? // lowercased and trimmed
   // Set when the person confirms their email or signs in by magic link.
   emailVerifiedAt  DateTime?
   // Supporters only: whether new updates are emailed to them.

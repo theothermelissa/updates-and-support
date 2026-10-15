@@ -8,3 +8,10 @@ export function isCorrectAnswer(answer: string, acceptedAnswers: string[]): bool
   const given = normalizeAnswer(answer);
   return given !== "" && acceptedAnswers.some((accepted) => normalizeAnswer(accepted) === given);
 }
+
+// Whether an answer that worked before a change stops working after it, so anyone who
+// got in with it should have to answer again.
+export function dropsAnAnswer(before: string[], after: string[]): boolean {
+  const kept = new Set(after.map(normalizeAnswer));
+  return before.map(normalizeAnswer).some((answer) => answer !== "" && !kept.has(answer));
+}

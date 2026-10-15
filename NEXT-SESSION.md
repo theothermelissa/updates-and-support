@@ -2,10 +2,16 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
+- **2026-10-15** — End a supporter's other sessions when their email is first verified.
+  Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser.
+- **2026-10-15** — Let a supporter change an email they haven't confirmed.
+  A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
 - **2026-10-14** — Lock the person row when signing in by magic link.
   A sign-in can race promotion or removal and keep a session that `deleteMany` missed. The verify-link sign-in for added supporters gets a `FOR UPDATE` lock; `signInWithLink` should reuse it.
 - **2026-10-14** — Show People page messages next to the form that caused them.
   "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. It came up while testing the new add-supporter form.
+- **2026-10-15** — Fit the People page's question form on a phone.
+  The question input (`size={50}`) and answers textarea (`cols={50}`) make the page scroll sideways at phone width. Seen while checking the new device count.
 - **2026-10-12** — Watch email deliverability through launch week.
   Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in and notification emails reach inboxes, whether Gmail starts showing its own "Unsubscribe" button (it hadn't for the first notifications, though the header is signed), tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
 - **2026-10-12** — Revisit the gate's per-network limit on shared networks.
@@ -18,3 +24,5 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   `pg` warns that `sslmode=require` will mean weaker checking in its next major version. Today it already behaves as `verify-full`; saying so explicitly in the Vercel and local connection strings silences the warning and keeps the behavior after upgrades.
 - **2026-10-13** — Give schema-changing PRs their own preview database if the shared one keeps colliding.
   All previews share the schema-only `preview` branch, which breaks when two open PRs change the schema or a PR's migration is abandoned; the fix today is recreating `preview` by hand (README → Deployment). If that happens often, script a schema-only Neon branch per PR with a branch-scoped Vercel variable and cleanup on merge.
+- **2026-10-15** — Prune anonymous supporter records with no live sessions.
+  Each correct answer creates a record, so they pile up, one per device per answer. They're never listed, loaded, or counted, so this is only tidiness until the table grows large.

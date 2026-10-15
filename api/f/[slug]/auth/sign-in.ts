@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { SESSION_LIFETIME, signInWithLink } from "../../../../server/auth.js";
-import { setSessionCookie } from "../../../../server/cookies.js";
 import { getDb } from "../../../../server/db.js";
-import { familyContext, jsonBody, methodNotAllowed, personView } from "../../../../server/http.js";
+import { familyContext, jsonBody, methodNotAllowed, personView, startSession } from "../../../../server/http.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return methodNotAllowed(res);
@@ -15,6 +14,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!result) {
     return res.status(400).json({ error: "This link has expired or was already used." });
   }
-  setSessionCookie(res, ctx.family.slug, result.sessionToken, SESSION_LIFETIME[result.person.role]);
+  await startSession(getDb(), req, res, ctx.family.slug, result.sessionToken, SESSION_LIFETIME[result.person.role]);
   res.status(200).json({ person: personView(result.person) });
 }

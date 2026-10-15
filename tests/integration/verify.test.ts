@@ -1,29 +1,22 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getSession, requestSignInLink, signInWithLink, verifyEmail } from "../../server/auth.js";
-import type { SendEmail } from "../../server/email.js";
 import { answerGate, BROWSER_LIMIT, NETWORK_LIMIT, signInWithVerifyLink, type Client } from "../../server/gate.js";
 import { addFamilyMember, addSupporter, setRemoved } from "../../server/people.js";
 import { createTestDb } from "./db.js";
-import { fakeMailer, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
+import { fakeMailer, joinWithEmail, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
 beforeEach(() => resetDb(db));
 
 const DAY = 24 * 60 * 60 * 1000;
-const client = { browserId: "browser-a", network: "203.0.113.1" };
 
-// Joins the Rivera family as a fictional supporter. Returns the family, the join
-// result, and the emails sent.
-async function joinRivera(send?: SendEmail) {
+// A fictional supporter of the Rivera family who answered the question and gave their email,
+// sam@example.com. Returns the family and the emails sent.
+async function joinRivera() {
   const { family } = await makeFamily(db, "Rivera");
-  const mail = fakeMailer();
-  const result = await answerGate(db, send ?? mail.send, family, client, {
-    answer: "Biscuit",
-    name: "Sam Friend",
-    email: "sam@example.com",
-  });
-  return { family, result, sent: mail.sent };
+  const { sent } = await joinWithEmail(db, family, "Sam");
+  return { family, sent };
 }
 
 async function sam() {
@@ -89,16 +82,6 @@ it("marks the email verified when someone signs in by magic link", async () => {
   expect((await sam()).emailVerifiedAt).toBeInstanceOf(Date);
 });
 
-it("still signs the supporter in when the verification email fails", async () => {
-  const failing: SendEmail = async () => {
-    throw new Error("Resend is down");
-  };
-  const { family, result } = await joinRivera(failing);
-  expect(result.result).toBe("joined");
-  if (result.result !== "joined") return;
-  expect((await getSession(db, family.slug, result.sessionToken))?.email).toBe("sam@example.com");
-});
-
 describe("signing in with a verification link and the answer", () => {
   // The link from joinRivera's verification email, used on a second device.
   const phone: Client = { browserId: "phone", network: "198.51.100.7" };
@@ -145,7 +128,7 @@ describe("signing in with a verification link and the answer", () => {
     await resetDb(db);
     const fresh = await setUp();
     for (let i = 0; i < NETWORK_LIMIT; i++) {
-      await answerGate(db, fakeMailer().send, fresh.family, { browserId: `b${i}`, network: phone.network }, { answer: "x" });
+      await answerGate(db, fresh.family, { browserId: `b${i}`, network: phone.network }, { answer: "x" });
     }
     expect(await signInWithVerifyLink(db, fresh.family, phone, fresh.token, "Biscuit")).toEqual({ result: "limited" });
   });

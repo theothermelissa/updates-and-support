@@ -84,7 +84,19 @@ Claude's Bash shell starts on Node 20 from nvm, while the repo needs Node 24 (`.
 
 **Why:** a session lost time suspecting `DATABASE_URL` before spotting the Node version.
 
-**How to apply:** prefix commands with `export PATH=~/.nvm/versions/node/v24.21.0/bin:$PATH &&` (or the current v24 in `~/.nvm/versions/node`).
+**How to apply:** prefix commands with `export PATH=~/.nvm/versions/node/v24.21.0/bin:$PATH &&` (or the current v24 in `~/.nvm/versions/node`). In a cloud session the shell starts on Node 22: run `. /opt/nvm/nvm.sh && nvm install 24` and prefix `/opt/nvm/versions/node/<v24>/bin` instead.
+
+### Cloud sessions differ from Melissa's Mac
+
+A cloud session can run the tests and its pushes build Vercel previews, but it can't read Vercel's logs or seed the preview, and its local setup starts from nothing.
+
+**Why:** on PR #13, the first preview failed and its logs needed a Vercel login. The guess that Vercel refuses commits authored by the `claude` GitHub account was wrong: the session's next commits built normally. The preview database strings and Vercel's bypass secret live only in Melissa's local `.env`, and `vercel dev` needs a Vercel login.
+
+**How to apply:**
+- Don't name a cause for a failed preview without its logs. Give Melissa `npx vercel inspect <deployment> --logs --scope theothermelissa-s-team`, and note whether a later push built.
+- Postgres 16 is installed but stopped: `pg_ctlcluster 16 main start`, create a role with a password, and point a gitignored `.env` at local databases.
+- For browser checks, a small scratchpad server that runs the `api/` handlers behind Vite in middleware mode works with the Playwright install in `/opt/node-tools`.
+- Prisma refuses `migrate reset` from an agent without Melissa's explicit consent. After editing an unmerged migration, apply it to a fresh `createdb` database instead.
 
 ### Prove each access test can fail
 
@@ -94,7 +106,7 @@ After writing an access-rule test, remove the rule it guards, watch the test fai
 
 **How to apply:** copy the file to the scratchpad before mutating it and restore from that copy. `git checkout` cannot restore a file that isn't committed yet, which nearly lost `server/auth.ts`.
 
-Three patterns hide a removed rule. A test can take a path that never reaches the rule: the check that a bad link costs no gate attempt passed with the order reversed, because it sent the *correct* answer, which never records an attempt. Next, a backstop check can mask the cleanup it backs up: removal's session and link deletion passed its test with the deletion gone, because `getSession` and `spendLink` refuse removed people anyway, so assert the cleanup directly. Last, a single concurrent race can come out right by timing alone: the family-member lock's test passed without the lock until it repeated the race 20 times.
+Three patterns hide a removed rule. A test can take a path that never reaches the rule: the check that a bad link costs no gate attempt passed with the order reversed, because it sent the *correct* answer, which never records an attempt. Next, a backstop check can mask the cleanup it backs up: removal's session and link deletion passed its test with the deletion gone, because `getSession` and `spendLink` refuse removed people anyway, so assert the cleanup directly. Last, a single concurrent race can come out right by timing alone: the family-member lock's test passed without the lock until it repeated the race 20 times. Where the rule is a lock, make the race deterministic instead: hold the lock in a test transaction, start the competing work, wait until it's queued in `pg_locks` (`queuedOrDone` in the test fixtures), then act and commit. The gate-lock tests work this way, and each one fails every time its lock is removed.
 
 ### Don't use `confirm()`, `alert()`, or `prompt()`
 

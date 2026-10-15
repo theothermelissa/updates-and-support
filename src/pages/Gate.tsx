@@ -1,20 +1,18 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api.js";
 
-type GateResult = { result?: "correct" | "wrong" | "limited" | "joined" | "check-email"; error?: string };
+type GateResult = { result?: "wrong" | "limited" | "joined"; error?: string };
 
 const MESSAGES = {
   wrong: "That's not the answer we have. Please try again.",
   limited: "Too many attempts. Please try again later.",
 };
 
-// What a visitor who isn't signed in sees: the community question, then name and email.
+// What a visitor who isn't signed in sees: the community question. A correct answer
+// goes straight to the updates.
 export function Gate({ slug, onJoined }: { slug: string; onJoined: () => void }) {
   const [info, setInfo] = useState<{ displayName: string; question: string } | null>(null);
-  const [step, setStep] = useState<"answer" | "join" | "check-email">("answer");
   const [answer, setAnswer] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -26,28 +24,14 @@ export function Gate({ slug, onJoined }: { slug: string; onJoined: () => void })
     e.preventDefault();
     setBusy(true);
     setMessage("");
-    const body = step === "join" ? { answer, name, email } : { answer };
-    const { data } = await api<GateResult>(slug, "gate", { method: "POST", body });
+    const { data } = await api<GateResult>(slug, "gate", { method: "POST", body: { answer } });
     setBusy(false);
     if (data?.result === "joined") return onJoined();
-    if (data?.result === "check-email") return setStep("check-email");
-    if (data?.result === "correct") return setStep("join");
-    if (data?.result === "wrong" || data?.result === "limited") {
-      setStep("answer");
-      return setMessage(MESSAGES[data.result]);
-    }
+    if (data?.result === "wrong" || data?.result === "limited") return setMessage(MESSAGES[data.result]);
     setMessage(data?.error ?? "Something went wrong. Please try again.");
   }
 
   if (!info) return null;
-  if (step === "check-email") {
-    return (
-      <main>
-        <h1>Check your email</h1>
-        <p>We've sent you a link to sign in to {info.displayName}'s updates. It expires in 15 minutes.</p>
-      </main>
-    );
-  }
   return (
     <main>
       <h1>{info.displayName}</h1>
@@ -56,25 +40,10 @@ export function Gate({ slug, onJoined }: { slug: string; onJoined: () => void })
           <label>
             {info.question}
             <br />
-            <input value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={step === "join"} required />
+            <input value={answer} onChange={(e) => setAnswer(e.target.value)} required />
           </label>
         </p>
-        {step === "join" && (
-          <>
-            <p>That's right. Tell the family who you are:</p>
-            <p>
-              <label>
-                Your name <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-              </label>
-            </p>
-            <p>
-              <label>
-                Your email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </label>
-            </p>
-          </>
-        )}
-        <button disabled={busy}>{step === "join" ? "Join" : "Continue"}</button>
+        <button disabled={busy}>Continue</button>
       </form>
       {message && <p className="error">{message}</p>}
       <p>

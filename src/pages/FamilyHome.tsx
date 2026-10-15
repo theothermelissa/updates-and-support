@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { api, type Me } from "../api.js";
 import { Feed } from "./Feed.js";
 import { Gate } from "./Gate.js";
@@ -36,7 +36,8 @@ export function FamilyHome({ slug }: { slug: string }) {
     <main>
       <h1>{me.family.displayName}</h1>
       <p>
-        Signed in as {me.person.name}. <button onClick={signOut}>Sign out</button>
+        {me.person.name && `Signed in as ${me.person.name}. `}
+        <button onClick={signOut}>Sign out</button>
         {me.person.role === "family" && (
           <>
             {" "}
@@ -44,7 +45,8 @@ export function FamilyHome({ slug }: { slug: string }) {
           </>
         )}
       </p>
-      {me.person.role === "supporter" && (
+      {me.person.role === "supporter" && !me.person.email && <EmailPrompt slug={slug} reload={load} />}
+      {me.person.role === "supporter" && me.person.email && (
         <p>
           <label>
             <input
@@ -57,7 +59,7 @@ export function FamilyHome({ slug }: { slug: string }) {
           {me.person.notificationsOn && !me.person.emailVerified && (
             <>
               <br />
-              Emails start once you confirm your address: look for a "Confirm your email" message, or sign in
+              Emails start once you confirm {me.person.email}: look for a "Confirm your email" message, or sign in
               by email once.
             </>
           )}
@@ -65,5 +67,56 @@ export function FamilyHome({ slug }: { slug: string }) {
       )}
       <Feed slug={slug} canEdit={me.person.role === "family"} />
     </main>
+  );
+}
+
+// For a supporter who hasn't given an email. Optional, and never in the way of reading.
+function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sentLink, setSentLink] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const { status, data } = await api<{ result?: "verify" | "sign-in-link"; error?: string }>(slug, "email", {
+      method: "POST",
+      body: { name, email },
+    });
+    setBusy(false);
+    // A new email, or signed out in the meantime: reloading shows what's next.
+    if (data?.result === "verify" || status === 401) return reload();
+    if (data?.result === "sign-in-link") return setSentLink(true);
+    setError(data?.error ?? "Something went wrong. Please try again.");
+  }
+
+  if (sentLink) {
+    return (
+      <p>
+        That email is already on the family's list, so we've sent it a link to sign in on this device. You can keep
+        reading here in the meantime.
+      </p>
+    );
+  }
+  return (
+    <form onSubmit={submit}>
+      <h2>Get an email when there's a new update</h2>
+      <p>
+        <label>
+          Your name <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+        </label>
+      </p>
+      <p>
+        <label>
+          Your email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </label>
+      </p>
+      <p>The family will see your name and email.</p>
+      <button disabled={busy}>Email me</button>
+      {error && <p className="error">{error}</p>}
+    </form>
   );
 }
