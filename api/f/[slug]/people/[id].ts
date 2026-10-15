@@ -8,10 +8,10 @@ import {
   sendRequestError,
   unauthorized,
 } from "../../../../server/http.js";
-import { setRemoved } from "../../../../server/people.js";
+import { setRemoved, verifySupporter } from "../../../../server/people.js";
 
-// A family member removing ({ removed: true }) a supporter or family member, or
-// restoring ({ removed: false }) a supporter.
+// A family member removing ({ removed: true }) a supporter or family member, restoring
+// ({ removed: false }) a supporter, or verifying a supporter's email ({ verified: true }).
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "PATCH") return methodNotAllowed(res);
   const body = jsonBody(req, res);
@@ -19,8 +19,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ctx = await familyContext(getDb(), req, res);
   if (!ctx) return;
   if (!ctx.person) return unauthorized(res);
+  if ("removed" in body && "verified" in body) {
+    return res.status(400).json({ error: "Send either removed or verified, not both" });
+  }
   try {
-    await setRemoved(getDb(), ctx.person, param(req, "id"), body.removed);
+    if ("verified" in body) await verifySupporter(getDb(), ctx.person, param(req, "id"), body.verified);
+    else await setRemoved(getDb(), ctx.person, param(req, "id"), body.removed);
     res.status(200).json({ ok: true });
   } catch (err) {
     sendRequestError(res, err);

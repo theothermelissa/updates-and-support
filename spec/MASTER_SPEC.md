@@ -23,7 +23,7 @@ A person who is both a supporter and a family member of different families has a
 - Operator creates and renames families with scripts. → [access.md](access.md)
 - Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
-- Family members add supporters directly, manage the supporter list, and change the community question. → [access.md](access.md)
+- Family members add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
 - Family members post, edit, and delete text updates; everyone signed in to the family reads them in a feed. → [updates.md](updates.md)
 - Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
 

@@ -66,6 +66,19 @@ export function People({ slug }: { slug: string }) {
     load();
   }
 
+  async function verify(s: Supporter) {
+    const { status, data } = await api<{ error?: string }>(slug, `people/${s.id}`, {
+      method: "PATCH",
+      body: { verified: true },
+    });
+    setMessage(
+      status === 200
+        ? { text: `Verified ${s.name}'s email.`, error: false }
+        : { text: data?.error ?? "Something went wrong. Please try again.", error: true },
+    );
+    if (status === 200) load();
+  }
+
   async function addFamilyMember(name: string, email: string): Promise<boolean> {
     const { status, data } = await api<{ name: string; outcome: string; error?: string }>(slug, "people", {
       method: "POST",
@@ -173,6 +186,7 @@ export function People({ slug }: { slug: string }) {
               `Remove ${s.name}? They'll be signed out, and this email can't be used here again. If they know the answer, they can still read without an email until you change it.`
             }
             onAction={(s) => setRemoved(s, true)}
+            onVerify={verify}
           />
         )}
       </Section>
@@ -351,11 +365,13 @@ function SupporterTable({
   action,
   confirm,
   onAction,
+  onVerify,
 }: {
   rows: Supporter[];
   action: string;
   confirm?: (s: Supporter) => string;
   onAction: (s: Supporter) => void;
+  onVerify?: (s: Supporter) => void;
 }) {
   const [confirming, setConfirming] = useState<string | null>(null);
   const showRemoved = rows.some((r) => r.removedAt);
@@ -381,7 +397,20 @@ function SupporterTable({
             <TableRow key={s.id}>
               <TableCell>{s.name}</TableCell>
               <TableCell>{s.email}</TableCell>
-              <TableCell>{s.emailVerified ? "Yes" : "Not yet"}</TableCell>
+              <TableCell>
+                {s.emailVerified ? (
+                  "Yes"
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Not yet
+                    {onVerify && (
+                      <Button variant="outline" size="xs" onClick={() => onVerify(s)}>
+                        Verify
+                      </Button>
+                    )}
+                  </span>
+                )}
+              </TableCell>
               <TableCell>{s.notificationsOn ? "On" : "Off"}</TableCell>
               <TableCell>{date(s.joinedAt)}</TableCell>
               {s.removedAt && <TableCell>{date(s.removedAt)}</TableCell>}

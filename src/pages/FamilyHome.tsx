@@ -125,7 +125,7 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
           <Field label="Your email">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </Field>
-          <Button disabled={busy}>Email me</Button>
+          <Button disabled={busy}>Keep me updated</Button>
           {error && <ErrorMessage>{error}</ErrorMessage>}
         </form>
       </CardContent>
