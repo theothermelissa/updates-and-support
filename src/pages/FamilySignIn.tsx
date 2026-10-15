@@ -1,4 +1,8 @@
 import { useState, type FormEvent } from "react";
+import { ErrorMessage, Field, PageShell } from "@/components/page";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { api } from "../api.js";
 
 // Family members and returning supporters both sign in here; the server sends the
@@ -16,22 +20,24 @@ export function FamilySignIn({ slug }: { slug: string }) {
 
   if (state === "sent") {
     return (
-      <main>
-        <h1>Check your email</h1>
+      <PageShell title="Check your email">
         <p>If that email belongs to someone in this family, we've sent it a sign-in link. It expires in 15 minutes.</p>
-      </main>
+      </PageShell>
     );
   }
   return (
-    <main>
-      <h1>Sign in by email</h1>
-      <form onSubmit={submit}>
-        <label>
-          Email <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>{" "}
-        <button disabled={state === "sending"}>Send sign-in link</button>
-      </form>
-      {state === "error" && <p className="error">Something went wrong. Please try again.</p>}
-    </main>
+    <PageShell title="Sign in by email">
+      <Card>
+        <CardContent>
+          <form onSubmit={submit} className="space-y-4">
+            <Field label="Email">
+              <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            </Field>
+            <Button disabled={state === "sending"}>Send sign-in link</Button>
+          </form>
+        </CardContent>
+      </Card>
+      {state === "error" && <ErrorMessage>Something went wrong. Please try again.</ErrorMessage>}
+    </PageShell>
   );
 }

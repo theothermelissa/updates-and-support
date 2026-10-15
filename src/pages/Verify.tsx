@@ -1,4 +1,8 @@
 import { useState, type FormEvent } from "react";
+import { ErrorMessage, Field, PageShell } from "@/components/page";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { api } from "../api.js";
 
 type Answered = { result?: "signed-in" | "wrong" | "limited"; error?: string };
@@ -46,39 +50,38 @@ export function Verify({ slug }: { slug: string }) {
   const signInByEmail = <a href={`/f/${slug}/family`}>sign in by email</a>;
 
   return (
-    <main>
-      <h1>{["signed-in", "question", "confirmed"].includes(state) ? "Email confirmed" : "Confirm your email"}</h1>
+    <PageShell title={["signed-in", "question", "confirmed"].includes(state) ? "Email confirmed" : "Confirm your email"}>
       {!token ? (
-        <p className="error">This link is incomplete. Please use the full link from your email.</p>
+        <ErrorMessage>This link is incomplete. Please use the full link from your email.</ErrorMessage>
       ) : state === "signed-in" ? (
-        <p>
-          Thanks for confirming your email.{" "}
-          <button onClick={() => location.assign(`/f/${slug}`)}>Go to the updates</button>
-        </p>
+        <div className="space-y-4">
+          <p>Thanks for confirming your email.</p>
+          <Button onClick={() => location.assign(`/f/${slug}`)}>Go to the updates</Button>
+        </div>
       ) : state === "question" ? (
         <>
           <p>Thanks for confirming your email. To see the updates on this device, answer the family's question:</p>
-          <form onSubmit={submit}>
-            <p>
-              <label>
-                {question}
-                <br />
-                <input value={answer} onChange={(e) => setAnswer(e.target.value)} required />
-              </label>
-            </p>
-            <button disabled={busy}>Continue</button>
-          </form>
-          {message && <p className="error">{message}</p>}
+          <Card>
+            <CardContent>
+              <form onSubmit={submit} className="space-y-4">
+                <Field label={question}>
+                  <Input value={answer} onChange={(e) => setAnswer(e.target.value)} required />
+                </Field>
+                <Button disabled={busy}>Continue</Button>
+              </form>
+            </CardContent>
+          </Card>
+          {message && <ErrorMessage>{message}</ErrorMessage>}
         </>
       ) : state === "confirmed" ? (
         <p>Thanks for confirming your email. To see the updates on this device, {signInByEmail}.</p>
       ) : state === "failed" ? (
-        <p className="error">This link has expired. Signing in by email also confirms your email: {signInByEmail}.</p>
+        <ErrorMessage>This link has expired. Signing in by email also confirms your email: {signInByEmail}.</ErrorMessage>
       ) : (
-        <button onClick={confirm} disabled={state === "confirming"}>
+        <Button size="lg" onClick={confirm} disabled={state === "confirming"}>
           Confirm my email
-        </button>
+        </Button>
       )}
-    </main>
+    </PageShell>
   );
 }

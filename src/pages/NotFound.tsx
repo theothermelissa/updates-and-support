@@ -1,8 +1,9 @@
+import { PageShell } from "@/components/page";
+
 export function NotFound() {
   return (
-    <main>
-      <h1>Not found</h1>
-      <p>There's nothing at this address.</p>
-    </main>
+    <PageShell title="Not found">
+      <p className="text-muted-foreground">There's nothing at this address.</p>
+    </PageShell>
   );
 }

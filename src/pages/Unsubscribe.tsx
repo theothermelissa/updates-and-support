@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ErrorMessage, PageShell } from "@/components/page";
+import { Button } from "@/components/ui/button";
 
 // A notification email's unsubscribe link lands here. Only pressing the button turns
 // notifications off, because email security scanners open links before people do.
@@ -14,10 +16,9 @@ export function Unsubscribe({ slug }: { slug: string }) {
   }
 
   return (
-    <main>
-      <h1>Notification emails</h1>
+    <PageShell title="Notification emails">
       {!token ? (
-        <p className="error">This link is incomplete. Please use the full link from your email.</p>
+        <ErrorMessage>This link is incomplete. Please use the full link from your email.</ErrorMessage>
       ) : state === "done" ? (
         <p>
           Notification emails are off. You can turn them back on any time after{" "}
@@ -26,12 +27,12 @@ export function Unsubscribe({ slug }: { slug: string }) {
       ) : (
         <>
           <p>Stop getting an email when there's a new update?</p>
-          <button onClick={turnOff} disabled={state === "working"}>
+          <Button onClick={turnOff} disabled={state === "working"}>
             Turn off notifications
-          </button>
-          {state === "error" && <p className="error">Something went wrong. Please try again.</p>}
+          </Button>
+          {state === "error" && <ErrorMessage>Something went wrong. Please try again.</ErrorMessage>}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

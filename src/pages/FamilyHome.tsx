@@ -1,4 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { ErrorMessage, Field, PageShell } from "@/components/page";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
 import { Feed } from "./Feed.js";
 import { Gate } from "./Gate.js";
@@ -33,40 +39,42 @@ export function FamilyHome({ slug }: { slug: string }) {
   if (me === "not-found") return <NotFound />;
   if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
   return (
-    <main>
-      <h1>{me.family.displayName}</h1>
-      <p>
-        {me.person.name && `Signed in as ${me.person.name}. `}
-        <button onClick={signOut}>Sign out</button>
-        {me.person.role === "family" && (
-          <>
-            {" "}
-            <a href={`/f/${slug}/people`}>People</a>
-          </>
-        )}
-      </p>
+    <PageShell
+      title={me.family.displayName}
+      actions={
+        <>
+          {me.person.role === "family" && (
+            <Button variant="ghost" size="sm" asChild>
+              <a href={`/f/${slug}/people`}>People</a>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={signOut}>
+            Sign out
+          </Button>
+        </>
+      }
+    >
+      {me.person.name && <p className="text-sm text-muted-foreground">Signed in as {me.person.name}.</p>}
       {me.person.role === "supporter" && !me.person.email && <EmailPrompt slug={slug} reload={load} />}
       {me.person.role === "supporter" && me.person.email && (
-        <p>
-          <label>
-            <input
-              type="checkbox"
+        <div className="space-y-2">
+          <Label>
+            <Checkbox
               checked={me.person.notificationsOn}
-              onChange={(e) => setNotifications(e.target.checked)}
-            />{" "}
+              onCheckedChange={(checked) => setNotifications(checked === true)}
+            />
             Email me when there's a new update
-          </label>
+          </Label>
           {me.person.notificationsOn && !me.person.emailVerified && (
-            <>
-              <br />
+            <p className="text-sm text-muted-foreground">
               Emails start once you confirm {me.person.email}: look for a "Confirm your email" message, or sign in
               by email once.
-            </>
+            </p>
           )}
-        </p>
+        </div>
       )}
       <Feed slug={slug} canEdit={me.person.role === "family"} />
-    </main>
+    </PageShell>
   );
 }
 
@@ -95,28 +103,32 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
 
   if (sentLink) {
     return (
-      <p>
-        That email is already on the family's list, so we've sent it a link to sign in on this device. You can keep
-        reading here in the meantime.
-      </p>
+      <Card>
+        <CardContent>
+          That email is already on the family's list, so we've sent it a link to sign in on this device. You can keep
+          reading here in the meantime.
+        </CardContent>
+      </Card>
     );
   }
   return (
-    <form onSubmit={submit}>
-      <h2>Get an email when there's a new update</h2>
-      <p>
-        <label>
-          Your name <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-        </label>
-      </p>
-      <p>
-        <label>
-          Your email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </label>
-      </p>
-      <p>The family will see your name and email.</p>
-      <button disabled={busy}>Email me</button>
-      {error && <p className="error">{error}</p>}
-    </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Get an email when there's a new update</CardTitle>
+        <CardDescription>The family will see your name and email.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-4">
+          <Field label="Your name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+          </Field>
+          <Field label="Your email">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </Field>
+          <Button disabled={busy}>Email me</Button>
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+        </form>
+      </CardContent>
+    </Card>
   );
 }

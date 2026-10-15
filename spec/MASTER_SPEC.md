@@ -46,9 +46,18 @@ These apply to every page, endpoint, and feature.
 - **Health information is sensitive.** Update content is shown only to people signed in to that family, and only the server decides who that is. See [access.md](access.md).
 - **Families are isolated.** Being signed in to one family grants nothing in another, and no page or response reveals one family's data to another family's members or supporters.
 - **No third-party tracking.** No analytics, tracking pixels, ad scripts, or third-party embeds on any page.
+- **Everything is served from the app's own domain.** Fonts, scripts, styles, and images are bundled with the app, so loading a page never contacts another server.
 - **Not indexable.** Every page sends `noindex`, and `robots.txt` disallows all crawling.
 - **Emails carry no update content.** Notification and sign-in emails name the family and contain a link, nothing more, because emails are forwarded and shown in lock-screen previews.
 - **Email is sent through Resend** from a subdomain of `orbul.com`, so deliverability problems cannot affect the root domain.
+
+## Look and feel
+
+The app follows the visual language of Vercel's Geist design system: the Geist Sans typeface, a quiet neutral palette, generous spacing, and plain, clearly labeled controls. Every page uses the same shared components, so new features look consistent without new design work.
+
+- **Light mode only.**
+- **Phone first.** Every page works at 360px wide without the page scrolling sideways. A wide table may scroll sideways within its own box.
+- **Confirmations happen on the page.** A destructive action, such as deleting an update or removing a person, asks for confirmation with an inline "Yes / Cancel" step, never a browser dialog, because some in-app email browsers silently suppress dialogs.
 
 ## Area specs
 

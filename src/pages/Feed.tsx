@@ -1,4 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Confirm, ErrorMessage } from "@/components/page";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
 import { linkify } from "../linkify.js";
 
@@ -31,10 +37,10 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
   }
 
   return (
-    <section>
+    <section className="space-y-6">
       {canEdit && <PostForm onPost={(body, notify) => change("updates", "POST", { body, notify })} />}
-      {error && <p className="error">{error}</p>}
-      {updates?.length === 0 && <p>No updates yet.</p>}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {updates?.length === 0 && <p className="text-muted-foreground">No updates yet.</p>}
       {updates?.map((update) => (
         <UpdateItem
           key={update.id}
@@ -64,17 +70,21 @@ function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promi
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2>Post an update</h2>
-      <textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
-      <p>
-        <label>
-          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Notify
-          supporters by email
-        </label>
-      </p>
-      <button disabled={posting || !body.trim()}>Post</button>
-    </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Post an update</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-4">
+          <Textarea className="min-h-32" value={body} onChange={(e) => setBody(e.target.value)} aria-label="Update" />
+          <Label>
+            <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} />
+            Notify supporters by email
+          </Label>
+          <Button disabled={posting || !body.trim()}>Post</Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -87,6 +97,7 @@ function UpdateItem(props: {
   const { update } = props;
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function save() {
     if (draft === null) return;
@@ -95,46 +106,61 @@ function UpdateItem(props: {
     setSaving(false);
   }
 
-  function remove() {
-    if (confirm("Delete this update? This can't be undone.")) props.onDelete();
-  }
-
   return (
     <article>
-      <hr />
-      <p>
-        <strong>{update.authorName}</strong> · {new Date(update.createdAt).toLocaleString()}
-        {update.editedAt && " · edited"}
-      </p>
-      {draft === null ? (
-        <p style={{ whiteSpace: "pre-wrap" }}>
-          {linkify(update.body).map((segment, i) =>
-            "href" in segment ? (
-              <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer">
-                {segment.href}
-              </a>
-            ) : (
-              segment.text
-            ),
+      <Card>
+        <CardHeader>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{update.authorName}</span> ·{" "}
+            {new Date(update.createdAt).toLocaleString()}
+            {update.editedAt && " · edited"}
+          </p>
+        </CardHeader>
+        <CardContent className="text-base">
+          {draft === null ? (
+            <p className="break-words whitespace-pre-wrap">
+              {linkify(update.body).map((segment, i) =>
+                "href" in segment ? (
+                  <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer">
+                    {segment.href}
+                  </a>
+                ) : (
+                  segment.text
+                ),
+              )}
+            </p>
+          ) : (
+            <Textarea className="min-h-32" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Update" />
           )}
-        </p>
-      ) : (
-        <textarea rows={6} value={draft} onChange={(e) => setDraft(e.target.value)} />
-      )}
-      {props.canEdit &&
-        (draft === null ? (
-          <p>
-            <button onClick={() => setDraft(update.body)}>Edit</button>{" "}
-            <button onClick={remove}>Delete</button>
-          </p>
-        ) : (
-          <p>
-            <button onClick={save} disabled={saving || !draft.trim()}>
-              Save
-            </button>{" "}
-            <button onClick={() => setDraft(null)}>Cancel</button>
-          </p>
-        ))}
+        </CardContent>
+        {props.canEdit && (
+          <CardFooter className="flex flex-wrap items-center gap-2 border-t py-3">
+            {draft !== null ? (
+              <>
+                <Button onClick={save} disabled={saving || !draft.trim()}>
+                  Save
+                </Button>
+                <Button variant="outline" onClick={() => setDraft(null)}>
+                  Cancel
+                </Button>
+              </>
+            ) : confirmingDelete ? (
+              <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirmingDelete(false)}>
+                Delete this update? This can't be undone.
+              </Confirm>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setDraft(update.body)}>
+                  Edit
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
+                  Delete
+                </Button>
+              </>
+            )}
+          </CardFooter>
+        )}
+      </Card>
     </article>
   );
 }
