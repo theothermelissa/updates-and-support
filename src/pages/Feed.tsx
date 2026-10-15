@@ -152,7 +152,7 @@ function UpdateItem(props: {
 
 const HOVER_DELAY = 300;
 
-// A React button that opens a tray of the six emoji, and a summary ("7 Reacted: ❤️🙏😂")
+// A React button that opens a tray of the six emoji, and a summary ("7 reactions: ❤️🙏😂")
 // that shows who reacted. With a mouse, hovering opens either one; on a phone, tapping does.
 function Reactions({ update, onReact }: { update: Update; onReact: (kind: string | null) => Promise<boolean> }) {
   const r = update.reactions;
@@ -233,7 +233,7 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
             onPointerLeave={() => setNames((n) => (n === "hover" ? "closed" : n))}
           >
             <button
-              className="link"
+              className="plain"
               aria-expanded={names === "pinned"}
               onClick={() => setNames((n) => (n === "pinned" ? "closed" : "pinned"))}
             >

@@ -5,8 +5,9 @@ const reactions = (r: Partial<Reactions>): Reactions => ({ count: 0, kinds: [], 
 
 describe("summary", () => {
   it("gives the total and up to three emoji, most-used first", () => {
-    expect(summary(reactions({ count: 1, kinds: ["heart"] }))).toBe("1 Reacted: ❤️");
-    expect(summary(reactions({ count: 7, kinds: ["heart", "pray", "laugh", "hug"] }))).toBe("7 Reacted: ❤️🙏😂");
+    expect(summary(reactions({ count: 1, kinds: ["heart"] }))).toBe("1 reaction: ❤️");
+    expect(summary(reactions({ count: 2, kinds: ["heart", "strong"] }))).toBe("2 reactions: ❤️💪");
+    expect(summary(reactions({ count: 7, kinds: ["heart", "pray", "laugh", "hug"] }))).toBe("7 reactions: ❤️🙏😂");
   });
 });
 

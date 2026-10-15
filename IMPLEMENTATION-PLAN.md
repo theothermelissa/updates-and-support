@@ -35,11 +35,11 @@ Nameless readers are only counted. Names are read at load time, so a reader who 
    - `reactionsView(loaded, viewerId)` shapes the view.
 3. **`server/updates.ts`**: `listUpdates` includes the filtered reactions and returns `FeedUpdate = UpdateView & ReactionsView`.
 4. **`api/f/[slug]/reactions.ts`** (POST): `familyContext`, 401 without a session, `jsonBody`, `setReaction`.
-5. **`src/reactions.ts`**: the six `{ kind, emoji, name }` entries (`name` is only for `aria-label`), `summary(r)` ("7 Reacted: ❤️🙏😂", up to three emoji), and `whoReacted(r)`, one line per person ("You ❤️" first, then "Ana Rivera 🙏", then "and N others", or "N people" when no one is named).
+5. **`src/reactions.ts`**: the six `{ kind, emoji, name }` entries (`name` is only for `aria-label`), `summary(r)` ("7 reactions: ❤️🙏😂" or "1 reaction: ❤️", up to three emoji), and `whoReacted(r)`, one line per person ("You ❤️" first, then "Ana Rivera 🙏", then "and N others", or "N people" when no one is named).
 6. **`src/pages/Feed.tsx`**: a `Reactions` component under each update.
    - **React button and tray.** The button shows "React" or the viewer's emoji. The button and tray share one hover area: with a mouse (`pointerType === "mouse"`), entering opens the tray after 300ms and leaving closes it after 300ms. Clicking or tapping the button opens it at once.
    - **In the tray**, the six emoji are buttons with `aria-label` and `aria-pressed` for the viewer's current one. Picking one closes the tray and sends the new kind, or `null` for the current one. Escape (returning focus to the button) and a pointer-down outside close it. The button is disabled while a request is in flight.
-   - **Summary.** A link-styled button showing `summary(r)`, hidden when nobody reacted. With a mouse, hovering shows `whoReacted(r)` in a small popover; clicking or tapping toggles the same list inline under the row (`aria-expanded`).
+   - **Summary.** A button styled as plain body text (focus ring only for keyboard focus, via `:focus-visible`) showing `summary(r)`, hidden when nobody reacted. With a mouse, hovering shows `whoReacted(r)` in a small popover; clicking or tapping toggles the same list inline under the row (`aria-expanded`).
 7. **`index.html`** styles: pill React button and tray buttons at least 44×44px, highlight for the viewer's emoji, absolutely positioned tray above the button and popover below the summary.
 8. **`NEXT-SESSION.md`**: in "Prune anonymous supporter records with no live sessions," note that nameless readers' reactions stay counted until their records are pruned, and that pruning cascades to them.
 
@@ -67,7 +67,7 @@ Nameless readers are only counted. Names are read at load time, so a reader who 
   - Sam's session gets 200.
   - This is the first test to call a handler directly. It points `DATABASE_URL` at the test database for the file and restores it afterwards.
 
-`src/reactions.test.ts` covers `summary` (total and up to three emoji) and `whoReacted` ("You" first, named people, "and N others", "N people").
+`src/reactions.test.ts` covers `summary` (singular and plural, up to three emoji) and `whoReacted` ("You" first, named people, "and N others", "N people").
 
 Hand check on the preview:
 - check the tray on hover with a mouse, and with a tap on a phone-sized screen

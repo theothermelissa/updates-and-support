@@ -20,9 +20,9 @@ export function emoji(kind: string): string {
   return REACTIONS.find((r) => r.kind === kind)?.emoji ?? "";
 }
 
-// "7 Reacted: ❤️🙏😂", with the three most-used emoji.
+// "7 reactions: ❤️🙏😂", with the three most-used emoji.
 export function summary(r: Reactions): string {
-  return `${r.count} Reacted: ${r.kinds.slice(0, 3).map(emoji).join("")}`;
+  return `${r.count} ${r.count === 1 ? "reaction" : "reactions"}: ${r.kinds.slice(0, 3).map(emoji).join("")}`;
 }
 
 // One line per person who reacted: the viewer first as "You", then named people, then
