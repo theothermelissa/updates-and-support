@@ -114,7 +114,7 @@ enum ReactionKind {
   laugh
 }
 
-// One person giving one reaction to one update.
+// A person's one reaction to an update; picking another replaces it.
 model Reaction {
   id        String       @id @default(cuid())
   updateId  String
@@ -125,7 +125,7 @@ model Reaction {
   update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
-  @@unique([updateId, personId, kind])
+  @@unique([updateId, personId])
 }
 
 // A wrong answer at a family's gate, counted against per-browser and per-network limits.
