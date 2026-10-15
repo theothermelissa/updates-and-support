@@ -58,6 +58,8 @@ What the app should do lives in `spec/`, starting with `spec/MASTER_SPEC.md`. Ho
 
 Vercel deploys `main` to production and every pull request to a preview URL.
 
+**Domains:** production is `orbul.com`. The older `updates.orbul.com` stays on the project, set in Vercel → Settings → Domains to redirect to `orbul.com` with the path kept, so old links still reach the app.
+
 **Previews share one database with no real data.** All previews use the Neon branch `preview`, which was created schema-only: it has production's tables but none of its rows. It holds a fictional test family and whatever is added while testing. Real families' data exists only in production.
 
 **Migrations run during the Vercel build.** Vercel runs the `vercel-build` script, which applies pending migrations (`prisma migrate deploy`) before building the frontend. A PR's preview applies its migrations to the `preview` branch, and merging to `main` applies them to production. Migrations use Neon's direct connection, `DATABASE_URL_UNPOOLED`; the running app uses the pooled `DATABASE_URL`. Because production migrates before the new code is live, keep migrations backward-compatible with the code already running.
