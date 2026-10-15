@@ -79,4 +79,4 @@ All steps are implemented, and `npm run typecheck` and `npm test` pass (124 test
 - the `email` condition: the reader case, where the database's `Person_verified_has_email` check throws instead of the expected 404
 - the `removedAt` condition: the removed supporter case
 
-**Not yet checked by hand:** the handler's 400 for a body with both `removed` and `verified`, and the button on the page. Both are for the PR preview.
+Melissa tested the Verify button on the PR preview and approved the merge. The handler's 400 for a body with both `removed` and `verified` can't be reached from the page and wasn't checked by hand.
