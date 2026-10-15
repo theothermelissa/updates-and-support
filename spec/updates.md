@@ -44,9 +44,9 @@ Each person can give each reaction once per update, and can give several differe
 Under each update:
 
 - **All six reactions as buttons**, each showing its count once anyone has given it. The viewer's own reactions are highlighted. The buttons are large enough to tap easily on a phone, and need no hovering or pop-ups. On a computer, pointing at a button lists who gave that reaction.
-- **A line naming who reacted**, once anyone has, such as "Ana Rivera, Sam Friend and 4 others." Each person counts once however many reactions they gave. Pressing the line shows, under it, the names who gave each reaction; pressing it again hides them.
+- **A line naming who reacted**, once anyone has, such as "Ana Rivera, Sam Friend and 4 others." It names up to two people; when the viewer has reacted, they come first as "You," as in "You, Ana Rivera and 4 others." Each person counts once however many reactions they gave. Pressing the line shows, under it, who gave each reaction; pressing it again hides them.
 
-**Everyone who can read the feed sees who reacted.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name appears as "Someone"; once they give one, their earlier reactions show it.
+**Everyone who can read the feed sees who reacted.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record, and the viewer appears as "You." A reader who hasn't given a name is never named: they're counted in each reaction's count and in "and N others." Once they give a name, their earlier reactions show it.
 
 A removed person's reactions are neither shown nor counted, and a removed person can't react, since they can't sign in. Restoring a supporter brings their reactions back.
 
