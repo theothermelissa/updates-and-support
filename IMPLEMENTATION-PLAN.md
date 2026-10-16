@@ -14,7 +14,7 @@ One session, one PR. The six reactions are ❤️ 🤗 💪 👏 🎉 😂, on u
 
 **Reading doesn't trust the write.** The feed and the wall load each note's reactions with the same person filter updates already use: this family, and not removed. `reactionsView` shapes both, so a response has names and counts, never another person's id or email. A nameless reader's reaction is only counted until they give a name.
 
-**On a note, the tray stays inside the card.** The wall's columns clip anything that sticks out. The control sits on the row with the time: "React" until the viewer has reacted, then their emoji, with the summary beside it. Choosing it opens the six emoji in the card, wrapping when the card is narrow. Tapping the summary shows who reacted, in the card. Click, tap, and the keyboard open them; resting the pointer does not, so moving across the wall doesn't keep resizing cards. Escape or a tap elsewhere closes the emoji. Updates keep the floating tray and the hover.
+**The same control on an update and a note.** One React button and summary: the outline button, the tray floating above it (or below when there isn't room), hover on a computer, tap on a phone, and the same who-reacted list. On a note they sit under the signature, with the time and Delete on that row. The tray and the hover list are drawn on top of the page, because the wall's columns would clip anything that sticks out of a card.
 
 No emails, no notifications, no rate limit, same as update reactions. A reaction reloads the feed or the wall.
 
@@ -24,7 +24,7 @@ No emails, no notifications, no rate limit, same as update reactions. A reaction
 2. **`server/reactions.ts`.** The shared person filter, `setReaction` for a note or an update, and `reactionsView` unchanged in shape.
 3. **`server/notes.ts`.** `noteSelect(familyId)` includes the filtered reactions. `noteView` adds them. The feed and the wall both use it.
 4. **`src/reactions.ts`.** The six emoji, with 👏 ("Clapping hands") where 🙏 was, after 💪.
-5. **`src/components/reactions.tsx`.** The update control, moved from the feed, plus the in-card control. The feed and `NoteCard` both use it, on the feed and on the wall.
+5. **`src/components/reactions.tsx`.** The one React control, used by the feed and by `NoteCard` on the feed and the wall. The tray and the hover list are portaled so the wall's columns don't clip them.
 6. **Tests.** Update reactions that used 🙏 now use another emoji, and `pray` is an unknown kind. Note reactions get the same access cases as update reactions.
 
 ## Tests
@@ -54,5 +54,4 @@ The shared write is a small function both tables call. A single Prisma delegate 
 ## Cut for speed
 
 - **No emails or live updates** when someone reacts (also the spec).
-- **No hover-to-open on a note.** The list and the emoji sit in the card.
 - **No separate rate limit.** One reaction per person per note already bounds it.

@@ -41,17 +41,16 @@ export function NoteCard(props: {
             </span>
           )}
         </p>
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <ReactionControls reactions={note.reactions} onReact={props.onReact} placement="inline" />
-          <div className="flex h-11 flex-wrap items-center gap-2 text-xs opacity-80">
+        <ReactionControls reactions={note.reactions} onReact={props.onReact}>
+          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs opacity-80">
             <time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
             {props.canDelete && !confirming && (
-              <button className="underline underline-offset-2" onClick={() => setConfirming(true)}>
+              <button type="button" className="underline underline-offset-2" onClick={() => setConfirming(true)}>
                 Delete
               </button>
             )}
           </div>
-        </div>
+        </ReactionControls>
         {confirming && (
           <div className="text-foreground">
             <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirming(false)}>

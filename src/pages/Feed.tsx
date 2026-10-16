@@ -220,7 +220,7 @@ function UpdateItem(props: {
             </Confirm>
           ) : (
             <>
-              <ReactionControls reactions={update.reactions} onReact={props.onReact} placement="floating">
+              <ReactionControls reactions={update.reactions} onReact={props.onReact}>
                 <Button variant="outline" className="h-11 rounded-full px-4" onClick={() => setWriting(true)}>
                   Leave a note
                 </Button>

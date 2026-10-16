@@ -68,17 +68,18 @@ Everyone signed in to the family can react to an update or a note: family member
 
 Each person has at most one reaction on a given update, and at most one on a given note. Picking a different emoji replaces it; picking the same one again removes it. Editing an update keeps its reactions and its notes' reactions.
 
-In the update's footer, side by side:
+The React button and the summary work the same way on an update and on a note.
 
-- **A React button.** It says "React" until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
-- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under the footer actions, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
-- **Leave a note**, and for family members **Edit** and **Delete** (see "The feed").
+- **A React button.** It says "React" until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
+- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
+
+On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the signature, with the time and **Delete** (see "Reacting to a note").
 
 **Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it.
 
 A removed person's reactions are neither shown nor counted, and a removed person can't react, since they can't sign in. Restoring a supporter brings their reactions back.
 
-Reacting never asks for confirmation, and reactions send no emails or notifications. Others' new reactions appear when the page is reloaded. How reacting looks on a note is described under "Reacting to a note."
+Reacting never asks for confirmation, and reactions send no emails or notifications. Others' new reactions appear when the page is reloaded.
 
 ## Notes
 
@@ -126,9 +127,7 @@ The wall, at `/f/<slug>/wall` and linked from "Notes" beside the feed's menu, sh
 
 ### Reacting to a note
 
-The rules are the ones under "Reactions": the same six emoji, one per person, names shown and emails never, nameless readers only counted, and nothing emailed.
-
-On the card, under the signature and on the same row as the time, a button says "React" until the viewer has reacted, then shows their emoji. Choosing it opens the six emoji inside the card. They wrap onto another line when the card is narrow, and they are large enough to tap. The summary sits beside the button once anyone has reacted. Tapping it shows who reacted, in the card, and tapping again hides it. These open from a click, a tap, or the keyboard, rather than when the pointer rests on them, so moving across the wall doesn't keep resizing the cards. Pressing Escape or tapping elsewhere closes the emoji.
+The rules, the React button, the tray, and the summary are the ones under "Reactions." They sit under the signature, with the time and Delete on that row.
 
 ### Deleting a note
 
