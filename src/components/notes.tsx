@@ -59,7 +59,7 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
 // video of another shape has no empty bars. Enlarged so the blur's soft edges fall outside
 // the box. A video source shows its frame at the given time, for a video not yet uploaded.
 function BlurredBackdrop({ src, video }: { src: string; video?: boolean }) {
-  const className = "pointer-events-none absolute inset-0 size-full scale-125 object-cover blur-2xl brightness-90";
+  const className = "pointer-events-none absolute inset-0 size-full scale-125 object-cover blur-[32px] brightness-90";
   return video ? (
     <video src={src} muted playsInline preload="auto" aria-hidden className={className} />
   ) : (
