@@ -55,8 +55,21 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
   );
 }
 
-// The video's still in a 16:9 box, cropped to fill it, with a play button. The
-// video plays in the same box, and starting it pauses any other video note that's playing.
+// A blurred, enlarged copy of a video's still that fills its box behind the video, so a
+// video of another shape has no empty bars. Enlarged so the blur's soft edges fall outside
+// the box. A video source shows its frame at the given time, for a video not yet uploaded.
+function BlurredBackdrop({ src, video }: { src: string; video?: boolean }) {
+  const className = "pointer-events-none absolute inset-0 size-full scale-125 object-cover blur-2xl brightness-90";
+  return video ? (
+    <video src={src} muted playsInline preload="auto" aria-hidden className={className} />
+  ) : (
+    <img src={src} alt="" aria-hidden className={className} />
+  );
+}
+
+// The video's still in a 16:9 box, shown whole over a blurred, enlarged copy of itself that
+// fills the rest of the box, with a play button. The video plays in the same box over the
+// same blurred still, and starting it pauses any other video note that's playing.
 // Until the host has converted the video, the still doesn't load and the box says so; when
 // the server couldn't make its links, the box says that instead.
 function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["video"]> }) {
@@ -75,22 +88,24 @@ function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["vide
 
   if (playing) {
     return (
-      <video
-        src={video.src}
-        poster={video.poster}
-        controls
-        autoPlay
-        playsInline
-        data-video-note
-        className={cn(box, "object-cover")}
-        style={{ backgroundColor: colors.fill }}
-        aria-label={`Video note from ${note.authorName}`}
-        onPlay={(e) => {
-          for (const other of document.querySelectorAll<HTMLVideoElement>("video[data-video-note]")) {
-            if (other !== e.currentTarget) other.pause();
-          }
-        }}
-      />
+      <div className={box} style={{ backgroundColor: colors.fill }}>
+        <BlurredBackdrop src={video.poster} />
+        <video
+          src={video.src}
+          poster={video.poster}
+          controls
+          autoPlay
+          playsInline
+          data-video-note
+          className="relative size-full object-contain"
+          aria-label={`Video note from ${note.authorName}`}
+          onPlay={(e) => {
+            for (const other of document.querySelectorAll<HTMLVideoElement>("video[data-video-note]")) {
+              if (other !== e.currentTarget) other.pause();
+            }
+          }}
+        />
+      </div>
     );
   }
   return (
@@ -108,10 +123,11 @@ function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["vide
         </span>
       ) : (
         <>
+          <BlurredBackdrop src={video.poster} />
           <img
             src={video.poster}
             alt=""
-            className="size-full object-cover"
+            className="relative size-full object-contain"
             onError={() => setProcessing(true)}
             loading="lazy"
           />
@@ -329,15 +345,20 @@ function VideoSide(props: {
       />
       {props.video && url ? (
         <>
-          <video
-            src={url}
-            controls
-            playsInline
-            autoPlay={props.video.recorded}
-            className="aspect-video w-full rounded-xl border-4 object-cover"
+          <div
+            className="relative aspect-video w-full overflow-hidden rounded-xl border-4"
             style={{ backgroundColor: colors.fill, borderColor: colors.fill }}
-            aria-label="Your video"
-          />
+          >
+            <BlurredBackdrop src={`${url}#t=0.1`} video />
+            <video
+              src={url}
+              controls
+              playsInline
+              autoPlay={props.video.recorded}
+              className="relative size-full object-contain"
+              aria-label="Your video"
+            />
+          </div>
           {props.video.recorded ? (
             <Button type="button" variant="outline" onClick={() => props.onVideo(null)} disabled={props.disabled}>
               Re-record
