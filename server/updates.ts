@@ -1,3 +1,4 @@
+import { blocksFrom, bodyOf, type Block } from "./blocks.js";
 import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
@@ -6,17 +7,23 @@ import { notifySupporters } from "./notifications.js";
 import { requireFamilyMember } from "./people.js";
 import { reactionsView, type ReactionsView } from "./reactions.js";
 
-const MAX_BODY = 20_000;
-
 export type UpdateView = {
   id: string;
-  body: string;
+  blocks: Block[];
   authorName: string;
   createdAt: Date;
   editedAt: Date | null;
 };
 
 export type FeedUpdate = UpdateView & ReactionsView;
+
+// What a post or edit sends: `blocks`, or `body` from pages loaded before blocks existed.
+export type Content = { blocks?: unknown; body?: unknown };
+
+const WITH_BLOCKS = {
+  author: { select: { name: true } },
+  blocks: { orderBy: { position: "asc" }, select: { text: true } },
+} as const;
 
 // Everyone signed in to the family reads every update, newest first, with its reactions.
 // Reactions are filtered by family on their own, rather than trusting how they were written,
@@ -26,7 +33,7 @@ export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]>
     where: { familyId: person.familyId },
     orderBy: { createdAt: "desc" },
     include: {
-      author: { select: { name: true } },
+      ...WITH_BLOCKS,
       reactions: {
         where: { person: { familyId: person.familyId, removedAt: null } },
         orderBy: { createdAt: "asc" },
@@ -42,13 +49,19 @@ export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]>
 export async function createUpdate(
   db: Db,
   person: Person,
-  body: unknown,
+  content: Content,
   notifyWith?: SendEmails,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
+  const blocks = blocksFrom(content);
   const update = await db.update.create({
-    data: { familyId: person.familyId, authorId: person.id, body: validBody(body) },
-    include: { author: { select: { name: true } } },
+    data: {
+      familyId: person.familyId,
+      authorId: person.id,
+      body: bodyOf(blocks),
+      blocks: { create: rows(blocks) },
+    },
+    include: WITH_BLOCKS,
   });
   if (notifyWith) {
     try {
@@ -60,20 +73,23 @@ export async function createUpdate(
   return view(update);
 }
 
-// Any family member may edit any update in their own family.
-export async function editUpdate(db: Db, person: Person, id: string, body: unknown): Promise<UpdateView> {
+// Any family member may edit any update in their own family. The update is locked while
+// its blocks are replaced, so two edits at once can't leave both sets of blocks.
+export async function editUpdate(db: Db, person: Person, id: string, content: Content): Promise<UpdateView> {
   requireFamilyMember(person);
-  const text = validBody(body);
-  // Scoped by family: another family's update ID behaves like one that doesn't exist.
-  const { count } = await db.update.updateMany({
-    where: { id, familyId: person.familyId },
-    data: { body: text, editedAt: new Date() },
+  const blocks = blocksFrom(content);
+  const found = await db.$transaction(async (tx) => {
+    // Scoped by family: another family's update ID behaves like one that doesn't exist.
+    const locked = await tx.$queryRaw<unknown[]>`
+      SELECT 1 FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
+    if (locked.length === 0) return false;
+    await tx.block.deleteMany({ where: { updateId: id } });
+    await tx.block.createMany({ data: rows(blocks).map((row) => ({ ...row, updateId: id })) });
+    await tx.update.update({ where: { id }, data: { body: bodyOf(blocks), editedAt: new Date() } });
+    return true;
   });
-  if (count === 0) throw new RequestError(404, "Update not found");
-  const update = await db.update.findUniqueOrThrow({
-    where: { id },
-    include: { author: { select: { name: true } } },
-  });
+  if (!found) throw new RequestError(404, "Update not found");
+  const update = await db.update.findUniqueOrThrow({ where: { id }, include: WITH_BLOCKS });
   return view(update);
 }
 
@@ -84,12 +100,8 @@ export async function deleteUpdate(db: Db, person: Person, id: string): Promise<
   if (count === 0) throw new RequestError(404, "Update not found");
 }
 
-function validBody(body: unknown): string {
-  const text = typeof body === "string" ? body.trim() : "";
-  if (text.length === 0 || text.length > MAX_BODY) {
-    throw new RequestError(400, `An update must be 1 to ${MAX_BODY.toLocaleString("en-US")} characters`);
-  }
-  return text;
+function rows(blocks: Block[]) {
+  return blocks.map((block, position) => ({ position, kind: "text" as const, text: block.text }));
 }
 
 function view(update: {
@@ -98,10 +110,15 @@ function view(update: {
   createdAt: Date;
   editedAt: Date | null;
   author: { name: string | null };
+  blocks: { text: string | null }[];
 }): UpdateView {
   return {
     id: update.id,
-    body: update.body,
+    // An update posted by the version before blocks, while blocks were being added, has none.
+    blocks:
+      update.blocks.length > 0
+        ? update.blocks.map((b) => ({ type: "text", text: b.text ?? "" }))
+        : [{ type: "text", text: update.body }],
     // Authors are family members, who always have a name.
     authorName: update.author.name ?? "",
     createdAt: update.createdAt,

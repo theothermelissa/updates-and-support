@@ -7,6 +7,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 - **2026-10-15** — End a supporter's other sessions when their email is first verified.
   Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser. A family member's Verify on the People page deliberately signs no one out, so this applies only when the email's owner confirms.
+- **2026-10-15** — Drop `Update.body` and the `{ body }` request once photo blocks have been live a while.
+  Text blocks kept `body` (written as the joined text) and accept `{ body }` so the code running during the migration, and pages loaded before it, kept working. Photos slice 2's migration reconciles `body` and blocks; after that, both can go.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
   A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
 - **2026-10-14** — Lock the person row when signing in by magic link.

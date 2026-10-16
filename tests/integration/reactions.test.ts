@@ -21,8 +21,8 @@ async function setUp() {
   const { family: okafor, people: [chidi] } = await makeFamily(db, "Okafor", ["Chidi"]);
   const sam = await joinWithEmail(db, family, "Sam");
   const olu = await joinWithEmail(db, okafor, "Olu");
-  const update = await createUpdate(db, ana!, "Rivera news");
-  await createUpdate(db, chidi!, "Okafor news");
+  const update = await createUpdate(db, ana!, { body: "Rivera news" });
+  await createUpdate(db, chidi!, { body: "Okafor news" });
   return { family, ana: ana!, sam: sam.person, samToken: sam.sessionToken, olu, update };
 }
 
@@ -31,7 +31,7 @@ function react(person: Person, updateId: string, kind: unknown = "heart") {
 }
 
 async function reactionsFor(person: Person) {
-  return (await listUpdates(db, person)).find((u) => u.body === "Rivera news")!.reactions;
+  return (await listUpdates(db, person)).find((u) => u.blocks[0]!.text === "Rivera news")!.reactions;
 }
 
 const none = { count: 0, kinds: [], mine: null, named: [] };

@@ -3,9 +3,11 @@ import { api } from "../api.js";
 import { linkify } from "../linkify.js";
 import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
 
+type TextBlock = { type: "text"; text: string };
+
 type Update = {
   id: string;
-  body: string;
+  blocks: TextBlock[];
   authorName: string;
   createdAt: string;
   editedAt: string | null;
@@ -40,7 +42,7 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
 
   return (
     <section>
-      {canEdit && <PostForm onPost={(body, notify) => change("updates", "POST", { body, notify })} />}
+      {canEdit && <PostForm onPost={(blocks, notify) => change("updates", "POST", { blocks, notify })} />}
       {error && <p className="error">{error}</p>}
       {updates?.length === 0 && <p>No updates yet.</p>}
       {updates?.map((update) => (
@@ -48,7 +50,7 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
           key={update.id}
           update={update}
           canEdit={canEdit}
-          onEdit={(body) => change(`updates/${update.id}`, "PATCH", { body })}
+          onEdit={(blocks) => change(`updates/${update.id}`, "PATCH", { blocks })}
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
         />
@@ -57,16 +59,54 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
   );
 }
 
-function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promise<boolean> }) {
-  const [body, setBody] = useState("");
+// The editor's text boxes, each with a key so removing one doesn't shift the others.
+type Draft = { key: number; text: string }[];
+
+let nextKey = 0;
+function draftOf(texts: string[]): Draft {
+  return texts.map((text) => ({ key: nextKey++, text }));
+}
+
+// What gets sent: empty text boxes are left out.
+function blocksOf(draft: Draft): TextBlock[] {
+  return draft.filter((d) => d.text.trim()).map((d) => ({ type: "text", text: d.text }));
+}
+
+// A column of text boxes, each with "Remove" while there's more than one, and "Add text".
+function BlockEditor({ draft, onChange }: { draft: Draft; onChange: (draft: Draft) => void }) {
+  return (
+    <div className="blocks">
+      {draft.map((d) => (
+        <div key={d.key}>
+          <textarea
+            rows={6}
+            value={d.text}
+            onChange={(e) => onChange(draft.map((x) => (x.key === d.key ? { ...x, text: e.target.value } : x)))}
+          />
+          {draft.length > 1 && (
+            <button type="button" onClick={() => onChange(draft.filter((x) => x.key !== d.key))}>
+              Remove
+            </button>
+          )}
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...draft, ...draftOf([""])])}>
+        Add text
+      </button>
+    </div>
+  );
+}
+
+function PostForm({ onPost }: { onPost: (blocks: TextBlock[], notify: boolean) => Promise<boolean> }) {
+  const [draft, setDraft] = useState(() => draftOf([""]));
   const [notify, setNotify] = useState(true);
   const [posting, setPosting] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setPosting(true);
-    if (await onPost(body, notify)) {
-      setBody("");
+    if (await onPost(blocksOf(draft), notify)) {
+      setDraft(draftOf([""]));
       setNotify(true);
     }
     setPosting(false);
@@ -75,14 +115,14 @@ function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promi
   return (
     <form onSubmit={submit}>
       <h2>Post an update</h2>
-      <textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
+      <BlockEditor draft={draft} onChange={setDraft} />
       <p>
         <label>
           <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Notify
           supporters by email
         </label>
       </p>
-      <button disabled={posting || !body.trim()}>Post</button>
+      <button disabled={posting || blocksOf(draft).length === 0}>Post</button>
     </form>
   );
 }
@@ -90,19 +130,19 @@ function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promi
 function UpdateItem(props: {
   update: Update;
   canEdit: boolean;
-  onEdit: (body: string) => Promise<boolean>;
+  onEdit: (blocks: TextBlock[]) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
 }) {
   const { update } = props;
-  const [draft, setDraft] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function save() {
     if (draft === null) return;
     setSaving(true);
-    if (await props.onEdit(draft)) setDraft(null);
+    if (await props.onEdit(blocksOf(draft))) setDraft(null);
     setSaving(false);
   }
 
@@ -114,25 +154,27 @@ function UpdateItem(props: {
         {update.editedAt && " · edited"}
       </p>
       {draft === null ? (
-        <p style={{ whiteSpace: "pre-wrap" }}>
-          {linkify(update.body).map((segment, i) =>
-            "href" in segment ? (
-              <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer">
-                {segment.href}
-              </a>
-            ) : (
-              segment.text
-            ),
-          )}
-        </p>
+        update.blocks.map((block, i) => (
+          <p key={i} style={{ whiteSpace: "pre-wrap" }}>
+            {linkify(block.text).map((segment, j) =>
+              "href" in segment ? (
+                <a key={j} href={segment.href} target="_blank" rel="noopener noreferrer">
+                  {segment.href}
+                </a>
+              ) : (
+                segment.text
+              ),
+            )}
+          </p>
+        ))
       ) : (
-        <textarea rows={6} value={draft} onChange={(e) => setDraft(e.target.value)} />
+        <BlockEditor draft={draft} onChange={setDraft} />
       )}
       {props.canEdit &&
         (draft === null ? (
           <>
             <p>
-              <button onClick={() => setDraft(update.body)}>Edit</button>{" "}
+              <button onClick={() => setDraft(draftOf(update.blocks.map((b) => b.text)))}>Edit</button>{" "}
               <button onClick={() => setConfirmingDelete(true)}>Delete</button>
             </p>
             {confirmingDelete && (
@@ -152,7 +194,7 @@ function UpdateItem(props: {
           </>
         ) : (
           <p>
-            <button onClick={save} disabled={saving || !draft.trim()}>
+            <button onClick={save} disabled={saving || blocksOf(draft).length === 0}>
               Save
             </button>{" "}
             <button onClick={() => setDraft(null)}>Cancel</button>

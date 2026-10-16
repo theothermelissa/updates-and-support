@@ -93,6 +93,8 @@ model Update {
   id        String    @id @default(cuid())
   familyId  String
   authorId  String
+  // The text blocks joined by blank lines, kept so the version before blocks still works.
+  // The content itself is in `blocks`.
   body      String
   createdAt DateTime  @default(now())
   editedAt  DateTime?
@@ -100,8 +102,27 @@ model Update {
   family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
   author    Person     @relation(fields: [authorId], references: [id])
   reactions Reaction[]
+  blocks    Block[]
 
   @@index([familyId, createdAt])
+}
+
+enum BlockKind {
+  text
+  photo
+}
+
+// One piece of an update's content, in order. Only text blocks exist so far.
+model Block {
+  id       String    @id @default(cuid())
+  updateId String
+  position Int
+  kind     BlockKind
+  text     String?
+
+  update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
+
+  @@unique([updateId, position])
 }
 
 // The fixed set of reactions; the UI gives each its emoji and label.

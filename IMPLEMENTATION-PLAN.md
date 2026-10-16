@@ -176,4 +176,12 @@ Turning photos off again is unsetting the variable and redeploying. Stored photo
 - **No retry of a failed upload**; remove it and choose it again.
 ## Progress and discoveries
 
-Not started.
+**Slice 1 is implemented** on `feature/text-blocks`; `npm run typecheck` and `npm test` pass (151 tests).
+
+- **Migration checked on a scratch database.** At `main`'s migrations, three updates (multi-line with a link; `'`, `"`, a backslash, and a literal `\n`; plain text) each became one text block equal to its `body`, at position 0. `prisma migrate diff` from the migrated database to the schema is empty.
+- **Proving the tests can fail.** Each rule was removed in turn from a copy of `server/updates.ts`, and a test failed every time:
+  - the family scope in the edit lock, and in delete: "refuses to edit or delete another family's update by ID"
+  - the family scope in `listUpdates`: "lists only the person's own family's updates"
+  - `requireFamilyMember` in create, edit, and delete: "lets a supporter read but not create, edit, or delete"
+- **Signatures.** `createUpdate` and `editUpdate` take the request's `{ blocks, body }` object, and the feed's updates carry `blocks` instead of `body`. Tests that posted a string now post `{ body }`.
+- The edit lock has no test of its own in slice 1, since only slice 3's photo deletion makes a lost edit dangerous; slice 3's race test covers it.
