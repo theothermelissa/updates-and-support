@@ -1,6 +1,7 @@
+import { MessageSquareHeartIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
-import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
+import { EmptyNoteButton, NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { ReactionControls } from "@/components/reactions";
 import { VideoCapture, VideoPlayer, type Playable } from "@/components/video";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -350,8 +351,13 @@ function UpdateItem(props: {
           ) : (
             <>
               <ReactionControls reactions={update.reactions} onReact={props.onReact}>
-                <Button variant="outline" className="h-11 rounded-full px-4" onClick={() => setWriting(true)}>
-                  Leave a note
+                <Button
+                  variant="outline"
+                  className="size-11 rounded-full [&_svg]:size-5"
+                  aria-label="Leave a note"
+                  onClick={() => setWriting(true)}
+                >
+                  <MessageSquareHeartIcon aria-hidden />
                 </Button>
               </ReactionControls>
               {props.canEdit && (
@@ -371,6 +377,12 @@ function UpdateItem(props: {
         </CardFooter>
       </Card>
       <NoteDialog open={writing} onOpenChange={setWriting} slug={props.slug} name={props.name} onLeave={props.onLeaveNote} />
+      {noteCount === 0 && (
+        // Only on a wide screen, where notes sit beside the update; on a phone it would crowd the feed.
+        <aside className="hidden min-w-0 flex-1 lg:block" aria-label="Notes">
+          <EmptyNoteButton onLeave={() => setWriting(true)} />
+        </aside>
+      )}
       {noteCount > 0 && (
         <aside className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-1" aria-label="Notes">
           {update.notes.slice(0, NOTES_SHOWN).map((note) => (

@@ -122,6 +122,7 @@ The local database holds several families, so `scripts/seed-preview.ts` refuses 
 - Run `npm run db:deploy` first.
 - Make a fictional family by piping answers into `npm run family:create`.
 - To act as a family member without a sign-in email, write a scratchpad `.mts` script that calls the `server/` functions with absolute imports, and run it with `npx tsx --env-file=.env`. One that creates a `sign_in` link with `newSignInLink` and prints its `/sign-in#token=` URL uses the real flow; the page then needs its Sign in button pressed.
+- Before minting a sign-in link, open the family page in the browser pane: it keeps sessions between runs, and auto mode refuses to read a minted link's token back.
 - To be a family member and a supporter at once, open one tab on `localhost` and the other on `127.0.0.1`: cookies are per host, so the two sessions don't replace each other.
 - To work on another branch while this checkout has uncommitted work, use `git worktree add` in `~/repos/`, copy `.env` and `.vercel` into it, run `npm ci` and `npx prisma generate` (npm skips Prisma's install scripts), and start it on its own port.
 
@@ -190,3 +191,11 @@ The pane blocks the camera, so only the refused-camera path of the recorder can 
 ### Don't run prettier
 
 The repo has no prettier config, and default prettier reformats whole files to 80 columns. Match the surrounding style by hand.
+
+### Tailwind v4 spaces every child but the last
+
+`space-y-*` and `space-x-*` put their margin on every child except the last one. An absolutely positioned decoration added as a last child still counts, so it gives the real last child a stray margin.
+
+**Why:** a note card's tail, added inside the card, put 12px of extra space under the React row.
+
+**How to apply:** put decorations beside a spaced container, in a wrapper, not inside it.
