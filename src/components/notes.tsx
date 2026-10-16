@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { MessageSquareHeartIcon, PlayIcon } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { MessageSquareHeartIcon } from "lucide-react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { cn } from "cn";
 import { Confirm, ErrorMessage, Field, LinkedText } from "@/components/page";
@@ -8,9 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { ReactionControls } from "@/components/reactions";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VideoCapture, VideoPlayer } from "@/components/video";
 import { COLORS, MAX_NOTE, PALETTE, randomColor, type Note, type NoteColor } from "../notes.js";
-import { checkVideo, uploadVideo } from "../videos.js";
-import { VideoRecorder } from "@/components/recorder";
+import { uploadVideo } from "../videos.js";
 
 // A note as a card in its color, signed by its author, with Delete for those allowed. A video
 // note's card is the video's still, edge to edge inside a thin frame in the note's color.
@@ -30,7 +30,7 @@ export function NoteCard(props: {
       style={{ color: colors.text }}
     >
       {note.video ? (
-        <VideoStill note={note} video={note.video} />
+        <VideoPlayer video={note.video} kind="note" authorName={note.authorName} fill={colors.fill} />
       ) : (
         <LinkedText text={note.body} className="font-medium [&_a]:text-inherit" />
       )}
@@ -120,98 +120,11 @@ function Bubble(props: {
   );
 }
 
-// A blurred, enlarged copy of a video's still that fills its box behind the video, so a
-// video of another shape has no empty bars. Enlarged so the blur's soft edges fall outside
-// the box. A video source shows its frame at the given time, for a video not yet uploaded.
-function BlurredBackdrop({ src, video }: { src: string; video?: boolean }) {
-  const className = "pointer-events-none absolute inset-0 size-full scale-125 object-cover blur-[26px] brightness-90";
-  return video ? (
-    <video src={src} muted playsInline preload="auto" aria-hidden className={className} />
-  ) : (
-    <img src={src} alt="" aria-hidden className={className} />
-  );
-}
-
-// The video's still in a 16:9 box, shown whole over a blurred, enlarged copy of itself that
-// fills the rest of the box, with a play button. The video plays in the same box over the
-// same blurred still, and starting it pauses any other video note that's playing.
-// Until the host has converted the video, the still doesn't load and the box says so; when
-// the server couldn't make its links, the box says that instead.
-function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["video"]> }) {
-  const [playing, setPlaying] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const colors = PALETTE[note.color];
-  const box = "relative block aspect-video w-full overflow-hidden rounded-lg";
-
-  if ("unavailable" in video) {
-    return (
-      <p className={cn(box, "flex items-center justify-center p-4 text-sm")} style={{ backgroundColor: colors.fill }}>
-        This video can't be shown right now.
-      </p>
-    );
-  }
-
-  if (playing) {
-    return (
-      <div className={box} style={{ backgroundColor: colors.fill }}>
-        <BlurredBackdrop src={video.poster} />
-        <video
-          src={video.src}
-          poster={video.poster}
-          controls
-          autoPlay
-          playsInline
-          data-video-note
-          className="relative size-full object-contain"
-          aria-label={`Video note from ${note.authorName}`}
-          onPlay={(e) => {
-            for (const other of document.querySelectorAll<HTMLVideoElement>("video[data-video-note]")) {
-              if (other !== e.currentTarget) other.pause();
-            }
-          }}
-        />
-      </div>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className={cn(box, "outline-none focus-visible:ring-3 focus-visible:ring-ring/50")}
-      style={{ backgroundColor: colors.fill }}
-      onClick={() => setPlaying(true)}
-      disabled={processing}
-      aria-label={`Play video note from ${note.authorName}`}
-    >
-      {processing ? (
-        <span className="flex h-full items-center justify-center p-4 text-sm">
-          Video is processing. Check back in a minute.
-        </span>
-      ) : (
-        <>
-          <BlurredBackdrop src={video.poster} />
-          <img
-            src={video.poster}
-            alt=""
-            className="relative size-full object-contain"
-            onError={() => setProcessing(true)}
-            loading="lazy"
-          />
-          <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-14 items-center justify-center rounded-full bg-black/55 text-white">
-              <PlayIcon className="ml-0.5 size-7 fill-current" />
-            </span>
-          </span>
-        </>
-      )}
-    </button>
-  );
-}
-
 // What the dialog leaves: a written note's body, or a posted video's public ID.
 export type NoteDraft = { body?: string; video?: string; color: NoteColor; name?: string };
 
-// The "Leave a note" dialog. Starts in a random color. Shows the viewer's name read-only, or
-// asks for one from someone without it; a name is changed on their profile, never here.
+// The "Leave a note" dialog. Starts in a random color. The name is filled in when they have
+// one, and they can change it; it's saved with the note.
 // `onLeave` returns an error message, or null once the note is saved.
 export function NoteDialog(props: {
   open: boolean;
@@ -245,9 +158,7 @@ function NoteForm(props: {
   const [uploaded, setUploaded] = useState<{ file: File; publicId: string } | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [color, setColor] = useState<NoteColor>(() => randomColor());
-  const [name, setName] = useState("");
-  // Fixed when the dialog opens, so the field doesn't change once a new name is saved.
-  const [askName] = useState(props.name === null);
+  const [name, setName] = useState(props.name ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const colors = PALETTE[color];
@@ -256,7 +167,7 @@ function NoteForm(props: {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const named = askName ? { name } : {};
+    const named = { name };
     let failed: string | null;
     if (mode === "write") {
       failed = await props.onLeave({ body, color, ...named });
@@ -315,7 +226,7 @@ function NoteForm(props: {
           required
         />
       ) : (
-        <VideoSide video={video} color={color} disabled={busy} onVideo={setVideo} onError={setError} />
+        <VideoCapture color={color} maxSeconds={60} video={video} disabled={busy} onVideo={setVideo} onError={setError} />
       )}
       <RadioGroupPrimitive.Root
         className="flex flex-wrap gap-2"
@@ -337,11 +248,7 @@ function NoteForm(props: {
         ))}
       </RadioGroupPrimitive.Root>
       <Field label="Your name">
-        {askName ? (
-          <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-        ) : (
-          <Input value={props.name ?? ""} readOnly className="bg-muted text-muted-foreground" />
-        )}
+        <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
       </Field>
       {progress !== null && (
         <p className="text-sm text-muted-foreground" role="status">
@@ -353,111 +260,10 @@ function NoteForm(props: {
         <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
           Cancel
         </Button>
-        <Button disabled={busy || !ready || (askName && !name.trim())}>
+        <Button disabled={busy || !ready || !name.trim()}>
           {mode === "write" ? "Leave note" : error ? "Try again" : "Post"}
         </Button>
       </DialogFooter>
     </form>
-  );
-}
-
-// The dialog's video side: the recorder, or the upload picker when the camera can't be used,
-// then the chosen video playing back for review, shown whole on the note's color. Nothing
-// uploads until the note is posted.
-function VideoSide(props: {
-  video: { file: File; recorded: boolean } | null;
-  color: NoteColor;
-  disabled: boolean;
-  onVideo: (video: { file: File; recorded: boolean } | null) => void;
-  onError: (message: string) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const [url, setUrl] = useState<string | null>(null);
-  const [cameraProblem, setCameraProblem] = useState<string | null>(null);
-  const colors = PALETTE[props.color];
-  const file = props.video?.file;
-
-  useEffect(() => {
-    if (!file) return setUrl(null);
-    const objectUrl = URL.createObjectURL(file);
-    setUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [file]);
-
-  async function picked(chosen: File | undefined) {
-    if (input.current) input.current.value = "";
-    if (!chosen) return;
-    props.onError("");
-    const problem = await checkVideo(chosen);
-    if (problem) props.onError(problem);
-    else props.onVideo({ file: chosen, recorded: false });
-  }
-
-  const upload = (label: string, variant: "outline" | "ghost" = "outline") => (
-    <Button type="button" variant={variant} onClick={() => input.current?.click()} disabled={props.disabled}>
-      {label}
-    </Button>
-  );
-
-  return (
-    <div className="grid gap-2">
-      <input
-        ref={input}
-        type="file"
-        accept="video/*"
-        className="hidden"
-        onChange={(e) => picked(e.target.files?.[0])}
-      />
-      {props.video && url ? (
-        <>
-          <div
-            className="relative aspect-video w-full overflow-hidden rounded-xl border-4"
-            style={{ backgroundColor: colors.fill, borderColor: colors.fill }}
-          >
-            <BlurredBackdrop src={`${url}#t=0.1`} video />
-            <video
-              src={url}
-              controls
-              playsInline
-              autoPlay={props.video.recorded}
-              className="relative size-full object-contain"
-              aria-label="Your video"
-            />
-          </div>
-          {props.video.recorded ? (
-            <Button
-              type="button"
-              className="hover:opacity-90"
-              style={{ backgroundColor: colors.text, color: "white" }}
-              onClick={() => props.onVideo(null)}
-              disabled={props.disabled}
-            >
-              Re-record
-            </Button>
-          ) : (
-            upload("Choose another")
-          )}
-        </>
-      ) : cameraProblem ? (
-        <>
-          <p
-            className="rounded-xl border p-4 text-sm"
-            style={{ backgroundColor: colors.fill, color: colors.text, borderColor: `${colors.text}33` }}
-          >
-            {cameraProblem}
-          </p>
-          {upload("Upload a video")}
-        </>
-      ) : (
-        <>
-          <VideoRecorder
-            color={props.color}
-            onRecorded={(recorded) => props.onVideo({ file: recorded, recorded: true })}
-            onUnavailable={setCameraProblem}
-          />
-          {upload("Upload a video instead", "ghost")}
-        </>
-      )}
-    </div>
   );
 }

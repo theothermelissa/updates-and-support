@@ -37,7 +37,13 @@ export function cameraProblem(error: unknown): string {
 }
 
 // "0:42 left" for the seconds remaining, rounded up so it never shows 0:00 while recording.
-export function timeLeft(elapsedMs: number): string {
-  const left = Math.max(0, Math.ceil(MAX_RECORDING_SECONDS - elapsedMs / 1000));
+export function timeLeft(elapsedMs: number, maxSeconds = MAX_RECORDING_SECONDS): string {
+  const left = Math.max(0, Math.ceil(maxSeconds - elapsedMs / 1000));
   return `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} left`;
+}
+
+// "1:05" for how long a recording with no time limit has run.
+export function elapsedTime(elapsedMs: number): string {
+  const total = Math.max(0, Math.floor(elapsedMs / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }

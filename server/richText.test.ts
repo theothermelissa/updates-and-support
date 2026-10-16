@@ -19,13 +19,13 @@ function refuses(input: unknown) {
 describe("validDoc", () => {
   it("accepts a document from the editor, keeping only each link's href", () => {
     const input = doc(
-      p(text("Bold", [{ type: "bold" }]), text(" and ", [{ type: "italic" }]), { type: "hardBreak" }, text("site", [link("https://example.com")])),
+      p(text("Bold", [{ type: "bold" }]), text(" and ", [{ type: "italic" }]), text("struck", [{ type: "strike" }]), { type: "hardBreak" }, text("site", [link("https://example.com")])),
       ul(li(p(text("one")), ol({ start: 3, type: null }, li(p(text("nested")))))),
       p(),
     );
     expect(validDoc(input)).toEqual(
       doc(
-        p(text("Bold", [{ type: "bold" }]), text(" and ", [{ type: "italic" }]), { type: "hardBreak" }, text("site", [{ type: "link", attrs: { href: "https://example.com" } }])),
+        p(text("Bold", [{ type: "bold" }]), text(" and ", [{ type: "italic" }]), text("struck", [{ type: "strike" }]), { type: "hardBreak" }, text("site", [{ type: "link", attrs: { href: "https://example.com" } }])),
         ul(li(p(text("one")), ol({ start: 3, type: null }, li(p(text("nested")))))),
         p(),
       ),
@@ -50,7 +50,7 @@ describe("validDoc", () => {
     for (const type of ["heading", "image", "codeBlock", "blockquote", "horizontalRule", "photo", "table", "mystery"]) {
       refuses(doc({ type, content: [text("x")] }));
     }
-    for (const type of ["code", "strike", "underline", "textStyle", "highlight"]) {
+    for (const type of ["code", "underline", "textStyle", "highlight"]) {
       refuses(doc(p(text("x", [{ type }]))));
     }
   });
@@ -61,6 +61,7 @@ describe("validDoc", () => {
     refuses(doc({ ...text("x"), style: "color:red" } as never));
     refuses(doc(p({ ...text("x"), extra: 1 })));
     refuses(doc(p(text("x", [{ type: "bold", attrs: {} }]))));
+    refuses(doc(p(text("x", [{ type: "strike", attrs: {} }]))));
     refuses(doc(p(text("x", [{ type: "link", attrs: { href: "https://example.com", style: "x" } }]))));
     refuses(doc(ol({ start: 1, type: null, reversed: true }, li(p(text("x"))))));
     refuses(doc(ul(li(p(text("x"))), { type: "listItem", content: [p(text("y"))], attrs: { checked: true } })));
@@ -70,7 +71,10 @@ describe("validDoc", () => {
   it("refuses malformed structure", () => {
     for (const bad of [null, "text", [], {}, { type: "doc" }, doc(), { type: "paragraph", content: [text("x")] }]) refuses(bad);
     refuses(doc(p(text("x", [{ type: "bold" }, { type: "bold" }]))));
-    refuses(doc(p(text("x", [{ type: "bold" }, { type: "italic" }, link("https://a.example"), { type: "bold" }]))));
+    refuses(doc(p(text("x", [{ type: "bold" }, { type: "italic" }, { type: "strike" }, link("https://a.example"), { type: "bold" }]))));
+    expect(validDoc(doc(p(text("x", [{ type: "bold" }, { type: "italic" }, { type: "strike" }, link("https://a.example")]))))).toEqual(
+      doc(p(text("x", [{ type: "bold" }, { type: "italic" }, { type: "strike" }, { type: "link", attrs: { href: "https://a.example" } }]))),
+    );
     refuses(doc(p(text(""))));
     refuses(doc(p({ type: "text", text: 5 })));
     refuses(doc(p(text("two\nlines"))));

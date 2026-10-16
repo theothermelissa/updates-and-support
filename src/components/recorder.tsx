@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { PALETTE, type NoteColor } from "../notes.js";
 import {
   cameraProblem,
-  MAX_RECORDING_SECONDS,
+  elapsedTime,
   recordingName,
   recordingType,
   timeLeft,
   VIDEO_BITS_PER_SECOND,
 } from "../recorder.js";
+import { MAX_BYTES } from "../videos.js";
 
 const CONSTRAINTS: MediaStreamConstraints = {
   video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -16,14 +18,19 @@ const CONSTRAINTS: MediaStreamConstraints = {
 };
 
 // A "Start recording" button that turns on the camera, which asks for permission the first
-// time, then the live camera, mirrored like a selfie, with a 3-2-1 countdown, then up to a
-// minute of recording with the time left and Stop. Hands the recording over as a file and
-// turns the camera off; unmounting turns it off too and discards anything recording. If the
-// camera can't start, reports why instead.
+// time, then the live camera, mirrored like a selfie, with a 3-2-1 countdown, then recording
+// with Stop. With a max length it shows the time left and stops at that length; without one
+// it shows how long it has run and stops only at Stop, at 100 MB, or when the page is hidden.
+// Hands the recording over as a file and turns the camera off; unmounting turns it off too
+// and discards anything recording. If the camera can't start, reports why instead. A note
+// color paints the frame and buttons; without one they use the usual styles.
 export function VideoRecorder(props: {
-  color: NoteColor;
+  color?: NoteColor;
+  maxSeconds: number | null;
   onRecorded: (file: File) => void;
   onUnavailable: (message: string) => void;
+  onRejected?: (message: string) => void;
+  onSizeLimit?: () => void;
 }) {
   const live = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
@@ -31,13 +38,15 @@ export function VideoRecorder(props: {
   const [phase, setPhase] = useState<"idle" | "starting" | "ready" | "countdown" | "recording">("idle");
   const [count, setCount] = useState(3);
   const [elapsed, setElapsed] = useState(0);
-  const colors = PALETTE[props.color];
+  const colors = props.color ? PALETTE[props.color] : null;
   // Buttons in the note's darker color rather than the usual black.
-  const inked = { backgroundColor: colors.text, color: "white" };
+  const inked = colors ? { backgroundColor: colors.text, color: "white" } : undefined;
 
   // The latest callbacks, so the effects below run once rather than on every render.
   const callbacks = useRef(props);
   callbacks.current = props;
+  const maxSeconds = useRef(props.maxSeconds);
+  maxSeconds.current = props.maxSeconds;
 
   const mounted = useRef(true);
 
@@ -73,7 +82,8 @@ export function VideoRecorder(props: {
     const timer = setInterval(() => {
       const ms = performance.now() - startedAt;
       setElapsed(ms);
-      if (ms >= MAX_RECORDING_SECONDS * 1000) stop();
+      const cap = maxSeconds.current;
+      if (cap !== null && ms >= cap * 1000) stop();
     }, 250);
     const hidden = () => document.visibilityState === "hidden" && stop();
     document.addEventListener("visibilitychange", hidden);
@@ -101,11 +111,29 @@ export function VideoRecorder(props: {
   function start() {
     const type = recordingType((t) => MediaRecorder.isTypeSupported(t))!;
     const chunks: Blob[] = [];
+    let bytes = 0;
+    let hitSize = false;
     const rec = new MediaRecorder(stream.current!, { mimeType: type, videoBitsPerSecond: VIDEO_BITS_PER_SECOND });
-    rec.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
+    rec.ondataavailable = (e) => {
+      if (e.data.size === 0) return;
+      // Drop the chunk that would pass 100 MB, so the recording can still be posted.
+      if (bytes + e.data.size > MAX_BYTES) {
+        hitSize = true;
+        if (rec.state === "recording") rec.stop();
+        return;
+      }
+      bytes += e.data.size;
+      chunks.push(e.data);
+    };
     rec.onstop = () => {
       stopTracks(stream.current);
+      if (chunks.length === 0) {
+        if (mounted.current) setPhase("idle");
+        callbacks.current.onRejected?.("That video is too large. Please choose one under 100 MB.");
+        return;
+      }
       const fileType = type.split(";")[0]!;
+      if (hitSize) callbacks.current.onSizeLimit?.();
       callbacks.current.onRecorded(new File(chunks, recordingName(type), { type: fileType }));
     };
     recorder.current = rec;
@@ -121,8 +149,11 @@ export function VideoRecorder(props: {
   return (
     <div className="grid gap-2">
       <div
-        className="relative aspect-[3/4] w-full overflow-hidden rounded-xl border-4 sm:aspect-video"
-        style={{ backgroundColor: colors.fill, borderColor: colors.fill }}
+        className={cn(
+          "relative aspect-[3/4] w-full overflow-hidden rounded-xl border-4 sm:aspect-video",
+          !colors && "border-border bg-muted",
+        )}
+        style={colors ? { backgroundColor: colors.fill, borderColor: colors.fill } : undefined}
       >
         <video
           ref={live}
@@ -140,7 +171,10 @@ export function VideoRecorder(props: {
           </span>
         )}
         {phase === "starting" && (
-          <p className="absolute inset-0 flex items-center justify-center p-4 text-sm" style={{ color: colors.text }}>
+          <p
+            className={cn("absolute inset-0 flex items-center justify-center p-4 text-sm", !colors && "text-muted-foreground")}
+            style={colors ? { color: colors.text } : undefined}
+          >
             Starting your camera…
           </p>
         )}
@@ -158,7 +192,7 @@ export function VideoRecorder(props: {
             role="timer"
           >
             <span className="size-2.5 animate-pulse rounded-full bg-red-500" aria-hidden />
-            {timeLeft(elapsed)}
+            {props.maxSeconds === null ? elapsedTime(elapsed) : timeLeft(elapsed, props.maxSeconds)}
           </span>
         )}
       </div>

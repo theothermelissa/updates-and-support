@@ -3,6 +3,8 @@ import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "rea
 import { Confirm, ErrorMessage } from "@/components/page";
 import { EmptyNoteButton, NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { ReactionControls } from "@/components/reactions";
+import { VideoCapture, VideoPlayer, type Playable } from "@/components/video";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +15,7 @@ import { applyFetched, newUpdatesLabel } from "../liveFeed.js";
 import type { Note } from "../notes.js";
 import type { Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
+import { uploadVideo } from "../videos.js";
 
 // Supporters never load the editor; family members load it when they first write or edit.
 const RichEditor = lazy(() => import("../editor/RichEditor.js"));
@@ -22,6 +25,7 @@ type PhotoMode = Me["family"]["photos"];
 type Update = {
   id: string;
   content: unknown;
+  video: Playable | null;
   authorName: string;
   createdAt: string;
   editedAt: string | null;
@@ -36,8 +40,8 @@ const NOTES_SHOWN = 6;
 // How often an open, visible feed checks for changes.
 const CHECK_EVERY = 30_000;
 
-// canEdit: the viewer is a family member. name: theirs, or null until they give one with a
-// note; onNamed passes it back once a note sets it. onSignedOut: a check found the reader's
+// canEdit: the viewer is a family member. name: theirs, or null until they give one.
+// onNamed passes a name back once a note saves one. onSignedOut: a check found the reader's
 // session ended, for example because they were removed.
 export function Feed(props: {
   slug: string;
@@ -81,6 +85,7 @@ export function Feed(props: {
   }
 
   // Checks every so often while the page is visible, and at once when the reader comes back.
+  // A changed name reloads too, so notes, reactions, and updates already on screen show it.
   useEffect(() => {
     load(true);
     let timer: number | undefined;
@@ -99,7 +104,7 @@ export function Feed(props: {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", comeBack);
     };
-  }, [slug]);
+  }, [slug, props.name]);
 
   function showNew() {
     load(true);
@@ -125,7 +130,7 @@ export function Feed(props: {
       body: { updateId, ...draft },
     });
     if (status >= 300) return data?.error ?? "Something went wrong. Please try again.";
-    if (data.name && props.name === null) props.onNamed(data.name);
+    if (data.name) props.onNamed(data.name);
     await load();
     return null;
   }
@@ -134,7 +139,11 @@ export function Feed(props: {
     <section className="space-y-6">
       {canEdit && (
         <div className={UPDATE_WIDTH}>
-          <PostForm slug={slug} photos={props.photos} onPost={(content, notify) => change("updates", "POST", { content, notify }, true)} />
+          <PostForm
+            slug={slug}
+            photos={props.photos}
+            onPost={(body, notify) => change("updates", "POST", { ...body, notify }, true)}
+          />
         </div>
       )}
       {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -174,9 +183,16 @@ function PostForm({
 }: {
   slug: string;
   photos: PhotoMode;
-  onPost: (content: unknown, notify: boolean) => Promise<boolean>;
+  onPost: (body: { content?: unknown; video?: string }, notify: boolean) => Promise<boolean>;
 }) {
+  const [mode, setMode] = useState<"write" | "video">("write");
   const [content, setContent] = useState<unknown>(null);
+  const [video, setVideo] = useState<{ file: File; recorded: boolean } | null>(null);
+  const file = video?.file ?? null;
+  // Once uploaded, a retry after a failed post reuses the video rather than uploading it again.
+  const [uploaded, setUploaded] = useState<{ file: File; publicId: string } | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState("");
   const [notify, setNotify] = useState(true);
   const [posting, setPosting] = useState(false);
   // Changing the key starts a fresh, empty editor after posting.
@@ -184,16 +200,39 @@ function PostForm({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (content === null) return;
     setPosting(true);
-    if (await onPost(content, notify)) {
+    setError("");
+    const posted = mode === "write" ? content !== null && (await onPost({ content }, notify)) : await postVideo();
+    if (posted) {
       setContent(null);
+      setVideo(null);
+      setUploaded(null);
       setEditorKey((k) => k + 1);
       setNotify(true);
+      setMode("write");
     }
+    setProgress(null);
     setPosting(false);
   }
 
+  async function postVideo(): Promise<boolean> {
+    if (!file) return false;
+    let publicId = uploaded?.file === file ? uploaded.publicId : null;
+    if (!publicId) {
+      try {
+        setProgress(0);
+        publicId = await uploadVideo(slug, file, setProgress);
+        setUploaded({ file, publicId });
+      } catch (err) {
+        setError((err as Error).message);
+        return false;
+      }
+    }
+    setProgress(1);
+    return onPost({ video: publicId }, notify);
+  }
+
+  const ready = mode === "write" ? content !== null : file !== null;
   return (
     <Card>
       <CardHeader>
@@ -201,14 +240,36 @@ function PostForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          <EditorSlot>
-            <RichEditor key={editorKey} slug={slug} photos={photos} onChange={setContent} />
-          </EditorSlot>
+          <Tabs value={mode} onValueChange={(v) => setMode(v as "write" | "video")}>
+            <TabsList className="w-full">
+              <TabsTrigger value="write" disabled={posting}>
+                Write
+              </TabsTrigger>
+              <TabsTrigger value="video" disabled={posting}>
+                Video
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {/* Kept mounted while recording, so a draft and any photo upload survive a tab switch. */}
+          <div hidden={mode !== "write"}>
+            <EditorSlot>
+              <RichEditor key={editorKey} slug={slug} photos={photos} onChange={setContent} />
+            </EditorSlot>
+          </div>
+          {mode === "video" && (
+            <VideoCapture maxSeconds={null} video={video} disabled={posting} onVideo={setVideo} onError={setError} />
+          )}
           <Label>
-            <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} />
+            <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} disabled={posting} />
             Notify supporters by email
           </Label>
-          <Button disabled={posting || content === null}>Post</Button>
+          {progress !== null && (
+            <p className="text-sm text-muted-foreground" role="status">
+              {progress < 1 ? `Uploading… ${Math.round(progress * 100)}%` : "Posting…"}
+            </p>
+          )}
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+          <Button disabled={posting || !ready}>{mode === "video" && error ? "Try again" : "Post"}</Button>
         </form>
       </CardContent>
     </Card>
@@ -262,7 +323,9 @@ function UpdateItem(props: {
           </p>
         </CardHeader>
         <CardContent className="text-base">
-          {editing ? (
+          {update.video ? (
+            <VideoPlayer video={update.video} kind="update" authorName={update.authorName} />
+          ) : editing ? (
             <EditorSlot>
               <RichEditor initial={update.content} slug={props.slug} photos={props.photos} onChange={setDraft} />
             </EditorSlot>
@@ -299,9 +362,11 @@ function UpdateItem(props: {
               </ReactionControls>
               {props.canEdit && (
                 <div className="ml-auto flex flex-wrap items-center gap-2">
-                  <Button variant="outline" onClick={startEditing}>
-                    Edit
-                  </Button>
+                  {!update.video && (
+                    <Button variant="outline" onClick={startEditing}>
+                      Edit
+                    </Button>
+                  )}
                   <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
                     Delete
                   </Button>

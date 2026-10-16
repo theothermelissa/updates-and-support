@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor, type JSONContent } from "@tiptap/react";
-import { BoldIcon, ImagePlusIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon } from "lucide-react";
+import { BoldIcon, ImagePlusIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon, StrikethroughIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { allowedHref } from "../lib/links.js";
@@ -72,6 +72,7 @@ function Toolbar({ editor, photos, slug }: { editor: Editor; photos: "real" | "p
     selector: ({ editor }) => ({
       bold: editor.isActive("bold"),
       italic: editor.isActive("italic"),
+      strike: editor.isActive("strike"),
       link: editor.isActive("link"),
       bulletList: editor.isActive("bulletList"),
       orderedList: editor.isActive("orderedList"),
@@ -158,6 +159,9 @@ function Toolbar({ editor, photos, slug }: { editor: Editor; photos: "real" | "p
         </Tool>
         <Tool label="Italic" pressed={active.italic} onClick={() => editor.chain().focus().toggleItalic().run()}>
           <ItalicIcon />
+        </Tool>
+        <Tool label="Strikethrough" pressed={active.strike} onClick={() => editor.chain().focus().toggleStrike().run()}>
+          <StrikethroughIcon />
         </Tool>
         <Tool label="Link" pressed={active.link} expanded={link !== null} onClick={openLink}>
           <LinkIcon />
