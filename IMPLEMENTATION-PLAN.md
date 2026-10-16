@@ -51,3 +51,8 @@ Preview: a cloud session can't seed the preview database or sign the browser pan
 - Plain text only, like request descriptions: no bold or real bulleted lists. A line starting with "- " reads as a list.
 - If two family members edit at once, the last save wins, with no warning.
 - Others see a change when they next load the page, as with requests.
+
+## Discoveries
+
+- Every access test was run with its rule removed and failed each time: reading any family's message, saving without the family-member check, saving to every family's row, the gate sending the family row, and the message endpoint without its sign-in check.
+- Browser check on a local server at 360px and 1280px, as a family member and a new supporter: Add, Cancel, Save, and Edit work; saving an empty box removes the message; a supporter sees "How to help" when the family has only a message, and loses it once the message is removed; an address in the message is a link that wraps on a phone; nothing scrolls sideways. Type check and all 342 tests pass.

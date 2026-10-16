@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import gateHandler from "../../api/f/[slug]/gate.js";
+import helpMessageHandler from "../../api/f/[slug]/help-message.js";
 import helpHandler from "../../api/f/[slug]/help/index.js";
 import helpOneHandler from "../../api/f/[slug]/help/[id].js";
 import offerHandler from "../../api/f/[slug]/help/[id]/offer.js";
@@ -10,13 +12,16 @@ import {
   createHelp,
   deleteHelp,
   hasHelpRequests,
+  helpMessage,
   listHelp,
   offerHelp,
   removeOffer,
+  setHelpMessage,
   updateHelp,
   type HelpRequestView,
 } from "../../server/help.js";
 import { setRemoved } from "../../server/people.js";
+import { hashToken, newToken } from "../../server/tokens.js";
 import { createTestDb } from "./db.js";
 import { answerCorrectly, fakeMailer, joinWithEmail, makeFamily, queuedOrDone, resetDb } from "./fixtures.js";
 
@@ -406,6 +411,47 @@ describe("emails", () => {
   });
 });
 
+describe("the family's message", () => {
+  const MESSAGE = "Please don't send flowers.\n- No visits for now";
+
+  it("is read by everyone signed in to the family, and by no other family", async () => {
+    const { ana, luis, sam, chidi, olu } = await setUp();
+    expect(await setHelpMessage(db, ana, { message: `  ${MESSAGE}\n ` })).toEqual({ message: MESSAGE });
+    for (const person of [ana, luis, sam]) expect(await helpMessage(db, person)).toBe(MESSAGE);
+    for (const person of [chidi, olu.person]) expect(await helpMessage(db, person)).toBeNull();
+
+    await setHelpMessage(db, luis, { message: "Meals are welcome." });
+    expect(await helpMessage(db, sam)).toBe("Meals are welcome.");
+    expect(await setHelpMessage(db, ana, { message: " \n " })).toEqual({ message: null });
+    expect(await helpMessage(db, sam)).toBeNull();
+  });
+
+  it("refuses a supporter, and keeps the message as it was", async () => {
+    const { ana, sam } = await setUp();
+    await setHelpMessage(db, ana, { message: MESSAGE });
+    await expect(setHelpMessage(db, sam, { message: "Send flowers!" })).rejects.toMatchObject({ status: 403 });
+    await expect(setHelpMessage(db, sam, { message: "" })).rejects.toMatchObject({ status: 403 });
+    expect(await helpMessage(db, ana)).toBe(MESSAGE);
+  });
+
+  it("lets a family member write only their own family's message", async () => {
+    const { ana, chidi, olu } = await setUp();
+    await setHelpMessage(db, ana, { message: MESSAGE });
+    await setHelpMessage(db, chidi, { message: "Okafor message" });
+    expect(await helpMessage(db, ana)).toBe(MESSAGE);
+    expect(await helpMessage(db, olu.person)).toBe("Okafor message");
+  });
+
+  it("rejects a message that's too long or isn't text", async () => {
+    const { ana } = await setUp();
+    for (const message of ["x".repeat(2001), 42, null, undefined]) {
+      await expect(setHelpMessage(db, ana, { message })).rejects.toMatchObject({ status: 400 });
+    }
+    expect(await helpMessage(db, ana)).toBeNull();
+    expect(await setHelpMessage(db, ana, { message: "x".repeat(2000) })).toEqual({ message: "x".repeat(2000) });
+  });
+});
+
 describe("the help endpoints", () => {
   const savedUrl = process.env.DATABASE_URL;
   beforeAll(() => {
@@ -418,22 +464,37 @@ describe("the help endpoints", () => {
 
   type Handler = (req: VercelRequest, res: VercelResponse) => Promise<unknown>;
 
-  async function call(handler: Handler, method: string, query: Record<string, string>, cookies: Record<string, string>, body?: unknown) {
+  async function send(handler: Handler, method: string, query: Record<string, string>, cookies: Record<string, string>, body?: unknown) {
     const req = { method, query, headers: { "content-type": "application/json" }, cookies, body };
     const res = {
       statusCode: 0,
+      body: undefined as unknown,
       setHeader() {},
       appendHeader() {},
       status(code: number) {
         this.statusCode = code;
         return this;
       },
-      json() {
+      json(payload: unknown) {
+        this.body = payload;
         return this;
       },
     };
     await handler(req as unknown as VercelRequest, res as unknown as VercelResponse);
-    return res.statusCode;
+    return { status: res.statusCode, body: res.body };
+  }
+
+  async function call(...args: Parameters<typeof send>) {
+    return (await send(...args)).status;
+  }
+
+  // A family member's session, made directly rather than through a sign-in email.
+  async function sessionFor(person: Person) {
+    const token = newToken();
+    await db.session.create({
+      data: { personId: person.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+    });
+    return token;
   }
 
   it("refuses requests without this family's session, a wrong method, or an unknown family", async () => {
@@ -455,5 +516,39 @@ describe("the help endpoints", () => {
     expect(await call(helpHandler, "PUT", { slug }, samCookie, { body: "Hi", slots: 1 })).toBe(405);
     expect(await call(helpHandler, "GET", { slug: "no-such-family" }, samCookie)).toBe(404);
     expect(await db.helpRequest.count()).toBe(1);
+  });
+
+  it("saves the message only for this family's members, and never sends it to anyone else", async () => {
+    const { family, ana, olu, samToken } = await setUp();
+    const slug = family.slug;
+    const anaCookie = { [`session_${slug}`]: await sessionFor(ana) };
+    const samCookie = { [`session_${slug}`]: samToken };
+    const oluCookie = { [`session_${slug}`]: olu.sessionToken };
+
+    for (const cookies of [{}, oluCookie]) {
+      expect(await call(helpMessageHandler, "PUT", { slug }, cookies, { message: "Send flowers!" })).toBe(401);
+    }
+    expect(await call(helpMessageHandler, "PUT", { slug }, samCookie, { message: "Send flowers!" })).toBe(403);
+    expect(await call(helpMessageHandler, "GET", { slug }, anaCookie)).toBe(405);
+    expect(await helpMessage(db, ana)).toBeNull();
+
+    expect(await send(helpMessageHandler, "PUT", { slug }, anaCookie, { message: "No visits for now" })).toEqual({
+      status: 200,
+      body: { message: "No visits for now" },
+    });
+    expect(await send(helpHandler, "GET", { slug }, samCookie)).toMatchObject({
+      status: 200,
+      body: { message: "No visits for now" },
+    });
+    // Signed out, or signed in to another family: neither the help list nor the gate sends it.
+    for (const [handler, cookies] of [
+      [helpHandler, {}],
+      [helpHandler, oluCookie],
+      [gateHandler, {}],
+    ] as const) {
+      const { body } = await send(handler, "GET", { slug }, cookies);
+      expect(JSON.stringify(body)).not.toContain("No visits");
+    }
+    expect((await send(gateHandler, "GET", { slug }, {})).status).toBe(200);
   });
 });
