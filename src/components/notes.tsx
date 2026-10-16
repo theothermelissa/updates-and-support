@@ -55,7 +55,7 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
   );
 }
 
-// The video's still in a 16:9 box, shown whole on the note's color, with a play button. The
+// The video's still in a 16:9 box, cropped to fill it, with a play button. The
 // video plays in the same box, and starting it pauses any other video note that's playing.
 // Until the host has converted the video, the still doesn't load and the box says so; when
 // the server couldn't make its links, the box says that instead.
@@ -82,7 +82,7 @@ function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["vide
         autoPlay
         playsInline
         data-video-note
-        className={cn(box, "object-contain")}
+        className={cn(box, "object-cover")}
         style={{ backgroundColor: colors.fill }}
         aria-label={`Video note from ${note.authorName}`}
         onPlay={(e) => {
@@ -111,7 +111,7 @@ function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["vide
           <img
             src={video.poster}
             alt=""
-            className="size-full object-contain"
+            className="size-full object-cover"
             onError={() => setProcessing(true)}
             loading="lazy"
           />
@@ -334,7 +334,7 @@ function VideoSide(props: {
             controls
             playsInline
             autoPlay={props.video.recorded}
-            className="aspect-video w-full rounded-xl border-4 object-contain"
+            className="aspect-video w-full rounded-xl border-4 object-cover"
             style={{ backgroundColor: colors.fill, borderColor: colors.fill }}
             aria-label="Your video"
           />
