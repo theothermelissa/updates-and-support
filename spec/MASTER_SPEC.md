@@ -24,7 +24,7 @@ A person who is both a supporter and a family member of different families has a
 - Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
 - Family members add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
-- Family members post, edit, and delete updates with simple formatting (bold, italic, links, and lists); everyone signed in to the family reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
+- Family members post, edit, and delete updates with simple formatting (bold, italic, strikethrough, links, and lists); everyone signed in to the family reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
 - Photos in updates, with optional captions, up to six per update, once the operator turns photos on; test sites can use grey placeholder photos instead. → [updates.md](updates.md#photos)
 - Everyone signed in to the family can give each update and each note one reaction from a fixed set of six emoji, and sees who reacted. → [updates.md](updates.md#reactions)
 - Everyone signed in to the family can leave colored notes of support on an update, written or as a video of up to 60 seconds, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)

@@ -10,13 +10,13 @@ it("draws each node and mark", () => {
   expect(
     render(
       doc(
-        { type: "paragraph", content: [text("b", [{ type: "bold" }]), text("i", [{ type: "italic" }]), { type: "hardBreak" }, text("x")] },
+        { type: "paragraph", content: [text("b", [{ type: "bold" }]), text("i", [{ type: "italic" }]), text("s", [{ type: "strike" }]), { type: "hardBreak" }, text("x")] },
         { type: "paragraph" },
         { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [text("one")] }] }] },
         { type: "orderedList", attrs: { start: 3, type: null }, content: [{ type: "listItem", content: [{ type: "paragraph", content: [text("three")] }] }] },
       ),
     ),
-  ).toBe("<p><strong>b</strong><em>i</em><br/>x</p><p><br/></p><ul><li><p>one</p></li></ul><ol start=\"3\"><li><p>three</p></li></ol>");
+  ).toBe("<p><strong>b</strong><em>i</em><s>s</s><br/>x</p><p><br/></p><ul><li><p>one</p></li></ul><ol start=\"3\"><li><p>three</p></li></ol>");
 });
 
 it("opens links in a new tab without a referrer", () => {

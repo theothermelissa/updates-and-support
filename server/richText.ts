@@ -7,7 +7,7 @@ import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 const MAX_TEXT = 20_000;
 const MAX_NODES = 10_000;
 const MAX_DEPTH = 10;
-const MAX_MARKS = 3;
+const MAX_MARKS = 4;
 const MIN_START = 1;
 const MAX_START = 9_999;
 const MAX_PHOTOS = 6;
@@ -250,7 +250,7 @@ function marks(input: unknown): Mark[] {
   return input.map((m): Mark => {
     if (!isObj(m) || typeof m.type !== "string" || seen.has(m.type)) throw unsupported();
     seen.add(m.type);
-    if (m.type === "bold" || m.type === "italic") {
+    if (m.type === "bold" || m.type === "italic" || m.type === "strike") {
       onlyKeys(m, ["type"]);
       return { type: m.type };
     }
