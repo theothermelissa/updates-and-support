@@ -41,3 +41,11 @@ Why polling: Vercel functions can't hold WebSockets, server-sent events would ke
 - **The wall doesn't poll.** It's current each time it's opened.
 - **Each poll sends the whole feed.** There's no ETag or "changed since" check. Families are small, so the payload is too; revisit if feeds grow long.
 - **In-place changes aren't scroll-anchored.** A deleted update, or a note added above the reader's position, can still shift the page slightly. Only new updates are held back.
+
+## Results
+
+- Typecheck, all unit and integration tests, and CI passed.
+- Checked by hand against `vercel dev`, using a fictional local family:
+  - An update posted from outside the page showed the "1 new update" pill within one check, without moving the page. Pressing it showed the update.
+  - Ending the reader's session in the database sent their tab to the gate at the next check.
+- Pausing while the tab is hidden wasn't checked by hand, because the browser pane can't hide its tab.
