@@ -44,6 +44,26 @@ it("draws nothing for a malformed document, rather than failing", () => {
   expect(render(doc(null, { type: "paragraph", content: [{ type: "text" }] }))).toBe("<p></p>");
 });
 
+it("draws a real photo full width, in a grey box until it loads", () => {
+  const url = "https://res.cloudinary.com/demo/image/authenticated/s--abcdefgh--/c_limit,w_1600/f_auto/q_auto/families/x/abc";
+  const html = render(
+    doc(
+      { type: "photo", attrs: { caption: "At the <park>", publicId: "families/x/abc", url } },
+      { type: "photo", attrs: { caption: "", publicId: "families/x/def", url: null } },
+      { type: "photo", attrs: { caption: "", url: "javascript:alert(1)" } },
+    ),
+  );
+  expect(html).toContain(`src="${url}"`);
+  expect(html).toContain('alt="Photo 1 of 3"');
+  expect(html).toContain('loading="lazy"');
+  expect(html).toContain('referrerPolicy="no-referrer"');
+  expect(html).toContain("aspect-[4/3]");
+  expect(html).toContain("w-full");
+  expect(html).toContain("At the &lt;park&gt;");
+  expect(html).not.toContain("families/x/def");
+  expect(html).not.toContain("javascript:");
+});
+
 it("draws a placeholder photo as a grey box, with its caption beneath when it has one", () => {
   const box = '<div class="aspect-[4/3] w-full rounded-lg bg-muted" role="img" aria-label="Placeholder photo"></div>';
   expect(

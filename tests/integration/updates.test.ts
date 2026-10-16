@@ -208,7 +208,15 @@ describe("placeholder photos", () => {
     await createUpdate(db, chidi!, { content: doc("Okafor news") });
 
     const [seen] = await listUpdates(db, sam);
-    expect(seen!.content).toEqual(withPhoto("Rivera beach day"));
+    expect(seen!.content).toEqual({
+      type: "doc",
+      content: [
+        doc("Before").content[0],
+        { type: "photo", attrs: { caption: "Rivera beach day", placeholder: true, url: null } },
+        doc("After").content[0],
+      ],
+    });
+    expect((await db.update.findFirstOrThrow({ where: { familyId: family.id } })).content).toEqual(withPhoto("Rivera beach day"));
     expect(seen!.body).toBe("Before\n\n[Photo: Rivera beach day]\n\nAfter");
     expect(JSON.stringify(await listUpdates(db, chidi!))).not.toContain("Rivera beach day");
   });

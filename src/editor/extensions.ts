@@ -40,6 +40,15 @@ function hostname(url: string): string {
 // one stray link can't stop the update from saving.
 export function cleanDoc(node: JSONContent): JSONContent {
   const out: JSONContent = { ...node };
+  if (node.type === "photo") {
+    const attrs = node.attrs ?? {};
+    const caption = typeof attrs.caption === "string" ? attrs.caption : "";
+    if (attrs.placeholder === true) out.attrs = { caption, placeholder: true };
+    else if (typeof attrs.publicId === "string" && attrs.publicId) out.attrs = { caption, publicId: attrs.publicId };
+    else out.attrs = { caption };
+    delete out.marks;
+    return out;
+  }
   if (node.marks) {
     out.marks = node.marks.filter((m) => m.type !== "link" || allowedHref(m.attrs?.href));
   }

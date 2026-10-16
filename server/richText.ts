@@ -1,5 +1,6 @@
 import type { Block, Doc, HardBreak, ListItem, Mark, Paragraph, Photo, Text } from "../src/lib/doc.js";
 import { allowedHref, linkify } from "../src/lib/links.js";
+import { isFamilyPhotoId } from "./cloudinary.js";
 import { RequestError } from "./errors.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 
@@ -17,13 +18,25 @@ const LINK_EXTRAS = ["target", "rel", "class", "title"];
 
 const unsupported = () => new RequestError(400, "This update has formatting the app doesn't support");
 
-type Walk = { nodes: number; chars: number; visible: boolean; photos: number; settings: PhotoSettings };
+// familyId checks a real photo's id. kept is the ids already on the update being edited:
+// those stay valid after Cloudinary is turned off.
+export type PhotoCheck = { familyId: string; kept?: ReadonlySet<string> };
+
+type Walk = {
+  nodes: number;
+  chars: number;
+  visible: boolean;
+  photos: number;
+  settings: PhotoSettings;
+  check?: PhotoCheck;
+  seen: Set<string>;
+};
 type Obj = Record<string, unknown>;
 
 // Checks a document sent by the editor and returns a new one built only from the fields it
 // checked, so nothing unexpected can reach the database. Anything not allowed is a 400.
-export function validDoc(input: unknown, settings: PhotoSettings = NO_PHOTOS): Doc {
-  const walk: Walk = { nodes: 0, chars: 0, visible: false, photos: 0, settings };
+export function validDoc(input: unknown, settings: PhotoSettings = NO_PHOTOS, check?: PhotoCheck): Doc {
+  const walk: Walk = { nodes: 0, chars: 0, visible: false, photos: 0, settings, check, seen: new Set() };
   const doc = node(input, 1, walk, ["content"]);
   if (doc.type !== "doc") throw unsupported();
   const content = children(doc, 1, walk, topLevel, true);
@@ -36,9 +49,10 @@ export function validDoc(input: unknown, settings: PhotoSettings = NO_PHOTOS): D
 export function contentFrom(
   input: { content?: unknown; body?: unknown },
   settings: PhotoSettings = NO_PHOTOS,
+  check?: PhotoCheck,
 ): { content: Doc; body: string } {
   let content: Doc;
-  if (input.content !== undefined) content = validDoc(input.content, settings);
+  if (input.content !== undefined) content = validDoc(input.content, settings, check);
   else if (typeof input.body === "string") content = validDoc(docFromText(input.body.trim()));
   else throw new RequestError(400, "Expected the update's content");
   return { content, body: textOf(content) };
@@ -135,24 +149,44 @@ function topLevel(input: unknown, depth: number, walk: Walk): Block | Photo {
   return isObj(input) && input.type === "photo" ? photo(input, depth, walk) : block(input, depth, walk);
 }
 
-// Photos come only from "Add photo", and so far only as placeholders, for test sites.
+// Photos come only from "Add photo": a placeholder on a test site, or a public id this server issued.
 function photo(input: unknown, depth: number, walk: Walk): Photo {
   const n = node(input, depth, walk, ["attrs"]);
   if (!isObj(n.attrs)) throw unsupported();
   // The feed may send a photo's url; it's never stored.
-  onlyKeys(n.attrs, ["caption", "placeholder", "url"]);
-  const { caption, placeholder } = n.attrs;
-  if (placeholder !== true || typeof caption !== "string") throw unsupported();
-  if (!walk.settings.placeholders) {
-    throw new RequestError(400, "Placeholder photos are turned off on this site. Remove the grey photo boxes to save.");
-  }
+  onlyKeys(n.attrs, ["caption", "placeholder", "publicId", "url"]);
+  const { caption } = n.attrs;
+  if (typeof caption !== "string") throw unsupported();
+  const placeholderKey = Object.hasOwn(n.attrs, "placeholder");
+  const publicIdKey = Object.hasOwn(n.attrs, "publicId");
+  if (placeholderKey === publicIdKey) throw unsupported();
   if (++walk.photos > MAX_PHOTOS) throw new RequestError(400, `An update can have at most ${MAX_PHOTOS} photos`);
   const trimmed = caption.trim();
   if (trimmed.length > MAX_CAPTION) {
     throw new RequestError(400, `A caption can have at most ${MAX_CAPTION} characters`);
   }
   walk.visible = true;
-  return { type: "photo", attrs: { caption: trimmed, placeholder: true } };
+  if (placeholderKey) return placeholderPhoto(n.attrs.placeholder, trimmed, walk);
+  return realPhoto(n.attrs.publicId, trimmed, walk);
+}
+
+function placeholderPhoto(placeholder: unknown, caption: string, walk: Walk): Photo {
+  if (placeholder !== true) throw unsupported();
+  if (!walk.settings.placeholders) {
+    throw new RequestError(400, "Placeholder photos are turned off on this site. Remove the grey photo boxes to save.");
+  }
+  return { type: "photo", attrs: { caption, placeholder: true } };
+}
+
+function realPhoto(publicId: unknown, caption: string, walk: Walk): Photo {
+  if (typeof publicId !== "string" || !isFamilyPhotoId(walk.check?.familyId ?? "", publicId)) {
+    throw new RequestError(400, "This photo can't be added to this update");
+  }
+  if (walk.seen.has(publicId)) throw new RequestError(400, "A photo can only be added once");
+  walk.seen.add(publicId);
+  const kept = walk.check?.kept?.has(publicId) ?? false;
+  if (!kept && !walk.settings.cloudinary) throw new RequestError(400, "Photos are turned off on this site.");
+  return { type: "photo", attrs: { caption, publicId } };
 }
 
 function block(input: unknown, depth: number, walk: Walk): Block {

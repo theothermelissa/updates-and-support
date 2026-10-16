@@ -47,7 +47,7 @@ A family member can delete any update in their family after confirming. Deletion
 
 Photos are available once the operator turns them on with a setting (see the README). Until then, no "Add photo" button appears and the server accepts no photos.
 
-**Adding.** "Add photo" opens the device's photo picker for one photo, including iPhone photos, and puts it where the cursor is, as a card with the photo, a caption field, and "Remove." The photo uploads as soon as it's chosen, and its card shows "Uploading…" until it's done; saving waits until every photo has finished uploading. A photo over 10 MB is refused with a message saying so. Photos can't be dragged; to move one, remove it and add it again. Removing a photo deletes it permanently once the update is saved.
+**Adding.** "Add photo" opens the device's photo picker for one photo, including iPhone photos, and puts it where the cursor is, as a card with the photo and a caption field. An X in the photo's upper-right corner removes it. On a device with a pointer the X appears when the photo is hovered; on a phone, where there is no hover, it stays visible. The photo uploads as soon as it's chosen, and its card shows "Uploading…" until it's done; saving waits until every photo has finished uploading. A photo over 10 MB is refused with a message saying so. Photos can't be dragged; to move one, remove it and add it again. Removing a photo deletes it permanently once the update is saved.
 
 **Who sees them.** Photos and captions are seen by exactly the people who can see the update (see [access.md](access.md)). They never appear on the gate or in emails.
 
@@ -95,7 +95,7 @@ A note is either a written note or a video note. It has:
 
 ### Leaving a note
 
-Each update's footer has a "Leave a note" button, in the same row as React. It opens a dialog with a text box, a row of the palette's colors with one chosen at random, and a "Leave note" button. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
+Each update's footer has a "Leave a note" button, in the same row as React. It opens a dialog with two tabs, "Written note" and "Video note," starting on "Written note," which has a text box. Below either tab are a row of the palette's colors with one chosen at random and the name, then "Leave note" for a written note or "Post" for a video. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
 
 A note needs a name. The dialog shows "Your name": filled in and read-only for anyone who already has one, and empty for a supporter who hasn't given one. A name entered there goes on their record, so their later notes and reactions show it too, and the feed's email form later shows it the same way, filled in and read-only. The dialog never asks for an email.
 
@@ -103,17 +103,17 @@ A person can leave any number of notes on an update, up to 20 notes an hour acro
 
 ### Video notes
 
-The note dialog has a "Record a video" button beside the text box. It switches the dialog to the recorder; "Write a note instead" switches back. The name and color work the same in both.
+The note dialog's "Video note" tab holds the recorder; "Written note" switches back, keeping what was written. The name and color work the same in both. The camera stays off until it's needed.
 
-**Recording.** The first time, the browser asks for the camera and microphone. The dialog then shows the live camera view, mirrored like a selfie, and a "Start recording" button. Pressing it shows a 3, 2, 1 countdown over the camera view, then records. While recording, the dialog shows the time left out of 60 seconds and a "Stop" button. Recording stops at "Stop" or when the 60 seconds run out.
+**Recording.** The recorder shows a "Start recording" button in the space where the camera view will be. Pressing it turns the camera on; the first time, the browser asks for the camera and microphone. The dialog then shows the live camera view, mirrored like a selfie, with a 3, 2, 1 countdown over it, then records. During the countdown, "Cancel countdown" leaves the camera on with a "Start recording" button below it. While recording, the dialog shows the time left out of 60 seconds and a "Stop" button. Recording stops at "Stop" or when the 60 seconds run out.
 
-**Reviewing.** As soon as recording stops, the dialog plays the video back, unmirrored, as everyone else will see it, with "Post" and "Re-record" buttons. "Re-record" discards the video and returns to the live camera view. Nothing leaves the device until "Post." "Cancel," at any point, closes the dialog and discards the video.
+**Reviewing.** As soon as recording stops, the dialog plays the video back, unmirrored, as everyone else will see it, with "Post" and "Re-record" buttons. "Re-record" discards the video and returns to the "Start recording" button. Nothing leaves the device until "Post." "Cancel," at any point, closes the dialog and discards the video.
 
 **Posting.** "Post" uploads the video, showing its progress, and the note appears once the upload finishes. If the upload fails, the dialog keeps the video and offers "Try again."
 
-**Uploading instead.** The recorder also offers "Upload a video" for anyone whose browser can't use the camera, such as when they've refused access or are in an email app's built-in browser. It picks a video file from the device, which goes to the same review step. A video longer than 60 seconds is refused with a message saying so. If the camera can't be used, the recorder says why and offers only the upload.
+**Uploading instead.** The recorder also offers "Upload a video instead" for anyone whose browser can't use the camera, such as when they've refused access or are in an email app's built-in browser. It picks a video file from the device, which goes to the same review step. A video longer than 60 seconds is refused with a message saying so. If the camera can't be used, the recorder says why and offers only the upload.
 
-**The card.** A video note's card shows a still from the video in a 16:9 landscape shape, filling the card edge to edge inside a thin frame in the note's color, with a play button over it. A video of another shape, such as one recorded upright on a phone, is shown whole and centered, with the space beside it filled with the note's color. Below the video, a strip in the note's color carries the signature and when it was left, as on a written note. Tapping the play button plays the video right there in the card, in the same shape, with sound and the browser's video controls, including full screen. Starting one video pauses any other that's playing. Videos never play on their own. If a video can't be shown, for example because the video host is misconfigured, its card says "This video can't be shown right now," and the rest of the page works as usual.
+**The card.** A video note's card shows a still from the video in a 16:9 landscape shape, filling the card edge to edge inside a thin frame in the note's color, with a play button over it. A video of another shape, such as one recorded upright on a phone, is shown whole and centered, and the space beside it is filled with a blurred, enlarged copy of its still, so nothing is cropped and there are no empty bars. While it plays, that blurred backdrop stays the still. Below the video, a strip in the note's color carries the signature and when it was left, as on a written note. Tapping the play button plays the video right there in the card, in the same shape, with sound and the browser's video controls, including full screen. Starting one video pauses any other that's playing. Videos never play on their own. If a video can't be shown, for example because the video host is misconfigured, its card says "This video can't be shown right now," and the rest of the page works as usual.
 
 Video notes are stored and delivered by Cloudinary, which also converts them to a format every browser plays (see [access.md](access.md#stated-limits) for how links to them work).
 

@@ -83,7 +83,7 @@ export function Feed(props: {
     <section className="space-y-6">
       {canEdit && (
         <div className={UPDATE_WIDTH}>
-          <PostForm photos={props.photos} onPost={(content, notify) => change("updates", "POST", { content, notify })} />
+          <PostForm slug={slug} photos={props.photos} onPost={(content, notify) => change("updates", "POST", { content, notify })} />
         </div>
       )}
       {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -108,7 +108,15 @@ export function Feed(props: {
   );
 }
 
-function PostForm({ photos, onPost }: { photos: PhotoMode; onPost: (content: unknown, notify: boolean) => Promise<boolean> }) {
+function PostForm({
+  slug,
+  photos,
+  onPost,
+}: {
+  slug: string;
+  photos: PhotoMode;
+  onPost: (content: unknown, notify: boolean) => Promise<boolean>;
+}) {
   const [content, setContent] = useState<unknown>(null);
   const [notify, setNotify] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -135,7 +143,7 @@ function PostForm({ photos, onPost }: { photos: PhotoMode; onPost: (content: unk
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
           <EditorSlot>
-            <RichEditor key={editorKey} photos={photos} onChange={setContent} />
+            <RichEditor key={editorKey} slug={slug} photos={photos} onChange={setContent} />
           </EditorSlot>
           <Label>
             <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} />
@@ -197,7 +205,7 @@ function UpdateItem(props: {
         <CardContent className="text-base">
           {editing ? (
             <EditorSlot>
-              <RichEditor initial={update.content} photos={props.photos} onChange={setDraft} />
+              <RichEditor initial={update.content} slug={props.slug} photos={props.photos} onChange={setDraft} />
             </EditorSlot>
           ) : (
             <RichText doc={update.content} />
