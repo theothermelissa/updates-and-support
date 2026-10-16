@@ -244,6 +244,54 @@ describe("photos", () => {
     refusesWith(doc({ ...grey(), content: [] }));
   });
 
+  it("accepts a photo this family was issued, and drops its url", () => {
+    const familyId = "cmrivera";
+    const publicId = `families/${familyId}/${"a".repeat(22)}`;
+    const real = { placeholders: false, cloudinary: { cloudName: "demo", apiKey: "1234", apiSecret: "abcd" } };
+    const sent = photo({ caption: "  At the park  ", publicId, url: "https://res.cloudinary.com/demo/original.jpg" });
+    expect(validDoc(doc(sent), real, { familyId })).toEqual(doc(photo({ caption: "At the park", publicId })));
+  });
+
+  it("keeps a photo already on the update when Cloudinary is off, and refuses a new one", () => {
+    const familyId = "cmrivera";
+    const publicId = `families/${familyId}/${"a".repeat(22)}`;
+    const off = { placeholders: false, cloudinary: null };
+    expect(validDoc(doc(photo({ caption: "Kept", publicId })), off, { familyId, kept: new Set([publicId]) })).toEqual(
+      doc(photo({ caption: "Kept", publicId })),
+    );
+    refusesWith(doc(photo({ caption: "", publicId })), off);
+    expect(() => validDoc(doc(photo({ caption: "", publicId })), off, { familyId })).toThrow(/turned off/);
+  });
+
+  it("refuses another family's id, a tampered id, a duplicate, and a placeholder while real photos are on", () => {
+    const familyId = "cmrivera";
+    const other = "cmokafor";
+    const suffix = "a".repeat(22);
+    const real = { placeholders: false, cloudinary: { cloudName: "demo", apiKey: "1234", apiSecret: "abcd" } };
+    const check = { familyId };
+    const bad = [
+      `families/${other}/${suffix}`,
+      `families/${familyId}/${suffix}/extra`,
+      `families/${familyId}/${"a".repeat(21)}`,
+      `families/${familyId}/families/${other}`,
+      `families/${familyId}/${suffix.slice(0, 10)}../${suffix.slice(0, 10)}`,
+      "",
+    ];
+    for (const publicId of bad) {
+      expect(() => validDoc(doc(photo({ caption: "", publicId })), real, check)).toThrow(expect.objectContaining({ status: 400 }));
+    }
+    const id = `families/${familyId}/${suffix}`;
+    expect(() => validDoc(doc(photo({ caption: "", publicId: id }), photo({ caption: "", publicId: id })), real, check)).toThrow(/only be added once/);
+    expect(() => validDoc(doc(grey()), real, check)).toThrow(/turned off/);
+    expect(() =>
+      validDoc(
+        doc(...Array.from({ length: 7 }, (_, i) => photo({ caption: "", publicId: `families/${familyId}/${String(i).padEnd(22, "b")}` }))),
+        real,
+        check,
+      ),
+    ).toThrow(/at most 6/);
+  });
+
   it("writes photos into the plain text and counts them", () => {
     const d = validDoc(doc(p(text("Hi")), grey("Beach"), grey()), on);
     expect(textOf(d)).toBe("Hi\n\n[Photo: Beach]\n\n[Photo]");
