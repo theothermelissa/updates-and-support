@@ -127,8 +127,16 @@
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
     }
+  /* Always keep room for the scrollbar, so the page doesn't shift sideways between pages
+     that scroll and pages that don't. */
   html {
     @apply font-sans;
+    scrollbar-gutter: stable;
+    }
+  /* With that room kept, an open menu or dialog's scroll lock mustn't add the scrollbar's width
+     again. More specific than the lock's own rule, which is injected after this file. */
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
     }
   a:not([data-slot]) {
     @apply underline underline-offset-4 hover:text-muted-foreground;
