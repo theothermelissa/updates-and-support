@@ -53,6 +53,11 @@ export function FamilyHome({ slug }: { slug: string }) {
       title={me.family.displayName}
       actions={
         <>
+          {(me.person.role === "family" || me.family.hasHelpRequests) && (
+            <Button variant="ghost" size="sm" asChild>
+              <a href={`/f/${slug}/help`}>How to help</a>
+            </Button>
+          )}
           <Button variant="ghost" size="sm" asChild>
             <a href={`/f/${slug}/wall`}>Notes</a>
           </Button>

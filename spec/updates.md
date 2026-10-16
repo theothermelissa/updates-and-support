@@ -21,7 +21,7 @@ There are no headings, colors, fonts, tables, code, quotes, or images from other
 
 The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Content appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
-A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), a link to the People page for family members, and "Sign out." Beside it, a "Notes" link leads to the family's wall (see "The wall").
+A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), a link to the People page for family members, and "Sign out." Beside it, a "Notes" link leads to the family's wall (see "The wall"). Immediately to its left, a "How to help" link leads to the family's requests (see "How to help"). Family members always see that link. Supporters see it once the family has at least one request.
 
 Each update has a footer of actions in one row: **React** and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
@@ -136,6 +136,41 @@ The rules, the React button, the tray, and the summary are the ones under "React
 The note's author, and any family member, can delete a note, after an inline confirmation. Deletion is permanent, and it deletes the note's reactions. Deleting a video note also deletes its video from Cloudinary, as does deleting the update it's on. Notes can't be edited; to change one, delete it and leave another.
 
 A removed person's notes are neither shown nor counted, and a removed person can't leave a note, since they can't sign in. Restoring a supporter brings their notes back.
+
+## How to help
+
+The page at `/f/<slug>/help`, titled "How to help," lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
+
+A request has:
+
+- a **body** of plain text, 1 to 2,000 characters. Line breaks are kept, and web addresses become links.
+- how many people can take it: **1**, a **number up to 99**, or **many**. The page says "1 person can help with this," "4 people can help with this," or "Many people can help with this."
+
+Family members add, edit, and delete requests. Deleting asks for confirmation on the page and removes every offer on that request. Requests are shown oldest first. A family can have at most 100.
+
+### Offering to help
+
+Anyone signed in can press **I can help with this**. An offer needs a name, the same way a note does: the page shows "Your name" when the person doesn't have one, and that name goes on their record. A person who already has a name offers under it and can't change it here. The page never asks for an email. Pressing the button again, which then reads **I'm helping with this**, withdraws the offer.
+
+One offer per person per request. When a numbered request already has that many offers, another person is told someone else just took it, and nothing is stored for them. If two people take the last place at the same moment, one offer is kept. Withdrawing, or a family member removing an offer, opens the place again. Lowering the number does not remove offers already made. The request is covered once at least that many active offers exist. A "many" request never fills.
+
+### Who has offered
+
+Under the request, once anyone has offered, one sentence names them:
+
+- one person: "Ana Rivera can help with this"
+- two: "Ana Rivera and Sam can help with this"
+- more: "Ana Rivera, Sam, and 2 others can help with this," with "1 other" when a single name is left out
+
+The viewer is first, as "You." On a computer, resting on the sentence shows everyone who offered. Tapping it shows that list under the sentence, and tapping again hides it. A "many" request always shows the list, and so does a family member's view of any request, with **Remove** on each name. Removing asks for confirmation.
+
+When a numbered request is covered, a green check appears beside the sentence. **I can help with this** is hidden from anyone who hasn't offered. Someone who has can still withdraw.
+
+Everyone signed in sees those names, and never an email or another person's id. Family members also see a person's email beside their name when they have one. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
+
+A removed person's offers are hidden and don't fill a place, and a removed person can't offer. Restoring a supporter brings their offers back, which can leave a numbered request with more offers than its number.
+
+Offering on a numbered request emails the family's other family members that someone offered to help, with a link to this page and none of the request's text. It does not email the person who offered, supporters, or removed family members. Offering again, withdrawing, a family member removing an offer, and any offer on a "many" request send nothing. The offer is kept if the email can't be sent. Others' new offers appear when the page is reloaded.
 
 ## Notifications
 
