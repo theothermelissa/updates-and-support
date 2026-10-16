@@ -204,6 +204,8 @@ Next to the form, the page explains this, with the number of devices a change to
 
 The gate keeps out bots, crawlers, and casual strangers. It does not stop a determined person, because the answer to a community question can often be looked up or passed along.
 
+So the app doesn't add friction, such as confirmation steps or forced sign-outs, to defend against someone who already knows the answer. Supporters are family and friends, many of them elderly, and every extra step costs them more than it stops an insider. When the family wants someone out, the remedy is to remove that person and change the answer. This limits only the gate: server-side authorization, keeping each family's data separate, and the tests for both are never relaxed.
+
 A slug chosen without the random suffix, such as `for-sam`, can be guessed, and the family shown at the site's root can be found by anyone who knows the site's address. Either way, the finder sees the family's display name and question, and can try answers within the wrong-answer limits.
 
 Anyone who knows the answer can read without giving a name or email. The family sees how many devices are signed in without a verified email, but not who is behind them. If the number looks too high, or the family suspects the answer has spread, the fix is to change the answer, which signs all of them out.
