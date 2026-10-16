@@ -1,7 +1,7 @@
 import { CheckIcon, EllipsisVerticalIcon, XIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { FamilyShell, PageTitle } from "@/components/familyShell";
-import { Confirm, ErrorMessage, Field, LinkedText, PageShell, PhoneLink } from "@/components/page";
+import { PageTitle } from "@/components/familyShell";
+import { Confirm, ErrorMessage, Field, LinkedText, PhoneLink } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,8 +9,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { api, type Me } from "../api.js";
+import { api } from "../api.js";
 import { capacityLabel, isPast, sortRequests, whenLabel } from "../help.js";
+import type { FamilyPageProps } from "./FamilyFrame.js";
 
 // A null name is an offer made without one.
 type Offer = { id: string | null; name: string | null; mine: boolean; email: string | null; phone: string | null };
@@ -27,25 +28,21 @@ type RequestFields = {
 // A supporter's offers hold only their own; offered counts everyone's.
 type HelpRequest = RequestFields & { id: string; full: boolean; offered: number; offers: Offer[] };
 
-export function Help({ slug }: { slug: string }) {
-  const [me, setMe] = useState<Me | null>(null);
+export function Help({ slug, me, reloadMe }: FamilyPageProps) {
   const [requests, setRequests] = useState<HelpRequest[] | null>(null);
   const [error, setError] = useState("");
 
   async function load() {
-    const [who, list] = await Promise.all([
-      api<Me>(slug, "me"),
-      api<{ requests: HelpRequest[] }>(slug, "help"),
-    ]);
-    if (who.status === 401 || list.status === 401) return location.replace(`/f/${slug}`);
-    if (who.status !== 200 || list.status !== 200) return setError("Couldn't load ways to help. Please refresh the page.");
-    setMe(who.data);
+    const list = await api<{ requests: HelpRequest[] }>(slug, "help");
+    if (list.status === 401) return location.replace(`/f/${slug}`);
+    if (list.status !== 200) return setError("Couldn't load ways to help. Please refresh the page.");
     setRequests(list.data.requests);
   }
 
+  // Again when the reader's name changes, since offers show it.
   useEffect(() => {
     load();
-  }, [slug]);
+  }, [slug, me.person.name]);
 
   async function change(path: string, method: string, body?: unknown): Promise<{ ok: boolean; name?: string; error?: string }> {
     setError("");
@@ -56,17 +53,17 @@ export function Help({ slug }: { slug: string }) {
       if (status === 409) await load();
       return { ok: false, error: message };
     }
-    if (data?.name && me && !me.person.name) setMe({ ...me, person: { ...me.person, name: data.name } });
+    // An offer can save the reader's name or email.
+    reloadMe();
     await load();
     return { ok: true, name: data?.name };
   }
 
-  if (error && !me) return <PageShell title="How to help">{<ErrorMessage>{error}</ErrorMessage>}</PageShell>;
-  if (!me || !requests) return null;
+  if (!requests) return error ? <ErrorMessage>{error}</ErrorMessage> : null;
   const family = me.person.role === "family";
 
   return (
-    <FamilyShell slug={slug} me={me} page="help" column onPersonChanged={load}>
+    <>
       <PageTitle>How to Help</PageTitle>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {family && <h3 className="text-lg font-semibold tracking-tight">What Would Help</h3>}
@@ -94,7 +91,7 @@ export function Help({ slug }: { slug: string }) {
           />
         ))}
       </div>
-    </FamilyShell>
+    </>
   );
 }
 

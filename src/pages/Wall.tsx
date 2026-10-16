@@ -1,11 +1,12 @@
 import { XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { FamilyShell, PageTitle } from "@/components/familyShell";
-import { ErrorMessage, PageShell } from "@/components/page";
+import { PageTitle } from "@/components/familyShell";
+import { ErrorMessage } from "@/components/page";
 import { NoteCard } from "@/components/notes";
 import { Button } from "@/components/ui/button";
-import { api, type Me } from "../api.js";
+import { api } from "../api.js";
 import type { Note } from "../notes.js";
+import type { FamilyPageProps } from "./FamilyFrame.js";
 
 type UpdateSummary = { id: string; body: string; authorName: string; createdAt: string };
 
@@ -18,8 +19,7 @@ function updateInAddress(): string | null {
 // Every note in the family, newest first, in columns. An update's "See all" link narrows it to
 // that update's notes, which a bar above them says, with a way back to every note. Anyone not
 // signed in goes to the family's home page, which shows the gate.
-export function Wall({ slug }: { slug: string }) {
-  const [me, setMe] = useState<Me | null>(null);
+export function Wall({ slug, me }: FamilyPageProps) {
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [updates, setUpdates] = useState<UpdateSummary[]>([]);
   const [filter, setFilter] = useState(updateInAddress);
@@ -45,16 +45,16 @@ export function Wall({ slug }: { slug: string }) {
   }
 
   async function load() {
-    const [who, list] = await Promise.all([api<Me>(slug, "me"), api<{ notes: Note[] }>(slug, "notes")]);
-    if (who.status === 401 || list.status === 401) return location.replace(`/f/${slug}`);
-    if (who.status !== 200 || list.status !== 200) return setError("Couldn't load the notes. Please refresh the page.");
-    setMe(who.data);
+    const list = await api<{ notes: Note[] }>(slug, "notes");
+    if (list.status === 401) return location.replace(`/f/${slug}`);
+    if (list.status !== 200) return setError("Couldn't load the notes. Please refresh the page.");
     setNotes(list.data.notes);
   }
 
+  // Again when the reader's name changes, since notes show it.
   useEffect(() => {
     load();
-  }, [slug]);
+  }, [slug, me.person.name]);
 
   async function change(path: string, method: string, body?: unknown): Promise<boolean> {
     setError("");
@@ -75,12 +75,11 @@ export function Wall({ slug }: { slug: string }) {
     return change("reactions", "POST", { noteId: id, kind });
   }
 
-  if (error && !me) return <PageShell title="Notes">{<ErrorMessage>{error}</ErrorMessage>}</PageShell>;
-  if (!me || !notes) return null;
+  if (!notes) return error ? <ErrorMessage>{error}</ErrorMessage> : null;
   const shown = filter ? notes.filter((n) => n.updateId === filter) : notes;
   const update = updates.find((u) => u.id === filter);
   return (
-    <FamilyShell slug={slug} me={me} page="notes" onPersonChanged={load}>
+    <>
       <PageTitle>Notes of support</PageTitle>
       {filter && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/50 px-4 py-3 text-sm">
@@ -119,7 +118,7 @@ export function Wall({ slug }: { slug: string }) {
           ))}
         </div>
       )}
-    </FamilyShell>
+    </>
   );
 }
 

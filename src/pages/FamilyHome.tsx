@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { FamilyShell } from "@/components/familyShell";
 import { ErrorMessage, Field } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,37 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
 import { Feed } from "./Feed.js";
-import { Gate } from "./Gate.js";
-import { NotFound } from "./NotFound.js";
+import type { FamilyPageProps } from "./FamilyFrame.js";
 
-export function FamilyHome({ slug }: { slug: string }) {
-  const [me, setMe] = useState<Me | "loading" | "signed-out" | "not-found">("loading");
-
-  function load() {
-    api<Me>(slug, "me").then(({ status, data }) => {
-      if (status === 200) setMe(data);
-      else setMe(status === 404 ? "not-found" : "signed-out");
-    });
-  }
-
-  useEffect(load, [slug]);
-
+export function FamilyHome({ slug, me, setMe, reloadMe, onSignedOut }: FamilyPageProps) {
   async function setNotifications(on: boolean) {
     const { status, data } = await api<{ person: Me["person"] }>(slug, "notifications", {
       method: "POST",
       body: { on },
     });
-    if (status === 200 && typeof me === "object") setMe({ ...me, person: data.person });
+    if (status === 200) setMe({ ...me, person: data.person });
   }
 
-  if (me === "loading") return null;
-  if (me === "not-found") return <NotFound />;
-  if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
-
   return (
-    <FamilyShell slug={slug} me={me} page="updates" onPersonChanged={load}>
+    <>
       {me.person.role === "supporter" && !me.person.email && (
-        <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
+        <EmailPrompt slug={slug} reload={reloadMe} storedName={me.person.name} />
       )}
       {me.person.role === "supporter" && me.person.email && (
         <div className="space-y-2 lg:w-[42rem]">
@@ -63,9 +46,9 @@ export function FamilyHome({ slug }: { slug: string }) {
         photos={me.family.photos}
         name={me.person.name}
         onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
-        onSignedOut={() => setMe("signed-out")}
+        onSignedOut={onSignedOut}
       />
-    </FamilyShell>
+    </>
   );
 }
 
