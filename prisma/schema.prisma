@@ -50,6 +50,9 @@ model Person {
   // Supporters only: set when a family member removes them. A removed person can't sign
   // in, join again, or get emails; the record stays so the email stays blocked.
   removedAt        DateTime?
+  // Supporters only, kept as typed: for the family to call or text them. Only family members
+  // see it. A database check keeps it null for family members.
+  phone            String?
   createdAt        DateTime  @default(now())
 
   family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
@@ -223,6 +226,8 @@ model HelpRequest {
   // Whether an offer needs a name, and an email when the person has none on their record.
   requireName  Boolean  @default(true)
   requireEmail Boolean  @default(false)
+  // Whether a supporter with no phone on their record gives one with their offer.
+  requirePhone Boolean  @default(false)
   // Exactly as typed, with no time zone: the need happens where the family is.
   // "YYYY-MM-DD" and "HH:MM"; a time only with a date.
   date         String?

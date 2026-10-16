@@ -3,7 +3,7 @@ import { getDb } from "../../../../server/db.js";
 import { deleteHelp, updateHelp } from "../../../../server/help.js";
 import { familyContext, jsonBody, methodNotAllowed, param, sendRequestError, unauthorized } from "../../../../server/http.js";
 
-// PATCH { body, slots, requireName, requireEmail, date, time }: a family member rewrites a
+// PATCH { body, slots, requireName, requireEmail, requirePhone, date, time }: a family member rewrites a
 // request. Every field is required. Offers stay.
 // DELETE: a family member removes it, and every offer on it.
 export default async function handler(req: VercelRequest, res: VercelResponse) {

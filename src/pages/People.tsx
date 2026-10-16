@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { FamilyShell, PageTitle } from "@/components/familyShell";
-import { Confirm, ErrorMessage, Field, PageShell } from "@/components/page";
+import { Confirm, ErrorMessage, Field, PageShell, PhoneLink } from "@/components/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ type Supporter = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   emailVerified: boolean;
   notificationsOn: boolean;
   joinedAt: string;
@@ -158,7 +159,7 @@ export function People({ slug }: { slug: string }) {
       me={me}
       page="people"
       column
-      onNameChanged={() => {
+      onPersonChanged={() => {
         loadMe();
         load();
       }}
@@ -397,6 +398,7 @@ function SupporterTable({
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
+            <TableHead>Phone</TableHead>
             <TableHead>Verified</TableHead>
             <TableHead>Notifications</TableHead>
             <TableHead>Joined</TableHead>
@@ -409,6 +411,7 @@ function SupporterTable({
             <TableRow key={s.id}>
               <TableCell>{s.name}</TableCell>
               <TableCell>{s.email}</TableCell>
+              <TableCell className="whitespace-nowrap">{s.phone && <PhoneLink phone={s.phone} />}</TableCell>
               <TableCell>
                 {s.emailVerified ? (
                   "Yes"

@@ -36,7 +36,7 @@ export function FamilyHome({ slug }: { slug: string }) {
   if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
 
   return (
-    <FamilyShell slug={slug} me={me} page="updates" onNameChanged={load}>
+    <FamilyShell slug={slug} me={me} page="updates" onPersonChanged={load}>
       {me.person.role === "supporter" && !me.person.email && (
         <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
       )}

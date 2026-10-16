@@ -15,6 +15,7 @@ export type SupporterView = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   emailVerified: boolean;
   notificationsOn: boolean;
   joinedAt: Date;
@@ -63,6 +64,7 @@ function unverifiedSessions(familyId: string) {
 // Adds a family member to the signed-in family member's family and emails them a sign-in
 // link. An email already in the family promotes a supporter or restores a removed person,
 // keeping their record; their sessions end so they sign in again as a family member.
+// Family members keep no phone number, so a promoted supporter's is cleared.
 export async function addFamilyMember(
   db: Db,
   send: SendEmail,
@@ -87,7 +89,7 @@ export async function addFamilyMember(
       }
       await tx.person.update({
         where: { id: existing.id },
-        data: { role: "family", name, removedAt: null, magicLinks: { create: link.data } },
+        data: { role: "family", name, phone: null, removedAt: null, magicLinks: { create: link.data } },
       });
       await tx.session.deleteMany({ where: { personId: existing.id } });
       return existing.role === "supporter" ? "promoted" : "restored";
@@ -269,6 +271,7 @@ function supporterView(p: Person): SupporterView {
     id: p.id,
     name: p.name ?? "",
     email: p.email ?? "",
+    phone: p.phone,
     emailVerified: p.emailVerifiedAt !== null,
     notificationsOn: p.notificationsOn,
     joinedAt: p.createdAt,

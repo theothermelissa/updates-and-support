@@ -30,6 +30,7 @@ A person who is both a supporter and a family member of different families has a
 - Everyone signed in to the family can give each update and each note one reaction from a fixed set of six emoji, and sees who reacted. → [updates.md](updates.md#reactions)
 - Everyone signed in to the family can leave colored notes of support on an update, written or as a video of up to 60 seconds, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)
 - Family members post ways to help, each with an optional date and time and a choice of whether offers need a name or an email, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered. → [updates.md](updates.md#how-to-help)
+- Supporters can keep a phone number on their record for the family to reach them; only family members see it. → [access.md](access.md#your-phone-number)
 - Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
 
 ### Later
@@ -66,5 +67,5 @@ The app follows the visual language of Vercel's Geist design system: the Geist S
 
 ## Area specs
 
-- [access.md](access.md): families, the community question, supporter and family member sign-in, sessions, and managing people.
+- [access.md](access.md): families, the community question, supporter and family member sign-in, sessions, names and phone numbers, and managing people.
 - [updates.md](updates.md): posting, editing, and deleting updates, photos, video updates, the feed, reactions, notes, ways to help, and notifications.

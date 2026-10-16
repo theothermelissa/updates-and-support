@@ -1,7 +1,7 @@
 import { CheckIcon, EllipsisVerticalIcon, XIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { FamilyShell, PageTitle } from "@/components/familyShell";
-import { Confirm, ErrorMessage, Field, LinkedText, PageShell } from "@/components/page";
+import { Confirm, ErrorMessage, Field, LinkedText, PageShell, PhoneLink } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,13 +13,14 @@ import { api, type Me } from "../api.js";
 import { capacityLabel, isPast, sortRequests, whenLabel } from "../help.js";
 
 // A null name is an offer made without one.
-type Offer = { id: string | null; name: string | null; mine: boolean; email: string | null };
+type Offer = { id: string | null; name: string | null; mine: boolean; email: string | null; phone: string | null };
 // What the family sets on a request. date is "YYYY-MM-DD" and time "HH:MM", or null.
 type RequestFields = {
   body: string;
   slots: number | null;
   requireName: boolean;
   requireEmail: boolean;
+  requirePhone: boolean;
   date: string | null;
   time: string | null;
 };
@@ -65,7 +66,7 @@ export function Help({ slug }: { slug: string }) {
   const family = me.person.role === "family";
 
   return (
-    <FamilyShell slug={slug} me={me} page="help" column onNameChanged={load}>
+    <FamilyShell slug={slug} me={me} page="help" column onPersonChanged={load}>
       <PageTitle>How to Help</PageTitle>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {family && <h3 className="text-lg font-semibold tracking-tight">What Would Help</h3>}
@@ -85,6 +86,7 @@ export function Help({ slug }: { slug: string }) {
             family={family}
             needsName={request.requireName && me.person.name === null}
             needsEmail={request.requireEmail && me.person.email === null}
+            needsPhone={request.requirePhone && me.person.role === "supporter" && me.person.phone === null}
             onSave={(fields) => change(`help/${request.id}`, "PATCH", fields).then((r) => r.ok)}
             onDelete={() => change(`help/${request.id}`, "DELETE").then((r) => r.ok)}
             onOffer={(helping, details) => change(`help/${request.id}/offer`, "POST", { helping, ...details }).then((r) => r.ok)}
@@ -101,9 +103,10 @@ function RequestCard(props: {
   family: boolean;
   needsName: boolean;
   needsEmail: boolean;
+  needsPhone: boolean;
   onSave: (fields: RequestFields) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
-  onOffer: (helping: boolean, details?: { name?: string; email?: string }) => Promise<boolean>;
+  onOffer: (helping: boolean, details?: { name?: string; email?: string; phone?: string }) => Promise<boolean>;
   onRemove: (offerId: string) => Promise<boolean>;
 }) {
   const { request } = props;
@@ -112,27 +115,30 @@ function RequestCard(props: {
   const [pending, setPending] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [asking, setAsking] = useState(false);
   const [bowingOut, setBowingOut] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const mine = request.offers.some((offer) => offer.mine);
   const past = isPast(request.date, request.time, new Date());
   const showButton = !request.full && !past && !mine;
-  const needsDetails = props.needsName || props.needsEmail;
+  const needsDetails = props.needsName || props.needsEmail || props.needsPhone;
 
   async function offer(e: FormEvent) {
     e.preventDefault();
-    // A name or email the request needs is asked for only once they press the button.
+    // A name, email, or phone number the request needs is asked for only once they press the button.
     if (needsDetails && !asking) return setAsking(true);
     setPending(true);
     const ok = await props.onOffer(true, {
       ...(props.needsName && { name }),
       ...(props.needsEmail && { email }),
+      ...(props.needsPhone && { phone }),
     });
     setPending(false);
     if (ok) {
       setName("");
       setEmail("");
+      setPhone("");
       setAsking(false);
     }
   }
@@ -217,6 +223,19 @@ function RequestCard(props: {
               />
             </Field>
           )}
+          {asking && props.needsPhone && (
+            <Field label={<span>Your phone number <span className="font-normal text-muted-foreground">(only the family will see this)</span></span>}>
+              <Input
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                maxLength={30}
+                autoFocus={!props.needsName && !props.needsEmail}
+              />
+            </Field>
+          )}
           <div className="flex gap-2">
             <Button type="submit" variant="outline" disabled={pending}>
               <span aria-hidden="true">✋</span>I can help with this
@@ -263,7 +282,7 @@ function RequestCard(props: {
   );
 }
 
-// The family's list of who offered, with emails and Remove.
+// The family's list of who offered, with emails, phone numbers, and Remove.
 function OfferList(props: {
   offers: Offer[];
   removing: string | null;
@@ -277,6 +296,12 @@ function OfferList(props: {
           <p>
             {offer.mine ? "You" : (offer.name ?? "Someone")}
             {offer.email && <span className="text-muted-foreground"> · {offer.email}</span>}
+            {offer.phone && (
+              <span className="text-muted-foreground">
+                {" · "}
+                <PhoneLink phone={offer.phone} />
+              </span>
+            )}
             {offer.id && props.removing !== offer.id && (
               <button type="button" className="ml-3 underline underline-offset-2" onClick={() => props.setRemoving(offer.id)}>
                 Remove
@@ -305,6 +330,7 @@ function RequestForm(props: {
   const [count, setCount] = useState(String(props.initial?.slots ?? 1));
   const [requireName, setRequireName] = useState(props.initial?.requireName ?? true);
   const [requireEmail, setRequireEmail] = useState(props.initial?.requireEmail ?? false);
+  const [requirePhone, setRequirePhone] = useState(props.initial?.requirePhone ?? false);
   const [date, setDate] = useState(props.initial?.date ?? "");
   const [time, setTime] = useState(props.initial?.time ?? "");
   const [busy, setBusy] = useState(false);
@@ -317,6 +343,7 @@ function RequestForm(props: {
       slots: many ? null : Number(count),
       requireName,
       requireEmail,
+      requirePhone,
       date: date || null,
       time: date && time ? time : null,
     });
@@ -327,6 +354,7 @@ function RequestForm(props: {
       setCount("1");
       setRequireName(true);
       setRequireEmail(false);
+      setRequirePhone(false);
       setDate("");
       setTime("");
     }
@@ -383,6 +411,10 @@ function RequestForm(props: {
       <Label>
         <Checkbox checked={requireEmail} onCheckedChange={(checked) => setRequireEmail(checked === true)} />
         Require email
+      </Label>
+      <Label>
+        <Checkbox checked={requirePhone} onCheckedChange={(checked) => setRequirePhone(checked === true)} />
+        Require phone
       </Label>
       <div className="flex gap-2">
         <Button disabled={busy}>{props.submitLabel}</Button>

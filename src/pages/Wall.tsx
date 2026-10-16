@@ -80,7 +80,7 @@ export function Wall({ slug }: { slug: string }) {
   const shown = filter ? notes.filter((n) => n.updateId === filter) : notes;
   const update = updates.find((u) => u.id === filter);
   return (
-    <FamilyShell slug={slug} me={me} page="notes" onNameChanged={load}>
+    <FamilyShell slug={slug} me={me} page="notes" onPersonChanged={load}>
       <PageTitle>Notes of support</PageTitle>
       {filter && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/50 px-4 py-3 text-sm">

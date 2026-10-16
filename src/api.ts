@@ -18,6 +18,8 @@ export type PersonView = {
   id: string;
   name: string | null;
   email: string | null;
+  // Supporters only; only ever sent to its own person and to family members.
+  phone: string | null;
   role: "family" | "supporter";
   notificationsOn: boolean;
   emailVerified: boolean;

@@ -4,19 +4,22 @@ import { RequestError } from "./errors.js";
 import { isValidEmail, normalizeEmail, validName } from "./families.js";
 import type { Person, Prisma } from "./generated/prisma/client.js";
 import { requireFamilyMember } from "./people.js";
+import { validPhone } from "./phone.js";
 
 const MAX_BODY = 2_000;
 const MAX_SLOTS = 99;
 const MAX_REQUESTS = 100;
 
-// What a viewer sees of an offer. A supporter gets only their own offer, with no email.
-// Family members get every offer, with the email when there is one and the offer's id so
-// they can remove it. Never a person's id. A null name is an offer made without one.
+// What a viewer sees of an offer. A supporter gets only their own offer, with no email or
+// phone. Family members get every offer, with the email when there is one, a supporter's
+// phone when they have one, and the offer's id so they can remove it. Never a person's id.
+// A null name is an offer made without one.
 export type HelpOfferView = {
   id: string | null;
   name: string | null;
   mine: boolean;
   email: string | null;
+  phone: string | null;
 };
 
 export type HelpRequestView = {
@@ -26,6 +29,7 @@ export type HelpRequestView = {
   slots: number | null;
   requireName: boolean;
   requireEmail: boolean;
+  requirePhone: boolean;
   // As typed: "YYYY-MM-DD" and "HH:MM", with no time zone.
   date: string | null;
   time: string | null;
@@ -44,7 +48,7 @@ const requestInclude = (familyId: string) =>
         personId: true,
         email: true,
         createdAt: true,
-        person: { select: { name: true, email: true } },
+        person: { select: { name: true, email: true, phone: true, role: true } },
       },
       orderBy: { createdAt: "asc" },
     },
@@ -67,6 +71,7 @@ function view(request: LoadedRequest, viewer: Person): HelpRequestView {
     slots: request.slots,
     requireName: request.requireName,
     requireEmail: request.requireEmail,
+    requirePhone: request.requirePhone,
     date: request.date,
     time: request.time,
     full: request.slots !== null && offers.length >= request.slots,
@@ -77,6 +82,7 @@ function view(request: LoadedRequest, viewer: Person): HelpRequestView {
       mine: offer.personId === viewer.id,
       // An offer has its own email only when the person had none on their record.
       email: family ? (offer.email ?? offer.person.email) : null,
+      phone: family && offer.person.role === "supporter" ? offer.person.phone : null,
     })),
   };
 }
@@ -152,13 +158,14 @@ type RequestInput = {
   slots?: unknown;
   requireName?: unknown;
   requireEmail?: unknown;
+  requirePhone?: unknown;
   date?: unknown;
   time?: unknown;
 };
 
 // Every field is required, so a page from before a field existed can't clear it by leaving it out.
 function validRequest(input: RequestInput) {
-  const fields = [input.requireName, input.requireEmail, input.date, input.time];
+  const fields = [input.requireName, input.requireEmail, input.requirePhone, input.date, input.time];
   if (fields.includes(undefined)) throw new RequestError(400, "This page is out of date. Please refresh it and try again.");
   const date = validDate(input.date);
   return {
@@ -166,6 +173,7 @@ function validRequest(input: RequestInput) {
     slots: validSlots(input.slots),
     requireName: validFlag(input.requireName, "requireName"),
     requireEmail: validFlag(input.requireEmail, "requireEmail"),
+    requirePhone: validFlag(input.requirePhone, "requirePhone"),
     date,
     time: validTime(input.time, date),
   };
@@ -220,7 +228,9 @@ export async function removeOffer(db: Db, person: Person, requestId: string, off
 // The signed-in person offers, or withdraws. A numbered request locks its row so two people
 // can't take the last place. A name is asked for only when the request requires one and the
 // person has none; an email only when the request requires one and the person has none on
-// their record, and it's kept on the offer alone. Both are checked before anything is written.
+// their record, and it's kept on the offer alone; a phone only on a new offer, when the request
+// requires one and the person is a supporter with none, and it goes on their record. All are
+// checked before anything is written.
 // A new offer on a numbered request emails the other family members, with no request text;
 // a failed email leaves the offer in place.
 export async function offerHelp(
@@ -228,20 +238,22 @@ export async function offerHelp(
   send: SendEmails | undefined,
   person: Person,
   requestId: string,
-  input: { helping?: unknown; name?: unknown; email?: unknown },
+  input: { helping?: unknown; name?: unknown; email?: unknown; phone?: unknown },
 ): Promise<{ name: string }> {
   if (typeof input.helping !== "boolean") throw new RequestError(400, "Expected helping: true or false");
   const outcome = await db.$transaction(async (tx) => {
     const [request] = await tx.$queryRaw<
-      { id: string; slots: number | null; requireName: boolean; requireEmail: boolean }[]
+      { id: string; slots: number | null; requireName: boolean; requireEmail: boolean; requirePhone: boolean }[]
     >`
-      SELECT id, slots, "requireName", "requireEmail" FROM "HelpRequest"
+      SELECT id, slots, "requireName", "requireEmail", "requirePhone" FROM "HelpRequest"
       WHERE id = ${requestId} AND "familyId" = ${person.familyId}
       FOR UPDATE`;
     if (!request) throw new RequestError(404, "Request not found");
 
-    const [author] = await tx.$queryRaw<{ name: string | null; email: string | null }[]>`
-      SELECT name, email FROM "Person"
+    const [author] = await tx.$queryRaw<
+      { name: string | null; email: string | null; phone: string | null; role: "family" | "supporter" }[]
+    >`
+      SELECT name, email, phone, role FROM "Person"
       WHERE id = ${person.id} AND "familyId" = ${person.familyId} AND "removedAt" IS NULL
       FOR UPDATE`;
     if (!author) throw new RequestError(403, "You can't offer help here");
@@ -263,8 +275,16 @@ export async function offerHelp(
 
     const newName = !author.name && request.requireName ? validName(input.name) : null;
     const email = !already && request.requireEmail && !author.email ? validOfferEmail(input.email) : null;
+    const askPhone = !already && request.requirePhone && author.role === "supporter" && !author.phone;
+    const newPhone = askPhone ? validPhone(input.phone) : null;
+    if (askPhone && !newPhone) throw new RequestError(400, "Please enter a phone number.");
     const name = author.name ?? newName ?? "";
-    if (newName) await tx.person.update({ where: { id: person.id }, data: { name: newName } });
+    if (newName || newPhone) {
+      await tx.person.update({
+        where: { id: person.id },
+        data: { ...(newName && { name: newName }), ...(newPhone && { phone: newPhone }) },
+      });
+    }
     if (already) return { name, notify: false };
 
     await tx.helpOffer.create({ data: { requestId, personId: person.id, email } });

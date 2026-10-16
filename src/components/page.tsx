@@ -52,6 +52,11 @@ export function Confirm(props: { children: ReactNode; yes: string; onYes: () => 
   );
 }
 
+// A phone number as the person typed it, as a link that calls it on a phone.
+export function PhoneLink({ phone }: { phone: string }) {
+  return <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>{phone}</a>;
+}
+
 // Plain text with its line breaks kept and its web addresses as links.
 // Children follow the text on its last line.
 export function LinkedText({ text, className, children }: { text: string; className?: string; children?: ReactNode }) {

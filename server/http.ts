@@ -59,6 +59,7 @@ export function personView(person: Person) {
     id: person.id,
     name: person.name,
     email: person.email,
+    phone: person.phone,
     role: person.role,
     notificationsOn: person.notificationsOn,
     emailVerified: person.emailVerifiedAt !== null,

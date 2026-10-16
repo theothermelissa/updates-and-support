@@ -38,7 +38,7 @@ async function setUp() {
 }
 
 // A request's other fields, as the form sends them by default.
-const DEFAULTS = { requireName: true, requireEmail: false, date: null, time: null };
+const DEFAULTS = { requireName: true, requireEmail: false, requirePhone: false, date: null, time: null };
 
 function add(
   person: Person,
@@ -272,6 +272,7 @@ describe("requirements and dates", () => {
       { time: "17:30" },
       { requireName: "yes" },
       { requireEmail: undefined },
+      { requirePhone: undefined },
       { date: undefined },
     ]) {
       await expect(add(ana, "Bad", 1, extra)).rejects.toMatchObject({ status: 400 });
