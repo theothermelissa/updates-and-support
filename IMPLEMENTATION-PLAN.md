@@ -167,7 +167,7 @@ The text-blocks attempt (closed PR #24) applied a `blocks` migration to the shar
 
 ## Progress and discoveries
 
-**Slice 1 implemented** on `feature/rich-text` (steps 1–7), after merging `main`'s notes and wall.
+**Slice 1 complete** (PR #25), approved by Melissa on the preview on 2026-10-15. At her request it also shows post and note times without seconds ("Oct 15, 2026, 8:47 PM").
 
 - **Typecheck, 62 unit tests, and 138 integration tests pass.** Each access and validation rule was removed in turn and its test failed:
   - family scope on list, edit, and delete
