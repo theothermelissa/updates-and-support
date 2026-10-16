@@ -5,7 +5,7 @@ import "dotenv/config";
 import { getDb } from "../server/db.js";
 import { isValidEmail, normalizeEmail } from "../server/families.js";
 
-// Also used by scripts/preview.sh.
+// Also used by scripts/preview.sh and scripts/sign-in-preview.ts.
 const TEST_SLUG = "testfamily-preview";
 
 async function main() {

@@ -42,7 +42,7 @@ When a PR's preview has built, run `npm run preview:seed` and `npm run preview` 
 
 **Why:** setting up each preview by hand (copying a connection string, running the family script, finding the URL) was tedious and error-prone, and she asked for it to be automated.
 
-**How to apply:** the scripts are described in README → Deployment. Every push gets its own preview address, so after pushing a fix, send the new link from `npm run preview`; an earlier link still shows the old build. Always put the current preview link in both the closing message and the PR description, and update the PR description when a push changes it; Melissa asked for this on 2026-10-16. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
+**How to apply:** the scripts are described in README → Deployment. `npm run preview` prints the branch's stable address, which always shows the latest push; send that one, not a push's own address. To sign the browser pane in as the family member, run `npm run preview:sign-in` and navigate the pane to the printed link, then press Sign in; the pane stays signed in on that address for the whole PR. The pane must be signed in to Vercel first. Never put a sign-in link in a PR description or commit. Always put the preview link in both the closing message and the PR description; Melissa asked for this on 2026-10-16. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
 
 ### The community question keeps casual observers out, nothing more
 
@@ -163,6 +163,14 @@ Ask for confirmation in the page itself, for example with inline "Yes / Cancel" 
 **Why:** headers like `X-Robots-Tag` and `Cache-Control: no-store` are privacy rules, and local dev silently shows them missing or wrong. A new route 404ing locally looked like a code bug. Sign-in links with `?token=` failed on previews until the token moved after `#`.
 
 **How to apply:** set anything privacy-critical in code (as `familyContext` does for `Cache-Control`) and check the rest on production with `curl -I` after merging. Restart `npm start` after adding an API file. Don't carry anything a page needs in the query string through a preview link.
+
+### Check the branch before committing
+
+Run `git status -sb` right before every commit, and work in a `git worktree` when another session may share this folder.
+
+**Why:** another session switched this folder to `main` and pulled between Claude's `git switch -c` and its commit, so the commit landed on local `main`. The push of the feature branch then sent nothing.
+
+**How to apply:** if a commit lands on the wrong branch, point the right branch at it with `git branch -f <branch> <sha>`. Then ask Melissa to reset the wrong branch, since auto mode blocks `git reset` on `main`.
 
 ### Merging `main` can delete the branch's plan
 

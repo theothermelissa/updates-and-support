@@ -19,6 +19,7 @@
     "start": "vercel dev",
     "vercel-build": "prisma generate && prisma migrate deploy && vite build",
     "preview": "scripts/preview.sh",
+    "preview:sign-in": "scripts/preview.sh --sign-in",
     "preview:seed": "scripts/with-preview-db.sh npx tsx scripts/seed-preview.ts",
     "preview:baseline": "scripts/with-preview-db.sh scripts/preview-baseline.sh",
     "verification:send": "tsx scripts/send-verifications.ts"
