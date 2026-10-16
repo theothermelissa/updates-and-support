@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cameraProblem, recordingName, recordingType, timeLeft } from "./recorder.js";
+import { cameraProblem, elapsedTime, recordingName, recordingType, timeLeft } from "./recorder.js";
 
 describe("recordingType", () => {
   it("prefers mp4, falls back to webm, and returns null when nothing is supported", () => {
@@ -33,5 +33,14 @@ describe("timeLeft", () => {
     expect(timeLeft(18_200)).toBe("0:42 left");
     expect(timeLeft(59_900)).toBe("0:01 left");
     expect(timeLeft(61_000)).toBe("0:00 left");
+  });
+});
+
+describe("elapsedTime", () => {
+  it("counts up in minutes and seconds, and never goes below zero", () => {
+    expect(elapsedTime(0)).toBe("0:00");
+    expect(elapsedTime(18_200)).toBe("0:18");
+    expect(elapsedTime(65_000)).toBe("1:05");
+    expect(elapsedTime(-1)).toBe("0:00");
   });
 });

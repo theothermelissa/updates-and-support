@@ -4,19 +4,21 @@ import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
-import { destroyVideos, noteSelect, noteView, visibleNotes, type NoteView } from "./notes.js";
+import { claimVideo, destroyVideos, lockUnusedVideo, noteSelect, noteView, shownVideo, visibleNotes, type NoteView } from "./notes.js";
 import { notifySupporters } from "./notifications.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
 import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
 import { contentFrom, photoCount, shownContent, type PhotoCheck } from "./richText.js";
-import { cloudinaryStore, type VideoStore } from "./videos.js";
+import { cloudinaryStore, MAX_VIDEO_BYTES, type VideoStore } from "./videos.js";
 
 export type UpdateView = {
   id: string;
-  // Plain text, for the wall's excerpts.
+  // Plain text, for the wall's excerpts. "[Video]" for a video update.
   body: string;
   content: Doc;
+  // Signed links for a video update, or `unavailable` when the host can't make them.
+  video: { src: string; poster: string } | { unavailable: true } | null;
   authorName: string;
   createdAt: Date;
   editedAt: Date | null;
@@ -49,7 +51,7 @@ export async function listUpdates(
     },
   });
   return updates.map((u) => {
-    const shown = view(u);
+    const shown = view(u, store);
     return {
       ...shown,
       content: withPhotoLinks(shown.content, person.familyId, new Set(u.photos.map((p) => p.publicId)), settings.cloudinary ?? null),
@@ -64,11 +66,13 @@ export async function listUpdates(
 export async function createUpdate(
   db: Db,
   person: Person,
-  input: { content?: unknown; body?: unknown },
+  input: { content?: unknown; body?: unknown; video?: unknown },
   notifyWith?: SendEmails,
   settings: PhotoSettings = NO_PHOTOS,
+  store: VideoStore = cloudinaryStore,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
+  if (input.video !== undefined) return createVideoUpdate(db, person, input, notifyWith, store);
   const { content, body } = contentFrom(input, settings, { familyId: person.familyId });
   const ids = [...publicIdsIn(content)];
   const update = await savePhoto(async () =>
@@ -90,7 +94,51 @@ export async function createUpdate(
       console.error(`Notifications failed for family ${person.familyId}: ${(err as Error).message}`);
     }
   }
-  return view(update);
+  return view(update, store);
+}
+
+// A video instead of text. The ticket is checked before the transaction, and locked inside
+// it, so a removal or a second attach of the same video can't slip through.
+async function createVideoUpdate(
+  db: Db,
+  person: Person,
+  input: { content?: unknown; body?: unknown; video?: unknown },
+  notifyWith: SendEmails | undefined,
+  store: VideoStore,
+): Promise<UpdateView> {
+  if (input.content !== undefined || input.body !== undefined) {
+    throw new RequestError(400, "An update is text or a video, not both");
+  }
+  const videoId = await claimVideo(db, person, input.video, store, { maxBytes: MAX_VIDEO_BYTES });
+  let update;
+  try {
+    update = await db.$transaction(async (tx) => {
+      const [author] = await tx.$queryRaw<{ role: string; removedAt: Date | null }[]>`
+        SELECT "role"::text AS role, "removedAt" FROM "Person"
+        WHERE id = ${person.id} AND "familyId" = ${person.familyId}
+        FOR UPDATE`;
+      if (!author || author.role !== "family" || author.removedAt) {
+        throw new RequestError(403, "Only family members can do this");
+      }
+      await lockUnusedVideo(tx, person.id, videoId);
+      return tx.update.create({
+        data: { familyId: person.familyId, authorId: person.id, body: "[Video]", videoId },
+        include: { author: { select: { name: true } } },
+      });
+    });
+  } catch (err) {
+    if (err instanceof RequestError) throw err;
+    if ((err as { code?: string }).code === "P2002") throw new RequestError(400, "That video is already posted");
+    throw err;
+  }
+  if (notifyWith) {
+    try {
+      await notifySupporters(db, notifyWith, person.familyId, 0, true);
+    } catch (err) {
+      console.error(`Notifications failed for family ${person.familyId}: ${(err as Error).message}`);
+    }
+  }
+  return view(update, store);
 }
 
 // Any family member may edit any update in their own family. The row stays locked until the
@@ -99,15 +147,18 @@ export async function editUpdate(
   db: Db,
   person: Person,
   id: string,
-  input: { content?: unknown; body?: unknown },
+  input: { content?: unknown; body?: unknown; video?: unknown },
   settings: PhotoSettings = NO_PHOTOS,
+  store: VideoStore = cloudinaryStore,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
+  if (input.video !== undefined) throw new RequestError(400, "A video update can't be edited");
   const { update, dropped } = await savePhoto(() =>
     db.$transaction(async (tx) => {
-      const [row] = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
+      const [row] = await tx.$queryRaw<{ id: string; videoId: string | null }[]>`
+        SELECT id, "videoId" FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
       if (!row) throw new RequestError(404, "Update not found");
+      if (row.videoId) throw new RequestError(400, "A video update can't be edited");
       const existing = await tx.photo.findMany({ where: { updateId: id }, select: { publicId: true } });
       const kept = new Set(existing.map((p) => p.publicId));
       const check: PhotoCheck = { familyId: person.familyId, kept };
@@ -129,11 +180,12 @@ export async function editUpdate(
   );
   // After commit: a failed edit never reaches here, so it deletes nothing from Cloudinary.
   await forgetPhotos(settings, dropped, id);
-  return view(update);
+  return view(update, store);
 }
 
 // Deletion is permanent: the row is removed, not hidden, with its reactions, notes, and photos.
-// Note videos are deleted before the row, so a failure there leaves the update in place.
+// Its videos, including its own when it is a video update, are deleted before the row, so a
+// failure there leaves the update in place.
 // Photos are deleted from Cloudinary after the commit, so a failure there still removes the update.
 export async function deleteUpdate(
   db: Db,
@@ -147,12 +199,15 @@ export async function deleteUpdate(
     async (tx) => {
       // Locks the update, so a note can't be attached while its videos are being deleted: a
       // note's insert waits on this lock and then finds the update gone. An edit waits too.
-      const [update] = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
+      const [update] = await tx.$queryRaw<{ id: string; videoId: string | null }[]>`
+        SELECT id, "videoId" FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
       if (!update) throw new RequestError(404, "Update not found");
-      // Every note's video, including hidden notes by removed people, which the cascade deletes too.
+      // Every note's video, including hidden notes by removed people, which the cascade deletes too,
+      // and the update's own video when it is a video update.
       const notes = await tx.note.findMany({ where: { updateId: id, videoId: { not: null } }, select: { videoId: true } });
-      await destroyVideos(store, notes.map((n) => n.videoId!));
+      const videoIds = notes.map((n) => n.videoId!);
+      if (update.videoId) videoIds.push(update.videoId);
+      await destroyVideos(store, videoIds);
       const photos = await tx.photo.findMany({ where: { updateId: id }, select: { publicId: true } });
       await tx.update.delete({ where: { id } });
       return photos.map((p) => p.publicId);
@@ -212,18 +267,23 @@ function linkedPhoto(photo: Photo, familyId: string, allowed: ReadonlySet<string
   return { type: "photo", attrs: { caption, publicId, url } };
 }
 
-function view(update: {
-  id: string;
-  body: string;
-  content: unknown;
-  createdAt: Date;
-  editedAt: Date | null;
-  author: { name: string | null };
-}): UpdateView {
+function view(
+  update: {
+    id: string;
+    body: string;
+    content: unknown;
+    videoId?: string | null;
+    createdAt: Date;
+    editedAt: Date | null;
+    author: { name: string | null };
+  },
+  store: VideoStore,
+): UpdateView {
   return {
     id: update.id,
     body: update.body,
     content: shownContent(update.content, update.body),
+    video: update.videoId ? shownVideo(store, update.videoId) : null,
     // Authors are family members, who always have a name.
     authorName: update.author.name ?? "",
     createdAt: update.createdAt,
