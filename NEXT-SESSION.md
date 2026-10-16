@@ -5,8 +5,6 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
   A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
 
-- **2026-10-16** — Build the in-page video recorder (video notes, part 2).
-  `spec/updates.md` → "Video notes" describes it: a live camera view, a 3-2-1 countdown, a 60-second timer with Stop, then automatic playback with "Post" and "Re-record." Part 1 shipped storage, access, and "Upload a video"; the recorder feeds the same review and upload path in `src/components/notes.tsx`. Recorded files can report no length in the browser (MediaRecorder), and the server's check covers that.
 - **2026-10-15** — Clean up leftover Cloudinary photos.
   A photo uploaded but never saved, a destroy that failed after the update was already deleted, or an update deleted while photos were off, stays in Cloudinary with nothing pointing to it. The signed upload fields can also be posted to Cloudinary's raw or video endpoint. A sweep could destroy authenticated images under `families/` that have no `Photo` row. Photos and video notes stay separate on purpose: videos are destroyed before the row is removed and the request fails if Cloudinary fails; photos are destroyed after the database commit and the request still succeeds.
 - **2026-10-16** — Sweep video uploads that never became notes.

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { COLORS, MAX_NOTE, PALETTE, randomColor, type Note, type NoteColor } from "../notes.js";
 import { checkVideo, uploadVideo } from "../videos.js";
+import { VideoRecorder } from "@/components/recorder";
 
 // A note as a card in its color, signed by its author, with Delete for those allowed. A video
 // note's card is the video's still, edge to edge inside a thin frame in the note's color.
@@ -56,12 +57,21 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
 
 // The video's still in a 16:9 box, shown whole on the note's color, with a play button. The
 // video plays in the same box, and starting it pauses any other video note that's playing.
-// Until the host has converted the video, the still doesn't load and the box says so.
+// Until the host has converted the video, the still doesn't load and the box says so; when
+// the server couldn't make its links, the box says that instead.
 function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["video"]> }) {
   const [playing, setPlaying] = useState(false);
   const [processing, setProcessing] = useState(false);
   const colors = PALETTE[note.color];
   const box = "relative block aspect-video w-full overflow-hidden rounded-lg";
+
+  if ("unavailable" in video) {
+    return (
+      <p className={cn(box, "flex items-center justify-center p-4 text-sm")} style={{ backgroundColor: colors.fill }}>
+        This video can't be shown right now.
+      </p>
+    );
+  }
 
   if (playing) {
     return (
@@ -147,7 +157,9 @@ function NoteForm(props: {
 }) {
   const [mode, setMode] = useState<"write" | "video">("write");
   const [body, setBody] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  // A recorded or uploaded video under review. A recording can be re-recorded.
+  const [video, setVideo] = useState<{ file: File; recorded: boolean } | null>(null);
+  const file = video?.file ?? null;
   // Once uploaded, a retry after a failed post reuses the video rather than uploading it again.
   const [uploaded, setUploaded] = useState<{ file: File; publicId: string } | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -213,12 +225,12 @@ function NoteForm(props: {
             required
           />
           <Button type="button" variant="outline" onClick={() => setMode("video")}>
-            Send a video instead
+            Record a video
           </Button>
         </>
       ) : (
         <>
-          <VideoPicker file={file} color={color} disabled={busy} onFile={setFile} onError={setError} />
+          <VideoSide video={video} color={color} disabled={busy} onVideo={setVideo} onError={setError} />
           <Button type="button" variant="outline" onClick={() => setMode("write")} disabled={busy}>
             Write a note instead
           </Button>
@@ -268,34 +280,43 @@ function NoteForm(props: {
   );
 }
 
-// Picks a video file and plays it back for review, shown whole on the note's color in the
-// card's 16:9 shape. Nothing uploads until the note is posted.
-function VideoPicker(props: {
-  file: File | null;
+// The dialog's video side: the recorder, or the upload picker when the camera can't be used,
+// then the chosen video playing back for review, shown whole on the note's color. Nothing
+// uploads until the note is posted.
+function VideoSide(props: {
+  video: { file: File; recorded: boolean } | null;
   color: NoteColor;
   disabled: boolean;
-  onFile: (file: File | null) => void;
+  onVideo: (video: { file: File; recorded: boolean } | null) => void;
   onError: (message: string) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState<string | null>(null);
+  const [cameraProblem, setCameraProblem] = useState<string | null>(null);
   const colors = PALETTE[props.color];
+  const file = props.video?.file;
 
   useEffect(() => {
-    if (!props.file) return setUrl(null);
-    const objectUrl = URL.createObjectURL(props.file);
+    if (!file) return setUrl(null);
+    const objectUrl = URL.createObjectURL(file);
     setUrl(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
-  }, [props.file]);
+  }, [file]);
 
-  async function picked(file: File | undefined) {
+  async function picked(chosen: File | undefined) {
     if (input.current) input.current.value = "";
-    if (!file) return;
+    if (!chosen) return;
     props.onError("");
-    const problem = await checkVideo(file);
+    const problem = await checkVideo(chosen);
     if (problem) props.onError(problem);
-    else props.onFile(file);
+    else props.onVideo({ file: chosen, recorded: false });
   }
+
+  const upload = (label: string, variant: "outline" | "ghost" = "outline") => (
+    <Button type="button" variant={variant} onClick={() => input.current?.click()} disabled={props.disabled}>
+      {label}
+    </Button>
+  );
 
   return (
     <div className="grid gap-2">
@@ -306,23 +327,45 @@ function VideoPicker(props: {
         className="hidden"
         onChange={(e) => picked(e.target.files?.[0])}
       />
-      {url ? (
-        <video
-          src={url}
-          controls
-          playsInline
-          className="aspect-video w-full rounded-xl border-4 object-contain"
-          style={{ backgroundColor: colors.fill, borderColor: colors.fill }}
-          aria-label="Your video"
-        />
+      {props.video && url ? (
+        <>
+          <video
+            src={url}
+            controls
+            playsInline
+            autoPlay={props.video.recorded}
+            className="aspect-video w-full rounded-xl border-4 object-contain"
+            style={{ backgroundColor: colors.fill, borderColor: colors.fill }}
+            aria-label="Your video"
+          />
+          {props.video.recorded ? (
+            <Button type="button" variant="outline" onClick={() => props.onVideo(null)} disabled={props.disabled}>
+              Re-record
+            </Button>
+          ) : (
+            upload("Choose another")
+          )}
+        </>
+      ) : cameraProblem ? (
+        <>
+          <p
+            className="rounded-xl border p-4 text-sm"
+            style={{ backgroundColor: colors.fill, color: colors.text, borderColor: `${colors.text}33` }}
+          >
+            {cameraProblem}
+          </p>
+          {upload("Upload a video")}
+        </>
       ) : (
-        <p className="rounded-xl border p-4 text-sm" style={{ backgroundColor: colors.fill, color: colors.text, borderColor: `${colors.text}33` }}>
-          Choose a video from your device, up to 60 seconds long.
-        </p>
+        <>
+          <VideoRecorder
+            color={props.color}
+            onRecorded={(recorded) => props.onVideo({ file: recorded, recorded: true })}
+            onUnavailable={setCameraProblem}
+          />
+          {upload("Upload a video", "ghost")}
+        </>
       )}
-      <Button type="button" variant="outline" onClick={() => input.current?.click()} disabled={props.disabled}>
-        {url ? "Choose another" : "Upload a video"}
-      </Button>
     </div>
   );
 }

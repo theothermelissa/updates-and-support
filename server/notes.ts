@@ -21,8 +21,9 @@ export type NoteView = {
   id: string;
   updateId: string;
   body: string;
-  // Signed links for a video note, built only for someone allowed to see the note.
-  video: { src: string; poster: string } | null;
+  // Signed links for a video note, built only for someone allowed to see the note, or
+  // `unavailable` when the video host can't make them, so one video can't break the page.
+  video: { src: string; poster: string } | { unavailable: true } | null;
   color: NoteColor;
   authorName: string;
   authorIsFamily: boolean;
@@ -56,7 +57,7 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
     id: note.id,
     updateId: note.updateId,
     body: note.body,
-    video: note.videoId ? store.urls(note.videoId) : null,
+    video: note.videoId ? videoLinks(store, note.videoId) : null,
     color: note.color,
     // Notes are only written with a name.
     authorName: note.author.name ?? "",
@@ -64,6 +65,15 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
     createdAt: note.createdAt,
     mine: note.authorId === viewerId,
   };
+}
+
+function videoLinks(store: VideoStore, publicId: string): NoteView["video"] {
+  try {
+    return store.urls(publicId);
+  } catch (err) {
+    console.error("Couldn't make video links", err);
+    return { unavailable: true };
+  }
 }
 
 // Gives the person a ticket to upload one video straight to the video host, and the signed
@@ -74,6 +84,8 @@ export async function issueVideoUpload(
   store: VideoStore = cloudinaryStore,
 ): Promise<{ publicId: string; url: string; fields: Record<string, string> }> {
   const publicId = newPublicId();
+  // Signed first, so a video host that can't sign uses up no ticket.
+  const params = await fromHost(() => store.uploadParams(publicId));
   await db.$transaction(async (tx) => {
     // Locks the person's row, as createNote does: a removal at the same moment lands first or
     // waits, and a burst of requests can't all pass the count at once.
@@ -89,7 +101,18 @@ export async function issueVideoUpload(
     }
     await tx.videoUpload.create({ data: { publicId, personId: person.id } });
   });
-  return { publicId, ...store.uploadParams(publicId) };
+  return { publicId, ...params };
+}
+
+// Runs a call to the video host, turning its failure, such as a misconfigured host, into a
+// refusal the page can show rather than a crash.
+async function fromHost<T>(call: () => T | Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (err) {
+    console.error("The video host failed", err);
+    throw new RequestError(503, "Videos can't be posted right now. Please try again later.");
+  }
 }
 
 // Leaves a note on an update in the person's own family: written, with a body, or a video,
@@ -157,7 +180,7 @@ async function validVideo(db: Db, person: Person, video: unknown, store: VideoSt
   if (typeof video !== "string") throw new RequestError(400, "Unknown video");
   const ticket = await db.videoUpload.findFirst({ where: { publicId: video, personId: person.id } });
   if (!ticket) throw new RequestError(400, "Unknown video");
-  const uploaded = await store.describe(video);
+  const uploaded = await fromHost(() => store.describe(video));
   if (!uploaded) throw new RequestError(400, "The video didn't finish uploading. Please try again.");
   if (uploaded.duration > MAX_SECONDS) throw new RequestError(400, "A video can be up to 60 seconds long");
   return video;
