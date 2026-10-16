@@ -84,7 +84,8 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 **Checking a pull request's preview** needs four local settings in `.env` (see `.env.example`): `PREVIEW_FAMILY_EMAIL`, the preview branch's two connection strings, and Vercel's bypass secret. Vercel keeps its own copies of the connection strings Sensitive, so they can't be pulled from there.
 
 1. `npm run preview:seed` makes sure the test family exists on the preview database, with `PREVIEW_FAMILY_EMAIL` as its family member. Run it after a preview has finished building. It refuses to touch a database that holds any other family.
-2. `npm run preview` prints the current commit's preview URL and the test family's link, and, with `VERCEL_AUTOMATION_BYPASS_SECRET` in your `.env`, checks the test family's gate through Vercel's preview login.
+2. `npm run preview` prints the branch's preview address and the test family's link, and, with `VERCEL_AUTOMATION_BYPASS_SECRET` in your `.env`, checks the test family's gate through Vercel's preview login. The address is the branch's own (`…-git-<branch>-…`), which always shows its latest push, so a sign-in there lasts for the whole pull request.
+3. `npm run preview:sign-in` does the same and also prints a sign-in link for the test family member, created directly in the preview database so no email is sent. Each link works once, within 15 minutes; open it and press Sign in. Never paste one into a pull request: the repository is public.
 
 **Creating or recreating the preview database** (for example, after a PR with a migration is abandoned, or two open PRs change the schema):
 
