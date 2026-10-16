@@ -7,8 +7,9 @@ import { People } from "./pages/People.js";
 import { SignIn } from "./pages/SignIn.js";
 import { Unsubscribe } from "./pages/Unsubscribe.js";
 import { Verify } from "./pages/Verify.js";
+import { Wall } from "./pages/Wall.js";
 
-const FAMILY_PATH = /^\/f\/([a-z0-9-]+)(?:\/(family|sign-in|verify|unsubscribe|people))?\/?$/;
+const FAMILY_PATH = /^\/f\/([a-z0-9-]+)(?:\/(family|sign-in|verify|unsubscribe|people|wall))?\/?$/;
 
 // Routes on the path. A handful of routes don't justify a router dependency.
 export function App() {
@@ -60,6 +61,7 @@ function FamilyPage({ slug, page }: { slug: string; page?: string }) {
   if (page === "verify") return <Verify slug={current} />;
   if (page === "unsubscribe") return <Unsubscribe slug={current} />;
   if (page === "people") return <People slug={current} />;
+  if (page === "wall") return <Wall slug={current} />;
   return <FamilyHome slug={current} />;
 }
 

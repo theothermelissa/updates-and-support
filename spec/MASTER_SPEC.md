@@ -11,7 +11,7 @@ The app hosts many families. Each family has its own private site, its own suppo
 ## People
 
 - **Family Member**: posts, edits, and deletes updates, and manages the family's supporters and family members. Every family member has the same permissions; the person the updates are about is simply one of the family members.
-- **Supporter**: someone in the family's support network. Reads updates and can get an email when a new one is posted.
+- **Supporter**: someone in the family's support network. Reads updates, reacts and leaves notes, and can get an email when a new one is posted.
 - **Operator**: the person running the app (Melissa). Creates and renames families with command-line scripts. The operator is not a role inside the app.
 
 A person who is both a supporter and a family member of different families has a separate, unrelated record in each.
@@ -27,6 +27,7 @@ A person who is both a supporter and a family member of different families has a
 - Family members post, edit, and delete updates with simple formatting (bold, italic, links, and lists); everyone signed in to the family reads them in a feed. → [updates.md](updates.md)
 - Photos in updates, with optional captions, up to six per update, once the operator turns photos on; test sites can use grey placeholder photos instead. → [updates.md](updates.md#photos)
 - Everyone signed in to the family can give each update one reaction from a fixed set of six emoji, and sees who reacted. → [updates.md](updates.md#reactions)
+- Everyone signed in to the family can leave colored notes of support on an update, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)
 - Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
 
 ### Later
@@ -35,7 +36,7 @@ These are planned but not yet specified. Each gets its own area spec when it bec
 
 - Self-serve family signup, replacing the operator script.
 - Export of a family's updates, so they never lose their journal if the app goes away.
-- Supporter messages of support to the family, visible to other supporters (the support wall), including unread markers, filtering by supporter and time, and text search for the family.
+- For the wall of notes: unread markers, filtering by supporter and time, text search, and editing a note.
 - Video messages from supporters.
 - Ways for supporters to offer meaningful help, coordinate with each other, share contact details, and reach out for their own support.
 - Supporters deleting their own record.
