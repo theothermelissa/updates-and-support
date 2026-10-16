@@ -121,7 +121,7 @@ A cloud session can run the tests and its pushes build Vercel previews, but it c
 **How to apply:**
 - Don't name a cause for a failed preview without its logs. Give Melissa `npx vercel inspect <deployment> --logs --scope theothermelissa-s-team`, and note whether a later push built.
 - Postgres 16 is installed but stopped: `pg_ctlcluster 16 main start`, create a role with a password, and point a gitignored `.env` at local databases.
-- For browser checks, a small scratchpad server that runs the `api/` handlers behind Vite in middleware mode works with the Playwright install in `/opt/node-tools`.
+- For browser checks, a small scratchpad server that runs the `api/` handlers behind Vite in middleware mode works with the Playwright install in `/opt/node-tools`. While a Radix menu is open, it hides the rest of the page from role queries, so measure the page before opening it. Radix moves focus on the tick after an arrow key, so wait briefly before checking focus.
 - Prisma refuses `migrate reset` from an agent without Melissa's explicit consent. After editing an unmerged migration, apply it to a fresh `createdb` database instead.
 
 ### Prove each access test can fail

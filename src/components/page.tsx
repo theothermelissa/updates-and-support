@@ -9,9 +9,10 @@ import { linkify } from "../linkify.js";
 export function PageShell(props: { title: ReactNode; actions?: ReactNode; children?: ReactNode }) {
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{props.title}</h1>
-        {props.actions && <div className="flex items-center gap-2 text-sm">{props.actions}</div>}
+      <header className="flex items-start justify-between gap-4">
+        <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{props.title}</h1>
+        {/* As tall as the title's first line, so the actions stay level with it when the title wraps. */}
+        {props.actions && <div className="flex h-8 shrink-0 items-center gap-2 text-sm">{props.actions}</div>}
       </header>
       {props.children}
     </main>
