@@ -233,9 +233,16 @@ function RequestCard(props: {
             </Field>
           )}
           <div className="flex gap-2">
-            <Button type="submit" variant="outline" disabled={pending}>
-              <span aria-hidden="true">✋</span>I can help with this
-            </Button>
+            {/* Once the fields it needs are showing, the same button makes the offer. */}
+            {asking ? (
+              <Button type="submit" disabled={pending}>
+                Confirm
+              </Button>
+            ) : (
+              <Button type="submit" variant="outline" disabled={pending}>
+                <span aria-hidden="true">✋</span>I can help with this
+              </Button>
+            )}
             {asking && (
               <Button type="button" variant="ghost" onClick={() => setAsking(false)}>
                 Cancel
