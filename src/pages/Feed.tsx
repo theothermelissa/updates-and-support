@@ -1,4 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
+import { Confirm, ErrorMessage } from "@/components/page";
+import { cn } from "cn";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
 import { linkify } from "../linkify.js";
 import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
@@ -39,10 +46,10 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
   }
 
   return (
-    <section>
+    <section className="space-y-6">
       {canEdit && <PostForm onPost={(body, notify) => change("updates", "POST", { body, notify })} />}
-      {error && <p className="error">{error}</p>}
-      {updates?.length === 0 && <p>No updates yet.</p>}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {updates?.length === 0 && <p className="text-muted-foreground">No updates yet.</p>}
       {updates?.map((update) => (
         <UpdateItem
           key={update.id}
@@ -73,17 +80,21 @@ function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promi
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2>Post an update</h2>
-      <textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
-      <p>
-        <label>
-          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Notify
-          supporters by email
-        </label>
-      </p>
-      <button disabled={posting || !body.trim()}>Post</button>
-    </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Post an update</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-4">
+          <Textarea className="min-h-32" value={body} onChange={(e) => setBody(e.target.value)} aria-label="Update" />
+          <Label>
+            <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} />
+            Notify supporters by email
+          </Label>
+          <Button disabled={posting || !body.trim()}>Post</Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -108,57 +119,61 @@ function UpdateItem(props: {
 
   return (
     <article>
-      <hr />
-      <p>
-        <strong>{update.authorName}</strong> · {new Date(update.createdAt).toLocaleString()}
-        {update.editedAt && " · edited"}
-      </p>
-      {draft === null ? (
-        <p style={{ whiteSpace: "pre-wrap" }}>
-          {linkify(update.body).map((segment, i) =>
-            "href" in segment ? (
-              <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer">
-                {segment.href}
-              </a>
-            ) : (
-              segment.text
-            ),
-          )}
-        </p>
-      ) : (
-        <textarea rows={6} value={draft} onChange={(e) => setDraft(e.target.value)} />
-      )}
-      {props.canEdit &&
-        (draft === null ? (
-          <>
-            <p>
-              <button onClick={() => setDraft(update.body)}>Edit</button>{" "}
-              <button onClick={() => setConfirmingDelete(true)}>Delete</button>
-            </p>
-            {confirmingDelete && (
-              <p>
-                Delete this update? This can't be undone.{" "}
-                <button
-                  onClick={() => {
-                    setConfirmingDelete(false);
-                    props.onDelete();
-                  }}
-                >
-                  Yes, delete
-                </button>{" "}
-                <button onClick={() => setConfirmingDelete(false)}>Cancel</button>
-              </p>
-            )}
-          </>
-        ) : (
-          <p>
-            <button onClick={save} disabled={saving || !draft.trim()}>
-              Save
-            </button>{" "}
-            <button onClick={() => setDraft(null)}>Cancel</button>
+      {/* Visible overflow, so the reaction tray is never clipped by the card's edge. */}
+      <Card className="overflow-visible">
+        <CardHeader>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{update.authorName}</span> ·{" "}
+            {new Date(update.createdAt).toLocaleString()}
+            {update.editedAt && " · edited"}
           </p>
-        ))}
-      <Reactions update={update} onReact={props.onReact} />
+        </CardHeader>
+        <CardContent className="text-base">
+          {draft === null ? (
+            <p className="break-words whitespace-pre-wrap">
+              {linkify(update.body).map((segment, i) =>
+                "href" in segment ? (
+                  <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer">
+                    {segment.href}
+                  </a>
+                ) : (
+                  segment.text
+                ),
+              )}
+            </p>
+          ) : (
+            <Textarea className="min-h-32" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Update" />
+          )}
+          <Reactions update={update} onReact={props.onReact} />
+        </CardContent>
+        {props.canEdit && (
+          <CardFooter className="flex flex-wrap items-center gap-2 border-t py-3">
+            {draft !== null ? (
+              <>
+                <Button onClick={save} disabled={saving || !draft.trim()}>
+                  Save
+                </Button>
+                <Button variant="outline" onClick={() => setDraft(null)}>
+                  Cancel
+                </Button>
+              </>
+            ) : confirmingDelete ? (
+              <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirmingDelete(false)}>
+                Delete this update? This can't be undone.
+              </Confirm>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setDraft(update.body)}>
+                  Edit
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
+                  Delete
+                </Button>
+              </>
+            )}
+          </CardFooter>
+        )}
+      </Card>
     </article>
   );
 }
@@ -214,11 +229,17 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
   const mine = REACTIONS.find((x) => x.kind === r.mine);
   return (
     <>
-      <div className="reactions">
-        <span className="react" ref={area} onPointerEnter={(e) => hoverTray(e, true)} onPointerLeave={(e) => hoverTray(e, false)}>
-          <button
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <span
+          className="relative"
+          ref={area}
+          onPointerEnter={(e) => hoverTray(e, true)}
+          onPointerLeave={(e) => hoverTray(e, false)}
+        >
+          <Button
             ref={button}
-            className={mine ? "react-button mine" : "react-button"}
+            variant="outline"
+            className={cn("h-11 min-w-11 rounded-full px-4", mine && "border-foreground bg-muted text-2xl")}
             aria-label={mine ? `Your reaction: ${mine.name}. Change it` : "React"}
             aria-expanded={tray}
             disabled={pending}
@@ -228,11 +249,21 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
             }}
           >
             {mine ? mine.emoji : "React"}
-          </button>
+          </Button>
           {tray && (
-            <span className="tray" role="group" aria-label="Pick a reaction">
+            <span
+              className="absolute bottom-full left-0 z-10 mb-1 flex gap-0.5 rounded-full border bg-popover p-1 shadow-md"
+              role="group"
+              aria-label="Pick a reaction"
+            >
               {REACTIONS.map((x) => (
-                <button key={x.kind} aria-label={x.name} aria-pressed={x.kind === r.mine} onClick={() => pick(x.kind)}>
+                <button
+                  key={x.kind}
+                  className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
+                  aria-label={x.name}
+                  aria-pressed={x.kind === r.mine}
+                  onClick={() => pick(x.kind)}
+                >
                   {x.emoji}
                 </button>
               ))}
@@ -241,23 +272,28 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
         </span>
         {r.count > 0 && (
           <span
-            className="summary"
+            className="relative"
             onPointerEnter={(e) => e.pointerType === "mouse" && setNames((n) => (n === "pinned" ? n : "hover"))}
             onPointerLeave={() => setNames((n) => (n === "hover" ? "closed" : n))}
           >
             <button
-              className="plain"
+              className="rounded-sm py-2 text-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               aria-label={summaryLabel(r)}
               aria-expanded={names === "pinned"}
               onClick={() => setNames((n) => (n === "pinned" ? "closed" : "pinned"))}
             >
               {summary(r)}
             </button>
-            {names === "hover" && <NameList r={r} className="popover" />}
+            {names === "hover" && (
+              <NameList
+                r={r}
+                className="absolute top-full left-0 z-10 rounded-md bg-foreground px-3 py-1.5 text-sm whitespace-nowrap text-background"
+              />
+            )}
           </span>
         )}
       </div>
-      {names === "pinned" && <NameList r={r} className="names" />}
+      {names === "pinned" && <NameList r={r} className="mt-2 text-sm text-muted-foreground" />}
     </>
   );
 }
