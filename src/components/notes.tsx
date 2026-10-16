@@ -54,53 +54,65 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
   );
 }
 
-// The video's still in a 16:9 box, shown whole on the note's color, with a play button that
-// opens the video. Until the host has converted the video, the still doesn't load and the box
-// says so.
+// The video's still in a 16:9 box, shown whole on the note's color, with a play button. The
+// video plays in the same box, and starting it pauses any other video note that's playing.
+// Until the host has converted the video, the still doesn't load and the box says so.
 function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["video"]> }) {
   const [playing, setPlaying] = useState(false);
   const [processing, setProcessing] = useState(false);
   const colors = PALETTE[note.color];
-  return (
-    <>
-      <button
-        type="button"
-        className="relative block aspect-video w-full overflow-hidden rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+  const box = "relative block aspect-video w-full overflow-hidden rounded-lg";
+
+  if (playing) {
+    return (
+      <video
+        src={video.src}
+        poster={video.poster}
+        controls
+        autoPlay
+        playsInline
+        data-video-note
+        className={cn(box, "object-contain")}
         style={{ backgroundColor: colors.fill }}
-        onClick={() => setPlaying(true)}
-        disabled={processing}
-        aria-label={`Play video note from ${note.authorName}`}
-      >
-        {processing ? (
-          <span className="flex h-full items-center justify-center p-4 text-sm">
-            Video is processing. Check back in a minute.
-          </span>
-        ) : (
-          <>
-            <img
-              src={video.poster}
-              alt=""
-              className="size-full object-contain"
-              onError={() => setProcessing(true)}
-              loading="lazy"
-            />
-            <span className="absolute inset-0 flex items-center justify-center">
-              <span className="flex size-14 items-center justify-center rounded-full bg-black/55 text-white">
-                <PlayIcon className="ml-0.5 size-7 fill-current" />
-              </span>
+        aria-label={`Video note from ${note.authorName}`}
+        onPlay={(e) => {
+          for (const other of document.querySelectorAll<HTMLVideoElement>("video[data-video-note]")) {
+            if (other !== e.currentTarget) other.pause();
+          }
+        }}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={cn(box, "outline-none focus-visible:ring-3 focus-visible:ring-ring/50")}
+      style={{ backgroundColor: colors.fill }}
+      onClick={() => setPlaying(true)}
+      disabled={processing}
+      aria-label={`Play video note from ${note.authorName}`}
+    >
+      {processing ? (
+        <span className="flex h-full items-center justify-center p-4 text-sm">
+          Video is processing. Check back in a minute.
+        </span>
+      ) : (
+        <>
+          <img
+            src={video.poster}
+            alt=""
+            className="size-full object-contain"
+            onError={() => setProcessing(true)}
+            loading="lazy"
+          />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="flex size-14 items-center justify-center rounded-full bg-black/55 text-white">
+              <PlayIcon className="ml-0.5 size-7 fill-current" />
             </span>
-          </>
-        )}
-      </button>
-      <Dialog open={playing} onOpenChange={setPlaying}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Video note from {note.authorName}</DialogTitle>
-          </DialogHeader>
-          <video src={video.src} poster={video.poster} controls autoPlay playsInline className="max-h-[75vh] w-full rounded-lg bg-black" />
-        </DialogContent>
-      </Dialog>
-    </>
+          </span>
+        </>
+      )}
+    </button>
   );
 }
 
