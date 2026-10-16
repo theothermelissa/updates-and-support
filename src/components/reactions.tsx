@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
+import { HeartPlusIcon } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
@@ -73,7 +74,7 @@ export function ReactionControls(props: {
           <Button
             ref={button}
             variant="outline"
-            className={cn("h-11 min-w-11 rounded-full px-4 text-foreground", mine && "border-foreground bg-muted text-2xl")}
+            className={cn("h-11 min-w-11 rounded-full px-4 text-foreground", mine ? "border-foreground bg-muted text-2xl" : "px-0 [&_svg]:size-5")}
             aria-label={mine ? `Your reaction: ${mine.name}. Change it` : "React"}
             aria-expanded={tray}
             disabled={pending}
@@ -82,7 +83,7 @@ export function ReactionControls(props: {
               setTray(true);
             }}
           >
-            {mine ? mine.emoji : "React"}
+            {mine ? mine.emoji : <HeartPlusIcon aria-hidden />}
           </Button>
           <Floating
             anchor={area.current}
