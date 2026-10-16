@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = jsonBody(req, res);
   if (!body) return;
   try {
-    res.status(201).json({ update: await createUpdate(getDb(), ctx.person, body.body, notifyWith(body)) });
+    res.status(201).json({ update: await createUpdate(getDb(), ctx.person, body, notifyWith(body)) });
   } catch (err) {
     sendRequestError(res, err);
   }

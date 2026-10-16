@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { linkify } from "../linkify.js";
+import { linkify } from "../lib/links.js";
 
 // The frame every page shares: a centered column with the page's title and, optionally,
 // links or buttons beside it. A wide page widens on large screens, for content set side by side.

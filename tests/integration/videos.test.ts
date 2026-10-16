@@ -21,8 +21,8 @@ async function setUp() {
   const sam = await joinWithEmail(db, family, "Sam");
   const tess = await joinWithEmail(db, family, "Tess");
   const olu = await joinWithEmail(db, okafor, "Olu");
-  const update = await createUpdate(db, ana!, "Rivera news");
-  const okaforUpdate = await createUpdate(db, chidi!, "Okafor news");
+  const update = await createUpdate(db, ana!, { body: "Rivera news" });
+  const okaforUpdate = await createUpdate(db, chidi!, { body: "Okafor news" });
   const videos = fakeVideoStore();
   return {
     family, ana: ana!, chidi: chidi!, sam: sam.person, samToken: sam.sessionToken, tess: tess.person,

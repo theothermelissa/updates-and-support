@@ -1,3 +1,4 @@
+import type { Doc } from "../src/lib/doc.js";
 import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
@@ -6,13 +7,14 @@ import { destroyVideos, noteSelect, noteView, visibleNotes, type NoteView } from
 import { notifySupporters } from "./notifications.js";
 import { requireFamilyMember } from "./people.js";
 import { reactionsView, type ReactionsView } from "./reactions.js";
+import { contentFrom, shownContent } from "./richText.js";
 import { cloudinaryStore, type VideoStore } from "./videos.js";
-
-const MAX_BODY = 20_000;
 
 export type UpdateView = {
   id: string;
+  // Plain text, for the wall's excerpts.
   body: string;
+  content: Doc;
   authorName: string;
   createdAt: Date;
   editedAt: Date | null;
@@ -50,12 +52,13 @@ export async function listUpdates(db: Db, person: Person, store: VideoStore = cl
 export async function createUpdate(
   db: Db,
   person: Person,
-  body: unknown,
+  input: { content?: unknown; body?: unknown },
   notifyWith?: SendEmails,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
+  const { content, body } = contentFrom(input);
   const update = await db.update.create({
-    data: { familyId: person.familyId, authorId: person.id, body: validBody(body) },
+    data: { familyId: person.familyId, authorId: person.id, content, body },
     include: { author: { select: { name: true } } },
   });
   if (notifyWith) {
@@ -69,13 +72,18 @@ export async function createUpdate(
 }
 
 // Any family member may edit any update in their own family.
-export async function editUpdate(db: Db, person: Person, id: string, body: unknown): Promise<UpdateView> {
+export async function editUpdate(
+  db: Db,
+  person: Person,
+  id: string,
+  input: { content?: unknown; body?: unknown },
+): Promise<UpdateView> {
   requireFamilyMember(person);
-  const text = validBody(body);
+  const { content, body } = contentFrom(input);
   // Scoped by family: another family's update ID behaves like one that doesn't exist.
   const { count } = await db.update.updateMany({
     where: { id, familyId: person.familyId },
-    data: { body: text, editedAt: new Date() },
+    data: { content, body, editedAt: new Date() },
   });
   if (count === 0) throw new RequestError(404, "Update not found");
   const update = await db.update.findUniqueOrThrow({
@@ -106,17 +114,10 @@ export async function deleteUpdate(db: Db, person: Person, id: string, store: Vi
   );
 }
 
-function validBody(body: unknown): string {
-  const text = typeof body === "string" ? body.trim() : "";
-  if (text.length === 0 || text.length > MAX_BODY) {
-    throw new RequestError(400, `An update must be 1 to ${MAX_BODY.toLocaleString("en-US")} characters`);
-  }
-  return text;
-}
-
 function view(update: {
   id: string;
   body: string;
+  content: unknown;
   createdAt: Date;
   editedAt: Date | null;
   author: { name: string | null };
@@ -124,6 +125,7 @@ function view(update: {
   return {
     id: update.id,
     body: update.body,
+    content: shownContent(update.content, update.body),
     // Authors are family members, who always have a name.
     authorName: update.author.name ?? "",
     createdAt: update.createdAt,

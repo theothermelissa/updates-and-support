@@ -58,14 +58,14 @@ async function notificationsOn(person: Person) {
 it("emails only this family's verified, opted-in, active supporters", async () => {
   const { ana } = await setUp();
   const mail = fakeMailer();
-  await createUpdate(db, ana, SECRET, mail.sendMany);
+  await createUpdate(db, ana, { body: SECRET }, mail.sendMany);
   expect(mail.sent.map((e) => e.to)).toEqual(["sam@example.com"]);
 });
 
 it("names the family and carries the recipient's own unsubscribe links, never the update's text", async () => {
   const { family, ana, sam } = await setUp();
   const mail = fakeMailer();
-  await createUpdate(db, ana, SECRET, mail.sendMany);
+  await createUpdate(db, ana, { body: SECRET }, mail.sendMany);
   const [email] = mail.sent;
 
   expect(email!.subject).toBe("The Rivera Family has a new update");
@@ -85,7 +85,7 @@ it("links the root family's notification emails to the site's root", async () =>
   process.env.ROOT_FAMILY_SLUG = family.slug;
   try {
     const mail = fakeMailer();
-    await createUpdate(db, ana, SECRET, mail.sendMany);
+    await createUpdate(db, ana, { body: SECRET }, mail.sendMany);
     expect(mail.sent[0]!.text).toContain(`Read it here:\n\n${appUrl()}/\n`);
   } finally {
     delete process.env.ROOT_FAMILY_SLUG;
@@ -95,8 +95,8 @@ it("links the root family's notification emails to the site's root", async () =>
 it("sends nothing when posting without notifications, or when editing", async () => {
   const { ana } = await setUp();
   const mail = fakeMailer();
-  const update = await createUpdate(db, ana, SECRET);
-  await editUpdate(db, ana, update.id, "Edited");
+  const update = await createUpdate(db, ana, { body: SECRET });
+  await editUpdate(db, ana, update.id, { body: "Edited" });
   expect(mail.sent).toHaveLength(0);
 });
 
@@ -105,7 +105,7 @@ it("keeps the update when the emails fail", async () => {
   const failing: SendEmails = async () => {
     throw new Error("Resend is down");
   };
-  await createUpdate(db, ana, SECRET, failing);
+  await createUpdate(db, ana, { body: SECRET }, failing);
   expect(await db.update.count()).toBe(1);
 });
 
