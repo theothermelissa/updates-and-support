@@ -6,24 +6,31 @@ How a family posts updates, how everyone reads and reacts to them, and how suppo
 
 An update has:
 
-- a **body** of plain text. Line breaks are kept, and web addresses become links. There is no other formatting.
-- up to six **photos**, in the order they were added (see "Photos")
+- its **content**: an ordered list of blocks, each either
+  - a **text block** of plain text, where line breaks are kept and web addresses become links, with no other formatting, or
+  - a **photo block**: one photo with an optional **caption** of plain text, up to 300 characters (see "Photos")
 - its **author**, a family member, shown by name
 - when it was **posted**, and when it was last **edited**, if ever
 
+An update has at least one block, at most 20 blocks, at most six of them photo blocks, and at most 20,000 characters of text across its text blocks. A text block can't be empty.
+
 ## The feed
 
-The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, body, photos, and an "edited" mark if it was edited. Photos appear under the body at the full width of the feed, one after another.
+The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Blocks appear in order: text as paragraphs, and each photo at the full width of the feed with its caption, if any, beneath it.
 
 Family members also see a "Post an update" button and, on each update, "Edit" and "Delete."
 
+## Writing an update
+
+Posting and editing use the same editor: a column of the update's blocks in order, each text block a text box and each photo block a card with the photo, a caption field, and "Remove." Text boxes have "Remove" too. "Add text" and "Add photo" at the bottom add a block at the end. Blocks can't be moved; to change the order, remove a block and add it again. Empty text boxes are left out when the update is saved. A new update starts with one empty text box.
+
 ## Posting
 
-A family member writes the body, optionally adds photos, and posts. The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone.
+A family member writes the update and posts. The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone.
 
 ## Editing
 
-A family member can edit any update in their family, including one written by another family member. Editing changes the body and photos, records the edit time, and never sends notifications.
+A family member can edit any update in their family, including one written by another family member. Editing can change, add, and remove text and photo blocks and captions. It records the edit time and never sends notifications.
 
 ## Deleting
 
@@ -31,17 +38,22 @@ A family member can delete any update in their family after confirming. Deletion
 
 ## Photos
 
-Photos are available once the operator turns them on with a setting (see the README). Until then, no photo controls appear anywhere and the server accepts no photos.
+Photos are available once the operator turns them on with a setting (see the README). Until then, no "Add photo" button appears and the server accepts no photo blocks.
 
-**Adding.** The post form has an "Add photos" button that opens the device's photo picker, for up to six photos per update, including iPhone photos. Each photo uploads as soon as it's chosen and shows as a small preview with a "Remove" button; "Post" waits until every chosen photo has finished uploading. A photo over 10 MB is refused with a message saying so. When editing, a family member can remove any of the update's photos and add more, up to six in all; removing a photo deletes it permanently when the edit is saved.
+**Adding.** "Add photo" opens the device's photo picker for one photo, including iPhone photos. The photo uploads as soon as it's chosen, and its card shows it with "Uploading…" until it's done; saving waits until every photo has finished uploading. A photo over 10 MB is refused with a message saying so. Removing a photo block deletes the photo permanently once the update is saved.
 
-**Who sees them.** Exactly the people who can see the update (see [access.md](access.md)). Photos never appear on the gate or in emails.
+**Who sees them.** Photos and captions are seen by exactly the people who can see the update (see [access.md](access.md)). They never appear on the gate or in emails.
 
-**How they're kept private.** Photos are stored privately with Cloudinary, a photo-hosting service. Nobody can view a stored photo without a link the server signs with the app's secret key, and the server creates those links only in the feed it sends to someone signed in to the family. A link can't be guessed or altered to show a different photo or size. Every link shows a resized copy, at most 1600 pixels wide, with the photo's embedded details, such as location and camera, removed; the file as uploaded is never shown.
+**How they're kept private.** Photos are stored privately with Cloudinary, a photo-hosting service.
+- Before storing a photo, Cloudinary shrinks it to at most 1600 pixels wide and removes its embedded details, such as location and camera, so the file as taken is never kept.
+- Nobody can view a stored photo without a link the server signs with the app's secret key, and the server creates those links only in the feed it sends to someone signed in to the family. A link can't be guessed or altered to show a different photo or size.
+- While a photo loads, a grey box holds its place.
 
-**Deleting.** Deleting an update, or removing a photo while editing, deletes the photo from Cloudinary as well as from the app. If Cloudinary can't be reached at that moment, the photo still disappears from the app at once (see "Stated limits" in [access.md](access.md)).
+**Deleting.** Deleting an update, or removing a photo block while editing, deletes the photo from Cloudinary as well as from the app. If Cloudinary can't be reached at that moment, the photo still disappears from the app at once (see "Stated limits" in [access.md](access.md)).
 
-There are no captions, reordering, or videos, and supporters can't add photos.
+**Placeholder photos, for testing.** On test sites (previews and local development) where the operator has turned on placeholder photos with their own setting, choosing a photo uploads nothing: the block is saved as a placeholder, shown as a plain grey box in a 4:3 shape with its caption beneath. Placeholders behave like photos in every other way: they count toward the six, take captions, can be removed, and count in notification subjects. The production site never accepts placeholders, whatever its settings. Where real photos are also turned on, new photos are real, and placeholders saved earlier stay grey boxes.
+
+There is no reordering, no video, and supporters can't add photos.
 
 ## Reactions
 
