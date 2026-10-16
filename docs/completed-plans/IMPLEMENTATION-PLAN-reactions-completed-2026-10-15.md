@@ -89,7 +89,7 @@ Hand check on the preview:
 
 ## Progress and discoveries
 
-All steps are implemented, and `npm run typecheck` and `npm test` pass (139 tests).
+All steps are implemented, and `npm run typecheck` and `npm test` pass (140 tests). Melissa tested the final design on the PR preview and approved shipping it.
 
 **Proving the tests can fail.** Each rule was removed in turn from a copy of its file, and a test failed every time:
 - the family scope on the update check: "treats another family's update as not found"

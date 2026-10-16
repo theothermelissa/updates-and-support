@@ -100,7 +100,17 @@ Claude's Bash shell starts on Node 20 from nvm, while the repo needs Node 24 (`.
 
 **Why:** a session lost time suspecting `DATABASE_URL` before spotting the Node version.
 
-**How to apply:** prefix commands with `export PATH=~/.nvm/versions/node/v24.21.0/bin:$PATH &&` (or the current v24 in `~/.nvm/versions/node`). In a cloud session the shell starts on Node 22: run `. /opt/nvm/nvm.sh && nvm install 24` and prefix `/opt/nvm/versions/node/<v24>/bin` instead.
+**How to apply:** prefix commands with `export PATH=~/.nvm/versions/node/v24.21.0/bin:$PATH &&` (or the current v24 in `~/.nvm/versions/node`). In a cloud session the shell starts on Node 22: run `. /opt/nvm/nvm.sh && nvm install 24` and prefix `/opt/nvm/versions/node/<v24>/bin` instead. If there is no nvm v24, look under `~/.local/share/mise/installs/node/`.
+
+### Commands that fail in an agent's shell
+
+Some routine commands refuse to run or error out from an agent, which can look like a real problem.
+
+**Why:** on the reactions PR, `prisma migrate dev --create-only` refused to run without an interactive terminal, and `gh pr edit` failed on a GitHub Projects (classic) deprecation error.
+
+**How to apply:**
+- Write the migration SQL by hand in a new `prisma/migrations/<timestamp>_<name>/` folder, then confirm `prisma migrate diff` shows no drift from the schema.
+- Edit a PR body with `gh api -X PATCH repos/theothermelissa/updates-and-support/pulls/<n> -F body=@file`.
 
 ### Cloud sessions differ from Melissa's Mac
 
