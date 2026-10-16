@@ -181,7 +181,7 @@ The text-blocks attempt (closed PR #24) applied a `blocks` migration to the shar
 - **Test setup.** jsdom has no `ClipboardEvent`, so the paste test passes a plain `Event` to ProseMirror's `pasteHTML` and `pasteText`, which run the real paste path.
 - **Document types** live in `src/lib/doc.ts`, shared by the server and the browser.
 
-**Slice 2 implemented** on `feature/photo-placeholders`.
+**Slice 2 implemented** on `feature/photo-placeholders` (PR #26). Melissa tested placeholders — grey photos and the X to remove a photo — on the preview on 2026-10-15 and approved shipping it. Slice 3 (real Cloudinary photos) is still unbuilt; this plan stays open.
 
 - **Typecheck and all unit and integration tests pass.** Each new rule was removed in turn and its test failed: the placeholder setting (unit and integration), production's refusal, the six-photo limit, the caption limit, the photo attribute allowlist, and the photo count in subjects.
 - **`photoSettingsFromEnv(env)`** takes the environment as an argument (defaulting to `process.env`), so its tests pass their own values instead of clearing variables.
