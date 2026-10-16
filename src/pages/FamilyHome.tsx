@@ -34,8 +34,9 @@ export function FamilyHome({ slug }: { slug: string }) {
   if (me === "loading") return null;
   if (me === "not-found") return <NotFound />;
   if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
+
   return (
-    <FamilyShell slug={slug} me={me} page="updates">
+    <FamilyShell slug={slug} me={me} page="updates" onNameChanged={load}>
       {me.person.role === "supporter" && !me.person.email && (
         <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
       )}
@@ -68,11 +69,18 @@ export function FamilyHome({ slug }: { slug: string }) {
   );
 }
 
-// For a supporter who hasn't given an email. Optional, and never in the way of reading. Someone
-// who already gave a name with a note sees it read-only; names change on their profile.
+// For a supporter who hasn't given an email. Optional, and never in the way of reading.
+// The name is filled in when they have one. It's sent only if they change it, so a name
+// saved somewhere else isn't put back by a form that was already open.
 function EmailPrompt(props: { slug: string; reload: () => void; storedName: string | null }) {
   const { slug, reload, storedName } = props;
-  const [name, setName] = useState("");
+  const [name, setName] = useState(storedName ?? "");
+  const [nameEdited, setNameEdited] = useState(false);
+  // The prompt is on the page before a note saves a name. Until they type in the field,
+  // show the name on their record.
+  useEffect(() => {
+    if (!nameEdited) setName(storedName ?? "");
+  }, [storedName, nameEdited]);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
@@ -85,7 +93,7 @@ function EmailPrompt(props: { slug: string; reload: () => void; storedName: stri
     setError("");
     const { status, data } = await api<{ result?: "verify" | "sign-in-link"; error?: string }>(slug, "email", {
       method: "POST",
-      body: storedName ? { email } : { name, email },
+      body: storedName === null || nameEdited ? { name, email } : { email },
     });
     setBusy(false);
     // A new email, or signed out in the meantime: reloading shows what's next.
@@ -125,11 +133,16 @@ function EmailPrompt(props: { slug: string; reload: () => void; storedName: stri
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Your name">
-            {storedName ? (
-              <Input value={storedName} readOnly className="bg-muted text-muted-foreground" />
-            ) : (
-              <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
-            )}
+            <Input
+              value={name}
+              onChange={(e) => {
+                setNameEdited(true);
+                setName(e.target.value);
+              }}
+              required
+              maxLength={100}
+              autoFocus={storedName === null}
+            />
           </Field>
           <Field label="Your email">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus={storedName !== null} />

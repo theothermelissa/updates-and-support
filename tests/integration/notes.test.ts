@@ -186,22 +186,45 @@ describe("names", () => {
     expect((await listNotes(db, ana)).map((n) => n.authorName)).toEqual(["Tess Neighbor", "Tess Neighbor"]);
   });
 
-  it("never changes an existing name through a note", async () => {
-    const { sam, update } = await setUp();
-    const result = await leave(sam, update.id, "Hi", { name: "Mom" });
-    expect(result.name).toBe("Sam");
-    expect((await reload(sam)).name).toBe("Sam");
+  it("saves a new name from a note and re-signs that person's earlier note and reaction", async () => {
+    const { family, ana, update } = await setUp();
+    const reader = await answerCorrectly(db, family);
+    await setReaction(db, reader.person, { updateId: update.id, kind: "hug" });
+    await leave(reader.person, update.id, "Hi", { name: "Tess" });
+
+    const result = await leave(reader.person, update.id, "Again", { name: " Tess Neighbor " });
+    expect(result.name).toBe("Tess Neighbor");
+    expect(result.note.authorName).toBe("Tess Neighbor");
+    expect((await reload(reader.person)).name).toBe("Tess Neighbor");
+    expect((await listNotes(db, ana)).map((n) => n.authorName)).toEqual(["Tess Neighbor", "Tess Neighbor"]);
+    const feed = (await listUpdates(db, ana)).find((u) => u.id === update.id)!;
+    expect(feed.reactions.named).toEqual([{ name: "Tess Neighbor", kind: "hug" }]);
   });
 
-  it("keeps a note's name when the supporter later gives an email under another name", async () => {
+  it("keeps the stored name when a note omits one", async () => {
+    const { sam, update } = await setUp();
+    const result = await leave(sam, update.id, "Hi", { name: "Mom" });
+    expect(result.name).toBe("Mom");
+    const again = await leave(sam, update.id, "Again");
+    expect(again.name).toBe("Mom");
+    expect((await reload(sam)).name).toBe("Mom");
+  });
+
+  it("re-signs a note when an email is given under another name, and keeps it when the email omits one", async () => {
     const { family, ana, update } = await setUp();
     const reader = await answerCorrectly(db, family);
     await leave(reader.person, update.id, "Hi", { name: "Tess" });
-    await addEmail(db, fakeMailer().send, family, reader.person, { name: "Someone Else", email: "tess@example.com" });
 
-    const tess = await reload(reader.person);
-    expect([tess.name, tess.email]).toEqual(["Tess", "tess@example.com"]);
+    await addEmail(db, fakeMailer().send, family, reader.person, { email: "tess@example.com" });
+    expect((await reload(reader.person)).name).toBe("Tess");
     expect((await listNotes(db, ana))[0]!.authorName).toBe("Tess");
+
+    const other = await answerCorrectly(db, family);
+    await leave(other.person, update.id, "Hello", { name: "Tess" });
+    await addEmail(db, fakeMailer().send, family, other.person, { name: "Someone Else", email: "other@example.com" });
+    const renamed = await reload(other.person);
+    expect([renamed.name, renamed.email]).toEqual(["Someone Else", "other@example.com"]);
+    expect((await listNotes(db, ana)).map((n) => n.authorName)).toContain("Someone Else");
   });
 
   it("names a nameless reader's earlier reaction once they sign a note", async () => {

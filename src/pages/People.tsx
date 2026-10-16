@@ -46,9 +46,11 @@ export function People({ slug }: { slug: string }) {
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [me, setMe] = useState<Me | null>(null);
 
-  useEffect(() => {
+  function loadMe() {
     api<Me>(slug, "me").then(({ status, data }) => status === 200 && setMe(data));
-  }, [slug]);
+  }
+
+  useEffect(loadMe, [slug]);
 
   function load() {
     api<People>(slug, "people").then(({ status, data }) => {
@@ -151,7 +153,16 @@ export function People({ slug }: { slug: string }) {
   }
   if (!me) return null;
   return (
-    <FamilyShell slug={slug} me={me} page="people" column>
+    <FamilyShell
+      slug={slug}
+      me={me}
+      page="people"
+      column
+      onNameChanged={() => {
+        loadMe();
+        load();
+      }}
+    >
       <PageTitle>People</PageTitle>
       {message &&
         (message.error ? (

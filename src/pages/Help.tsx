@@ -65,7 +65,7 @@ export function Help({ slug }: { slug: string }) {
   const family = me.person.role === "family";
 
   return (
-    <FamilyShell slug={slug} me={me} page="help" column>
+    <FamilyShell slug={slug} me={me} page="help" column onNameChanged={load}>
       <PageTitle>How to Help</PageTitle>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {family && <h3 className="text-lg font-semibold tracking-tight">Add a Request</h3>}

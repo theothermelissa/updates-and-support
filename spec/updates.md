@@ -4,46 +4,46 @@ How a family posts updates, how everyone reads them, reacts to them, and leaves 
 
 ## An update
 
-An update has:
+An update is either formatted text, with optional photos, or a video (see "Video updates"). It is never both. It has:
 
-- its **content**: formatted text with optional photos, in the order the family member wrote them. The formatting is deliberately small:
+- its **content**, when it is text: formatted text with optional photos, in the order the family member wrote them. The formatting is deliberately small:
   - paragraphs and line breaks
-  - **bold** and *italic*
+  - **bold**, *italic*, and ~~strikethrough~~
   - links, to web addresses (`http:` or `https:`) and email addresses (`mailto:`)
   - bulleted and numbered lists, which can be nested
   - photos, each with an optional **caption** of plain text up to 300 characters (see "Photos")
-- its **author**, a family member, shown by name
+- its **author**, a family member, shown by the name on their record (see [access.md](access.md#changing-your-name))
 - when it was **posted**, and when it was last **edited**, if ever
 
-There are no headings, colors, fonts, tables, code, quotes, or images from other websites. An update can't be empty, and it has at most 20,000 characters of text, at most six photos, and lists nested at most three levels deep.
+There are no headings, colors, fonts, tables, code, quotes, or images from other websites. A text update can't be empty, and it has at most 20,000 characters of text, at most six photos, and lists nested at most three levels deep.
 
 ## The feed
 
-The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Content appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
+The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Text appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. A video update shows its video instead (see "Video updates"). Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
 The feed, like every page signed in to a family, sits under the family's navigation bar (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
-Each update has a footer of actions in one row: **React** and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
+Each update has a footer of actions in one row: **React** and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
 **The feed stays current without a refresh.** While the page is open and visible, it checks for changes every 30 seconds, and immediately when the reader returns to the tab. A hidden tab doesn't check, so a forgotten tab costs nothing. Changes to updates already on screen (edits, reactions, notes, and deletions) appear in place. New updates don't appear on their own, because inserting one at the top would move whatever the reader is in the middle of; instead a "1 new update" (or "3 new updates") button appears at the top of the screen, and pressing it shows them and scrolls to the top. A family member's own post appears at once. A failed check shows nothing and simply tries again at the next one. If the reader has been signed out, for example because they were removed or the community question's answer changed, the next check takes them to the gate. The wall doesn't update itself; it's current each time it's opened.
 
 ## Writing an update
 
-Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
+Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
 
-Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
+Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, strikethrough, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
 
 ## Posting
 
-A family member writes the update and posts. The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone.
+A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone. The checkbox applies to either tab.
 
 ## Editing
 
-A family member can edit any update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications.
+A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. A video update can't be edited.
 
 ## Deleting
 
-A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions, its notes and the reactions on those notes, and its photos (see "Photos"), and its notes' videos are deleted from Cloudinary. When the update has notes, the confirmation says they'll be deleted too.
+A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions, its notes and the reactions on those notes, and its photos (see "Photos"). Its notes' videos, and the update's own video when it has one, are deleted from Cloudinary before the update is removed; if Cloudinary can't delete one of them, the update stays so it can be tried again. When the update has notes, the confirmation says they'll be deleted too.
 
 ## Photos
 
@@ -62,7 +62,19 @@ Photos are available once the operator turns them on with a setting (see the REA
 
 **Placeholder photos, for testing.** On test sites (previews and local development) where the operator has turned on placeholder photos with their own setting, choosing a photo uploads nothing: it is saved as a placeholder, shown as a plain grey box in a 4:3 shape with its caption beneath. Placeholders behave like photos in every other way: they count toward the six, take captions, can be removed, and count in notification subjects. The production site never accepts placeholders, whatever its settings. Where real photos are also turned on, new photos are real, and placeholders saved earlier stay grey boxes.
 
-There is no reordering, no video, and supporters can't add photos.
+There is no reordering, and supporters can't add photos. A video is its own kind of update (see "Video updates"), not a photo.
+
+## Video updates
+
+A family member can post an update that is a video instead of text. It has no text and no photos. Everyone signed in to the family sees it in the feed in place of the update's text, in the same player as a video note: a still in a 16:9 shape, shown whole over a blurred backdrop, playing in place with sound and the browser's controls. It has no note color. Starting one video pauses any other that's playing, including a video note. Videos never play on their own. If a video can't be shown, its place says "This video can't be shown right now," and the rest of the page works as usual.
+
+The post form's Video tab holds the same recorder as a video note. "Start recording" turns the camera on, which asks for the camera and microphone the first time, then shows the live view mirrored like a selfie, with a 3, 2, 1 countdown, then records until "Stop." There is no time limit. During the countdown, "Cancel countdown" leaves the camera on. While recording, the tab shows how long the recording has run and a "Stop" button. Recording also stops if the page is hidden, and if the recording reaches 100 MB, which can still be posted. Review plays the video back unmirrored, with "Post" and "Re-record." "Re-record" discards it and returns to "Start recording." Nothing uploads until "Post." "Upload a video instead" works the same way as for a note, including when the camera can't be used. A file over 100 MB is refused. A file of any length is accepted, as long as it is under 100 MB. If the upload fails, the form keeps the video and offers "Try again."
+
+A video update can't be edited. To change it, delete it and post another. Deleting it deletes the video from Cloudinary first; if that fails, the update stays.
+
+The wall's filter bar quotes `[Video]`, the way a photo-only update is quoted as `[Photo]`.
+
+Videos are stored and delivered the same way as video notes (see [access.md](access.md#stated-limits)). The server refuses a video over 100 MB. One that isn't finished uploading, or that was already posted as a note or an update, is refused, and the file stays where it is.
 
 ## Reactions
 
@@ -77,7 +89,7 @@ The React button and the summary work the same way on an update and on a note.
 
 On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the signature, with the time and **Delete** (see "Reacting to a note").
 
-**Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it.
+**Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it, and a later change of name shows there too (see [access.md](access.md#changing-your-name)).
 
 A removed person's reactions are neither shown nor counted, and a removed person can't react, since they can't sign in. Restoring a supporter brings their reactions back.
 
@@ -99,7 +111,7 @@ A note is either a written note or a video note. It has:
 
 Each update's footer has a "Leave a note" button, in the same row as React. It opens a dialog with two tabs, "Written note" and "Video note," starting on "Written note," which has a text box. Below either tab are a row of the palette's colors with one chosen at random and the name, then "Leave note" for a written note or "Post" for a video. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
 
-A note needs a name. The dialog shows "Your name": filled in and read-only for anyone who already has one, and empty for a supporter who hasn't given one. A name entered there goes on their record, so their later notes and reactions show it too, and the feed's email form later shows it the same way, filled in and read-only. The dialog never asks for an email.
+A note needs a name. The dialog shows "Your name", filled in with the name on their record, or empty if they haven't given one, and they can change it. Leaving the note saves that name on their record (see [access.md](access.md#changing-your-name)). Cancelling, or a note that isn't saved, leaves the name as it was. The dialog never asks for an email.
 
 A person can leave any number of notes on an update, up to 20 notes an hour across the family, written and video notes together, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
 
@@ -196,7 +208,7 @@ Offering on a numbered request emails the family's other family members that som
 
 When an update is posted with "Notify supporters by email" checked, every supporter of the family who has a verified email, has notifications on, and has not been removed gets one email.
 
-- The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content. When the update has photos, the subject says how many, as in "Sam's Updates has a new update (2 photos)"; the photos themselves are never attached or linked.
+- The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content. When the update has photos, the subject says how many, as in "Sam's Updates has a new update (2 photos)"; the photos themselves are never attached or linked. When the update is a video, the subject says so, as in "Sam's Updates has a new update (video)"; the video is never attached or linked.
 - Each email has an unsubscribe link to a page with a "Turn off notifications" button, which works without signing in. The button, rather than the link alone, keeps email security scanners that open links from unsubscribing people.
 - Each email also has `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so mail apps that offer their own "Unsubscribe" button can turn notifications off in one click. Scanners don't send that request.
 - Family members are not notified.

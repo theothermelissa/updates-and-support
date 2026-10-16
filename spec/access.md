@@ -42,12 +42,12 @@ A correct answer signs the visitor in on that device at once and shows the feed.
 
 ### Getting notification emails
 
-Giving an email is optional, and reading never waits on it. A signed-in supporter without an email sees a prompt at the top of the feed: "Get an email when there's a new update," with an "Add your email" button. The button opens a form that asks for their name and email and says the family will see both (a supporter who gave a name with a note sees it filled in and read-only, and keeps it); "Cancel" closes it again. The prompt stays until they give an email.
+Giving an email is optional, and reading never waits on it. A signed-in supporter without an email sees a prompt at the top of the feed: "Get an email when there's a new update," with an "Add your email" button. The button opens a form that asks for their name and email and says the family will see both. If they already have a name, it's filled in, and they can change it (see "Changing your name"). "Cancel" closes the form and leaves their name as it was. The prompt stays until they give an email.
 
 What happens depends on whom the email already belongs to in this family:
 
 - **No one:** the name and email go on the supporter's own record, unverified, and a verification email is sent with a link to the confirmation page (see "Confirming an email"). The page tells them to check their email. Notifications start once the email is verified: they confirm it, or a family member verifies it for them (see "Managing supporters"). If the email can't be sent, the email is still added; the supporter can verify later by signing in by email.
-- **A supporter or family member:** nothing changes. The email is never attached to the supporter's record, because knowing the answer must not let anyone act as someone else. Instead that address gets a magic link (see "Magic links"), and the page says the email is already on the family's list and has been sent a link to sign in. Using the link signs them in on that device as the person who owns the email. Until then, they keep reading.
+- **A supporter or family member:** nothing changes, and the name typed in the form is not saved. The email is never attached to the supporter's record, because knowing the answer must not let anyone act as someone else. Instead that address gets a magic link (see "Magic links"), and the page says the email is already on the family's list and has been sent a link to sign in. Using the link signs them in on that device as the person who owns the email. Until then, they keep reading.
 - **A removed supporter or family member:** nothing changes and nothing is sent; the page says "This email can't join this family's updates. Please contact the family." They can still read, because they answered the question (see "Stated limits").
 
 A supporter who already has an email can't change it this way.
@@ -139,6 +139,18 @@ Magic links are how supporters with an email sign in as themselves on a new devi
 - Every request for family data checks the session against the database. Removing a person ends all of their sessions immediately.
 - A browser can be signed in to more than one family at once, each with its own session. Signing in to a family ends the browser's previous session for that family, if it had one.
 
+## Changing your name
+
+Anyone signed in to a family can change their own name, and only their own. The new name replaces the one on their record. It has to be 1 to 100 characters after trimming; they can't clear it. Notes, reactions, and updates show the name on the author's record, so the new name appears on everything they've already left, not only on what they write next. A family member's notes stay marked "Family," which follows their role and not the name they choose.
+
+Three places save a name:
+
+- **The navigation bar's menu**, on every page signed in to the family. "Edit name" sits with "Signed in as," above the line, once they have a name. It opens a dialog with the name filled in, and a line saying this is the name people see for them. "Save" stores it. "Cancel" leaves it as it was.
+- **Leave a note.** The dialog's name field is filled in, and they can change it. The name is saved when the note is, and not if they cancel or the note isn't saved (see [updates.md](updates.md#leaving-a-note)).
+- **The feed's email form.** A supporter adding an email can change the name in that form. The name is saved only when they changed it and the email is added to their record. If they leave the name as it was, or the email already belongs to someone in the family, or it can't be added, their name stays as it was (see "Getting notification emails").
+
+Someone with no name doesn't see "Edit name." They give one by leaving a note or adding an email. After saving, the page reloads what it shows, so the new name appears at once.
+
 ## Managing supporters
 
 Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately.
@@ -204,6 +216,6 @@ Giving an email reveals whether it already belongs to the family: a new email go
 
 A supporter added by a family member is only as safe as the email typed in. If the address is mistyped and belongs to a real person, that person can sign in by email and read the updates. They appear in the supporter list under the name the family gave, so the family can spot and remove them. Likewise, whoever receives a forwarded welcome email and knows the answer signs in as that supporter rather than under their own name.
 
-A video note is shown through a link to Cloudinary that the server creates only for someone signed in to the family. The link is signed, so it can't be guessed or altered, but it doesn't expire: anyone who copies or is forwarded it can watch that video until the note is deleted, including a supporter who has since been removed. They can't use it to find any other video. Links that expire need a Cloudinary plan the app doesn't use; this is about as much as someone could already keep by recording the screen while they had access. Deleting the note deletes the video, and every link to it stops working within minutes, once Cloudinary has cleared its cached copies.
+A video, on a note or an update, is shown through a link to Cloudinary that the server creates only for someone signed in to the family. The link is signed, so it can't be guessed or altered, but it doesn't expire: anyone who copies or is forwarded it can watch that video until the note or the update is deleted, including a supporter who has since been removed. They can't use it to find any other video. Links that expire need a Cloudinary plan the app doesn't use; this is about as much as someone could already keep by recording the screen while they had access. Deleting the note, or the update, deletes its video, and every link to it stops working within minutes, once Cloudinary has cleared its cached copies.
 
-Anyone who knows the answer can leave a note signed with any name, including one that isn't theirs, such as "Mom." The family can delete any note. A note's author who never gave an email isn't in the supporter list and can't be removed one by one; if it keeps happening, the fix is to change the answer, which signs out everyone without a verified email.
+Anyone who knows the answer can leave a note signed with any name, including one that isn't theirs, such as "Mom," and changing their name shows that name on their earlier notes and reactions too. The family can delete any note. A note's author who never gave an email isn't in the supporter list and can't be removed one by one; if it keeps happening, the fix is to change the answer, which signs out everyone without a verified email.
