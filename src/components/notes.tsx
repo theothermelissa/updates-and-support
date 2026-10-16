@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { PlayIcon } from "lucide-react";
+import { MessageSquareHeartIcon, PlayIcon } from "lucide-react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { cn } from "cn";
 import { Confirm, ErrorMessage, Field, LinkedText } from "@/components/page";
@@ -24,9 +24,11 @@ export function NoteCard(props: {
   const [confirming, setConfirming] = useState(false);
   const colors = PALETTE[note.color];
   return (
-    <article
-      className={cn("break-inside-avoid rounded-xl border text-base", note.video ? "space-y-2 p-1.5 pb-4" : "space-y-3 p-4")}
-      style={{ backgroundColor: colors.fill, color: colors.text, borderColor: `${colors.text}33` }}
+    <Bubble
+      as="article"
+      color={note.color}
+      className={cn("text-base", note.video ? "space-y-2 p-1.5 pb-4" : "space-y-3 p-4")}
+      style={{ color: colors.text }}
     >
       {note.video ? (
         <VideoStill note={note} video={note.video} />
@@ -60,23 +62,59 @@ export function NoteCard(props: {
           </div>
         )}
       </div>
-    </article>
+    </Bubble>
   );
 }
 
 // Holds a note's place beside an update with none yet: an Oak card with a button that opens
 // the note dialog, where a note's React button sits.
 export function EmptyNoteCard({ onLeave }: { onLeave: () => void }) {
-  const colors = PALETTE.oak;
   return (
-    <div
-      className="flex min-h-36 flex-col items-start justify-end rounded-xl border p-4"
-      style={{ backgroundColor: colors.fill, borderColor: `${colors.text}33` }}
-    >
-      <Button variant="outline" className="h-11 rounded-full px-4" onClick={onLeave}>
-        Leave a note
+    <Bubble color="oak" className="flex min-h-36 flex-col items-start justify-end p-4">
+      <Button variant="outline" className="size-11 rounded-full [&_svg]:size-5" aria-label="Leave a note" onClick={onLeave}>
+        <MessageSquareHeartIcon aria-hidden />
       </Button>
-    </div>
+    </Bubble>
+  );
+}
+
+const TAIL_WIDTH = 16;
+const TAIL_HEIGHT = 12;
+
+// A card in a note color shaped like a message bubble, after the "Leave a note" icon: its
+// square bottom-left corner runs down into a tail. The outer element leaves room below for
+// the tail, so it never overlaps whatever comes next.
+function Bubble(props: {
+  as?: "article" | "div";
+  color: NoteColor;
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  const Outer = props.as ?? "div";
+  const colors = PALETTE[props.color];
+  const border = `${colors.text}33`;
+  return (
+    <Outer className="relative break-inside-avoid" style={{ paddingBottom: TAIL_HEIGHT }}>
+      <div
+        className={cn("rounded-xl rounded-bl-none border", props.className)}
+        style={{ backgroundColor: colors.fill, borderColor: border, ...props.style }}
+      >
+        {props.children}
+      </div>
+      {/* Outside the card, so the card's space-y spacing ignores it. Starts on the card's
+          bottom border, covering it where the tail joins. */}
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-0"
+        width={TAIL_WIDTH + 1}
+        height={TAIL_HEIGHT + 1}
+        viewBox={`0 0 ${TAIL_WIDTH + 1} ${TAIL_HEIGHT + 1}`}
+      >
+        <path d={`M0 0V${TAIL_HEIGHT + 0.5}L${TAIL_WIDTH + 1} 0Z`} fill={colors.fill} />
+        <path d={`M0.5 1V${TAIL_HEIGHT}L${TAIL_WIDTH} 0.5`} fill="none" stroke={border} strokeLinejoin="round" />
+      </svg>
+    </Outer>
   );
 }
 

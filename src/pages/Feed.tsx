@@ -1,3 +1,4 @@
+import { MessageSquareHeartIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
 import { EmptyNoteCard, NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
@@ -287,8 +288,13 @@ function UpdateItem(props: {
           ) : (
             <>
               <ReactionControls reactions={update.reactions} onReact={props.onReact}>
-                <Button variant="outline" className="h-11 rounded-full px-4" onClick={() => setWriting(true)}>
-                  Leave a note
+                <Button
+                  variant="outline"
+                  className="size-11 rounded-full [&_svg]:size-5"
+                  aria-label="Leave a note"
+                  onClick={() => setWriting(true)}
+                >
+                  <MessageSquareHeartIcon aria-hidden />
                 </Button>
               </ReactionControls>
               {props.canEdit && (
