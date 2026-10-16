@@ -21,8 +21,8 @@ async function setUp() {
   const { family: okafor, people: [chidi] } = await makeFamily(db, "Okafor", ["Chidi"]);
   const sam = await joinWithEmail(db, family, "Sam");
   const olu = await joinWithEmail(db, okafor, "Olu");
-  const update = await createUpdate(db, ana!, "Rivera news");
-  await createUpdate(db, chidi!, "Okafor news");
+  const update = await createUpdate(db, ana!, { body: "Rivera news" });
+  await createUpdate(db, chidi!, { body: "Okafor news" });
   return { family, ana: ana!, sam: sam.person, samToken: sam.sessionToken, olu, update };
 }
 

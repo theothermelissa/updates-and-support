@@ -1,19 +1,22 @@
-import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
-import { Confirm, ErrorMessage, LinkedText } from "@/components/page";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
+import { Confirm, ErrorMessage } from "@/components/page";
 import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
 import type { Note } from "../notes.js";
 import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
+import { RichText } from "../richText.js";
+
+// Supporters never load the editor; family members load it when they first write or edit.
+const RichEditor = lazy(() => import("../editor/RichEditor.js"));
 
 type Update = {
   id: string;
-  body: string;
+  content: unknown;
   authorName: string;
   createdAt: string;
   editedAt: string | null;
@@ -71,7 +74,7 @@ export function Feed(props: { slug: string; canEdit: boolean; name: string | nul
     <section className="space-y-6">
       {canEdit && (
         <div className={UPDATE_WIDTH}>
-          <PostForm onPost={(body, notify) => change("updates", "POST", { body, notify })} />
+          <PostForm onPost={(content, notify) => change("updates", "POST", { content, notify })} />
         </div>
       )}
       {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -81,7 +84,7 @@ export function Feed(props: { slug: string; canEdit: boolean; name: string | nul
           key={update.id}
           update={update}
           canEdit={canEdit}
-          onEdit={(body) => change(`updates/${update.id}`, "PATCH", { body })}
+          onEdit={(content) => change(`updates/${update.id}`, "PATCH", { content })}
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
           slug={slug}
@@ -94,16 +97,20 @@ export function Feed(props: { slug: string; canEdit: boolean; name: string | nul
   );
 }
 
-function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promise<boolean> }) {
-  const [body, setBody] = useState("");
+function PostForm({ onPost }: { onPost: (content: unknown, notify: boolean) => Promise<boolean> }) {
+  const [content, setContent] = useState<unknown>(null);
   const [notify, setNotify] = useState(true);
   const [posting, setPosting] = useState(false);
+  // Changing the key starts a fresh, empty editor after posting.
+  const [editorKey, setEditorKey] = useState(0);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (content === null) return;
     setPosting(true);
-    if (await onPost(body, notify)) {
-      setBody("");
+    if (await onPost(content, notify)) {
+      setContent(null);
+      setEditorKey((k) => k + 1);
       setNotify(true);
     }
     setPosting(false);
@@ -116,12 +123,14 @@ function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promi
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          <Textarea className="min-h-32" value={body} onChange={(e) => setBody(e.target.value)} aria-label="Update" />
+          <EditorSlot>
+            <RichEditor key={editorKey} onChange={setContent} />
+          </EditorSlot>
           <Label>
             <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} />
             Notify supporters by email
           </Label>
-          <Button disabled={posting || !body.trim()}>Post</Button>
+          <Button disabled={posting || content === null}>Post</Button>
         </form>
       </CardContent>
     </Card>
@@ -131,7 +140,7 @@ function PostForm({ onPost }: { onPost: (body: string, notify: boolean) => Promi
 function UpdateItem(props: {
   update: Update;
   canEdit: boolean;
-  onEdit: (body: string) => Promise<boolean>;
+  onEdit: (content: unknown) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
   slug: string;
@@ -142,15 +151,22 @@ function UpdateItem(props: {
   const { update } = props;
   const [writing, setWriting] = useState(false);
   const noteCount = update.notes.length;
-  const [draft, setDraft] = useState<string | null>(null);
+  // While editing: the document to save, or null while the editor is empty.
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function save() {
     if (draft === null) return;
     setSaving(true);
-    if (await props.onEdit(draft)) setDraft(null);
+    if (await props.onEdit(draft)) setEditing(false);
     setSaving(false);
+  }
+
+  function startEditing() {
+    setDraft(update.content);
+    setEditing(true);
   }
 
   return (
@@ -166,10 +182,12 @@ function UpdateItem(props: {
           </p>
         </CardHeader>
         <CardContent className="text-base">
-          {draft === null ? (
-            <LinkedText text={update.body} />
+          {editing ? (
+            <EditorSlot>
+              <RichEditor initial={update.content} onChange={setDraft} />
+            </EditorSlot>
           ) : (
-            <Textarea className="min-h-32" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Update" />
+            <RichText doc={update.content} />
           )}
           <Reactions update={update} onReact={props.onReact} />
           <Button variant="outline" className="mt-3 h-11 rounded-full px-4" onClick={() => setWriting(true)}>
@@ -179,12 +197,12 @@ function UpdateItem(props: {
         </CardContent>
         {props.canEdit && (
           <CardFooter className="flex flex-wrap items-center gap-2 border-t py-3">
-            {draft !== null ? (
+            {editing ? (
               <>
-                <Button onClick={save} disabled={saving || !draft.trim()}>
+                <Button onClick={save} disabled={saving || draft === null}>
                   Save
                 </Button>
-                <Button variant="outline" onClick={() => setDraft(null)}>
+                <Button variant="outline" onClick={() => setEditing(false)}>
                   Cancel
                 </Button>
               </>
@@ -195,7 +213,7 @@ function UpdateItem(props: {
               </Confirm>
             ) : (
               <>
-                <Button variant="outline" onClick={() => setDraft(update.body)}>
+                <Button variant="outline" onClick={startEditing}>
                   Edit
                 </Button>
                 <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
@@ -224,6 +242,15 @@ function UpdateItem(props: {
         </aside>
       )}
     </article>
+  );
+}
+
+// Holds the editor's place, at its height, while it loads.
+function EditorSlot({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="h-[12.5rem] rounded-lg border border-input" aria-busy="true" />}>
+      {children}
+    </Suspense>
   );
 }
 

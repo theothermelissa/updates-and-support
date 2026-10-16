@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { linkify } from "./linkify.js";
+import { linkify } from "./links.js";
 
 it("links http and https addresses and keeps the surrounding text", () => {
   expect(linkify("Meal train: https://example.com/meals?id=1. Thanks!\nAlso http://example.org")).toEqual([

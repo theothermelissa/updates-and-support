@@ -46,7 +46,7 @@ The migration only adds the nullable `content` column. Nothing is rewritten:
 
 ### Writing and editing
 
-`createUpdate(db, person, input, notifyWith?)` and `editUpdate(db, person, id, input)` take the request's `{ content, body }`. Editing locks the update (`SELECT … FROM "Update" WHERE id = $1 AND "familyId" = $2 FOR UPDATE`; no row is a 404) in an interactive transaction; slice 3 relies on the lock to know which photos an edit dropped.
+`createUpdate(db, person, input, notifyWith?)` and `editUpdate(db, person, id, input)` take the request's `{ content, body }`. In slice 1 an edit is one family-scoped `updateMany`, which is already atomic. Slice 3 changes it to lock the update (`SELECT … FROM "Update" WHERE id = $1 AND "familyId" = $2 FOR UPDATE`; no row is a 404) in an interactive transaction, so it knows which photos an edit dropped.
 
 ### The editor
 
@@ -88,7 +88,7 @@ Everything below was checked on 2026-10-15 against cloudinary.com/documentation 
 
 1. **Migration `rich_text`**: `ALTER TABLE "Update" ADD COLUMN "content" JSONB;` (written by hand if `prisma migrate dev` won't run).
 2. **`src/lib/links.ts`**: `allowedHref`, and `linkify` moved from `src/linkify.ts` with its test. **`server/richText.ts`**: `validDoc` (photo nodes refused until slice 2), `docFromText`, `textOf`, and `contentFrom(input)` (content wins, else body). The server imports `src/lib/links.ts` directly; it has no browser or React dependencies.
-3. **`server/updates.ts`**: create, edit (with the lock), and list use `content`, keeping `body` in step; the feed's updates carry `content` instead of `body`.
+3. **`server/updates.ts`**: create, edit, and list use `content`, keeping `body` in step; the feed's updates carry `content`, and still carry `body`, which the wall uses for its excerpts.
 4. **Handlers** pass the request body through.
 5. **`src/richText.tsx`**: the renderer. **`src/editor/RichEditor.tsx`**: the editor and toolbar, lazy-loaded. **`src/pages/Feed.tsx`**: the post form and edit use the editor; updates render with the renderer.
 6. **Dependencies**: `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit` (3.32; starter-kit includes `Link` in v3). Measured in a scratch Vite build with React 19: about 400 KB more JavaScript (about 126 KB gzipped), all in the lazy editor chunk, so supporters' pages don't grow beyond the small renderer. `jsdom` as a dev dependency, for one test that runs the real editor.
@@ -104,7 +104,7 @@ Everything below was checked on 2026-10-15 against cloudinary.com/documentation 
   - `docFromText` on quotes, a backslash, a literal `\n`, emoji, `\r\n`, three or more newlines, leading and trailing spaces, and URLs with trailing punctuation gives the expected paragraphs, breaks, and link marks, and `textOf` of the result gives back the original text exactly (after `\r\n` becomes `\n`); a bare `https://` and a 2,001-character URL stay plain text
   - content wins over body; body alone is converted
 - **Unit, `src/richText.test.tsx`** (`renderToStaticMarkup`): each node and mark renders as expected; links have `target="_blank"` and `rel="noopener noreferrer"`; text containing `<script>` comes out escaped; a `javascript:` link and an unknown node render as plain text or nothing.
-- **Unit, `src/editor/schema.test.ts`** (`// @vitest-environment jsdom`): a headless Tiptap editor with the app's extensions is given pasted-style HTML with headings, a table, an image, a `<script>`, colors, a `javascript:` link, an `ftp://` link, a blockquote, and a Google Docs lettered list (`list-style-type: lower-alpha`); its `getJSON()` passes `validDoc`, contains none of those, and keeps their text. This also catches the editor and validator drifting apart.
+- **Unit, `src/editor/extensions.test.ts`** (`// @vitest-environment jsdom`): a headless Tiptap editor with the app's extensions is given pasted-style HTML with headings, a table, an image, a `<script>`, colors, a `javascript:` link, an `ftp://` link, a blockquote, and a Google Docs lettered list (`list-style-type: lower-alpha`); its `getJSON()` passes `validDoc`, contains none of those, and keeps their text. This also catches the editor and validator drifting apart.
 - **Integration, `tests/integration/updates.test.ts`:** the existing cross-family, supporter, and edit/delete tests rewritten for `content`, each shown failing with its rule removed (family scope on list, edit lock, and delete; `requireFamilyMember` on create, edit, and delete). Added: content round-trips; `body` is kept in step; an update whose `body` was changed directly (as rolled-back code would) shows the new `body`; an update with `content` null (inserted directly) comes back as the converted document with link marks; `{ body }` still posts and edits; content wins when both are sent; an invalid document stores nothing and leaves an edited update unchanged.
 - **Migration:** on a scratch database at `main`'s migrations with updates holding quotes, backslashes, a literal `\n`, URLs, and emoji, apply `rich_text` and confirm the feed shows each one as before; `prisma migrate diff` shows no drift. After the preview builds, the test family's earlier updates look unchanged.
 - **Hand check on the preview:** existing updates look the same; bold, italic, links (typed, pasted, and through the Link field, plus `mailto:`), and nested lists; paste from a web page and from Google Docs or Word; a supporter sees the formatting in a private window; editing keeps the formatting; on a phone, the toolbar is easy to tap; the notification email is unchanged.
@@ -167,4 +167,16 @@ The text-blocks attempt (closed PR #24) applied a `blocks` migration to the shar
 
 ## Progress and discoveries
 
-Not started.
+**Slice 1 implemented** on `feature/rich-text` (steps 1–7), after merging `main`'s notes and wall.
+
+- **Typecheck, 62 unit tests, and 138 integration tests pass.** Each access and validation rule was removed in turn and its test failed:
+  - family scope on list, edit, and delete
+  - `requireFamilyMember` on create, edit, and delete
+  - the rollback fallback, the server's link check, the link-attribute allowlist, and "content wins"
+  - the renderer's link check, the editor's stray-link cleanup, and `shouldAutoLink`
+- **Migration, on a scratch database at `main`'s migrations:** five old updates applied cleanly and kept SQL `NULL` content, with no drift. The old updates had quotes, a backslash, a literal `\n`, URLs with `&` and trailing punctuation, emoji with a skin tone, three and four newlines, `\r\n`, and `javascript:` text. Each one read back through `listUpdates` as the expected document, and its text round-tripped.
+- **Bundle:** the editor is its own lazy chunk of 403 KB (128 KB gzipped). The main bundle grew 3.4 KB (1.4 KB gzipped) for the renderer and link helpers.
+- **Link checks.** Tiptap's paste rule passes the address *as typed* (`www.example.com`) to `isAllowedUri`, so an address with no scheme is checked as `https://…`, and one starting with `/` is refused. The paste rule also ignores `defaultProtocol`, so a pasted `www.` address links with `http://`; that's allowed, and sites redirect.
+- **The Link field** turns an email address into `mailto:` and anything else without a scheme into `https://`.
+- **Test setup.** jsdom has no `ClipboardEvent`, so the paste test passes a plain `Event` to ProseMirror's `pasteHTML` and `pasteText`, which run the real paste path.
+- **Document types** live in `src/lib/doc.ts`, shared by the server and the browser.

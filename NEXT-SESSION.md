@@ -11,6 +11,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   A nameless reader who signs notes isn't on the People page, so the only remedies for a flood are deleting notes one by one (capped at 20 an hour per person) or changing the answer. Raised in the notes plan's access review.
 - **2026-10-16** — Let authors edit their notes.
   Cut from the notes slice for speed; today they delete and leave another. Also in the spec's Later list.
+- **2026-10-16** — Backfill `Update.content`, then drop `body` and `{ body }` requests.
+  Updates from before formatting have no content and are converted from `body` each time the feed loads, and `body` is kept in step so older code still works during a deploy or rollback. Once formatting has been live a while, backfill `content` with `docFromText`, make it required, and remove the `body` fallbacks; the wall's excerpts would then need `textOf`.
 - **2026-10-15** — End a supporter's other sessions when their email is first verified.
   Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser. A family member's Verify on the People page deliberately signs no one out, so this applies only when the email's owner confirms.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
