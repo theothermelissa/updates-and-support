@@ -137,6 +137,19 @@ Integration tests run against Postgres with the fake store. Each one guards an a
 
 There's no unit test for URL signing (it's the SDK's job). Step 1's manual check covers that the configuration is right.
 
+## Discoveries
+
+- **API key permissions.** Cloudinary API keys carry their own permissions. The first key could read and delete but not upload ("missing permissions (actions=[create])"). A key for this app needs to create, read, and delete.
+- **Video length.** The Admin API's `resource` call reports a video's length only with `media_metadata: true`. Without it, `describe` found every video missing.
+- **SDK usage parameter.** The SDK adds an `_a=` usage parameter to delivery links by default. Links are built with `urlAnalytics: false`, so it never reaches Cloudinary.
+- **Checked against the real Cloudinary environment:**
+  - uploads land as `authenticated`, and an upload sent through the browser keeps `video` as its original filename;
+  - an image uploaded with the same signed parameters looks missing to `describe`;
+  - re-uploading to an existing ID returns the original and doesn't overwrite it;
+  - signed links play, an unsigned link gets 401, and the public `upload` form of the address gets 404;
+  - the converted mp4 is h264 with no location atoms;
+  - deleting a note in the UI removes its video from Cloudinary.
+
 ## Cut for speed
 
 - **Orphaned uploads.** Some videos sit in Cloudinary unattached: an upload refused for being too long, or one whose attach failed or whose tab closed mid-post. No link to them is ever handed out. A sweep script, which destroys ticketed videos with no note after a day, goes in `NEXT-SESSION.md`.
