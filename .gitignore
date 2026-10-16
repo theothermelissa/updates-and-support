@@ -158,3 +158,6 @@ vite.config.ts.timestamp-*
 .DS_Store
 
 /server/generated/prisma
+
+# Claude Code local settings and worktrees
+.claude/
