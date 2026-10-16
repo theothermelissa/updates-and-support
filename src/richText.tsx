@@ -4,7 +4,7 @@ import { allowedHref } from "./lib/links.js";
 // Shared by the renderer and the editor, so an update looks the same while it's written.
 // Paragraphs are a line apart, so a blank line in an older update looks as it always has.
 export const DOC_CLASSES =
-  "space-y-[1lh] break-words whitespace-pre-wrap [&_li]:mt-1 [&_li>*+*]:mt-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6";
+  "space-y-[1lh] break-words whitespace-pre-wrap [&_li]:mt-1 [&_li>*+*]:mt-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_s]:line-through [&_ul]:list-disc [&_ul]:pl-6";
 
 // Deep enough for any document the server accepts.
 const MAX_DEPTH = 20;
@@ -107,6 +107,7 @@ function marked(text: string, marks: unknown): ReactNode {
     if (!isObj(m)) continue;
     if (m.type === "bold") out = <strong>{out}</strong>;
     else if (m.type === "italic") out = <em>{out}</em>;
+    else if (m.type === "strike") out = <s>{out}</s>;
     else if (m.type === "link" && isObj(m.attrs) && allowedHref(m.attrs.href)) {
       out = (
         <a href={m.attrs.href} target="_blank" rel="noopener noreferrer">

@@ -8,7 +8,7 @@ An update has:
 
 - its **content**: formatted text with optional photos, in the order the family member wrote them. The formatting is deliberately small:
   - paragraphs and line breaks
-  - **bold** and *italic*
+  - **bold**, *italic*, and ~~strikethrough~~
   - links, to web addresses (`http:` or `https:`) and email addresses (`mailto:`)
   - bulleted and numbered lists, which can be nested
   - photos, each with an optional **caption** of plain text up to 300 characters (see "Photos")
@@ -21,7 +21,7 @@ There are no headings, colors, fonts, tables, code, quotes, or images from other
 
 The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Content appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
-A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), "Edit name" for anyone who has a name (see [access.md](access.md#changing-your-name)), a link to the People page for family members, and "Sign out." Beside it, a "Notes" link leads to the family's wall (see "The wall").
+A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), "Edit name" for anyone who has a name (see [access.md](access.md#changing-your-name)), a link to the People page for family members, and "Sign out." Beside it, a "Notes" link leads to the family's wall (see "The wall"). Immediately to its left, a "How to help" link leads to the family's requests (see "How to help"). Family members always see that link. Supporters see it once the family has at least one request.
 
 Each update has a footer of actions in one row: **React** and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
@@ -29,9 +29,9 @@ Each update has a footer of actions in one row: **React** and **Leave a note** f
 
 ## Writing an update
 
-Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
+Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
 
-Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
+Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, strikethrough, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
 
 ## Posting
 
@@ -136,6 +136,45 @@ The rules, the React button, the tray, and the summary are the ones under "React
 The note's author, and any family member, can delete a note, after an inline confirmation. Deletion is permanent, and it deletes the note's reactions. Deleting a video note also deletes its video from Cloudinary, as does deleting the update it's on. Notes can't be edited; to change one, delete it and leave another.
 
 A removed person's notes are neither shown nor counted, and a removed person can't leave a note, since they can't sign in. Restoring a supporter brings their notes back.
+
+## How to help
+
+The page at `/f/<slug>/help`, titled "How to help," lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
+
+A request has:
+
+- a **body** of plain text, 1 to 2,000 characters. Line breaks are kept, and web addresses become links.
+- how many people can take it: **1**, a **number up to 99**, or **many** (the form's "Everyone can help with this" checkbox). Right after the body's last word, in smaller, lighter text, the page shows the count in parentheses, kept together on one line (see "Who has offered").
+
+Family members add, edit, and delete requests. Only they see the form for adding one, at the top of the page above the requests. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Deleting asks for confirmation on the page and removes every offer on that request. Requests are shown oldest first. A family can have at most 100.
+
+### Offering to help
+
+Anyone signed in can press **✋ I can help with this**. An offer needs a name, the same way a note does: when the person doesn't have one, pressing the button shows "Your name" on that request with a Cancel button, and pressing it again with a name makes the offer and puts that name on their record. A person who already has a name offers under it and can't change it here. The page never asks for an email. Once someone has offered, the button goes away and "👍 You are helping" takes its place, whether or not the request is covered.
+
+To withdraw, the person presses the **×** just after "You are helping." On a computer it appears when resting on that line or reaching it with the keyboard; on a touch screen it is always shown. It opens a dialog, "Need to bow out? No problem — thanks for letting us know," with **Cancel** and **Confirm**. Confirming withdraws the offer.
+
+One offer per person per request. When a numbered request already has that many offers, another person is told someone else just took it, and nothing is stored for them. If two people take the last place at the same moment, one offer is kept. Withdrawing, or a family member removing an offer, opens the place again. Lowering the number does not remove offers already made. The request is covered once at least that many active offers exist. A "many" request never fills.
+
+### Who has offered
+
+The count beside the request says how many people it needs and how it stands:
+
+- "(1 person)," "(4 people)," or "(everyone)" before anyone offers, and "(everyone)" always for a "many" request
+- "(4 people, need 3 more)" once a numbered request has some offers but isn't covered
+- "(4 people)" again once it is covered
+
+A covered request's text is struck through, with a green check in front of it. The count isn't struck through.
+
+**✋ I can help with this** is hidden from anyone who hasn't offered on a covered request.
+
+Only family members see who offered. Under each request, they see the list of everyone who offered, with **Remove** on each name. Removing asks for confirmation. Supporters see the count and their own "You are helping," never anyone else's name, so offering doesn't invite comparison between supporters, while the family can still coordinate with and thank each person.
+
+The server sends a supporter only the number of offers and whether one of them is theirs: never another person's name, email, or id. Family members see each name, with the person's email beside it when they have one. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
+
+A removed person's offers are hidden and don't fill a place, and a removed person can't offer. Restoring a supporter brings their offers back, which can leave a numbered request with more offers than its number.
+
+Offering on a numbered request emails the family's other family members that someone offered to help, with a link to this page and none of the request's text. It does not email the person who offered, supporters, or removed family members. Offering again, withdrawing, a family member removing an offer, and any offer on a "many" request send nothing. The offer is kept if the email can't be sent. Others' new offers appear when the page is reloaded.
 
 ## Notifications
 

@@ -24,10 +24,11 @@ A person who is both a supporter and a family member of different families has a
 - Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
 - Family members add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
-- Family members post, edit, and delete updates with simple formatting (bold, italic, links, and lists); everyone signed in to the family reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
+- Family members post, edit, and delete updates with simple formatting (bold, italic, strikethrough, links, and lists); everyone signed in to the family reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
 - Photos in updates, with optional captions, up to six per update, once the operator turns photos on; test sites can use grey placeholder photos instead. → [updates.md](updates.md#photos)
 - Everyone signed in to the family can give each update and each note one reaction from a fixed set of six emoji, and sees who reacted. → [updates.md](updates.md#reactions)
 - Everyone signed in to the family can leave colored notes of support on an update, written or as a video of up to 60 seconds, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)
+- Family members post ways to help, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered. → [updates.md](updates.md#how-to-help)
 - Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
 
 ### Later
@@ -37,7 +38,7 @@ These are planned but not yet specified. Each gets its own area spec when it bec
 - Self-serve family signup, replacing the operator script.
 - Export of a family's updates, so they never lose their journal if the app goes away.
 - For the wall of notes: unread markers, filtering by supporter and time, text search, and editing a note.
-- Ways for supporters to offer meaningful help, coordinate with each other, share contact details, and reach out for their own support.
+- Supporters sharing contact details with each other, and reaching out for their own support.
 - Supporters deleting their own record.
 
 ## Product-wide rules
@@ -64,4 +65,4 @@ The app follows the visual language of Vercel's Geist design system: the Geist S
 ## Area specs
 
 - [access.md](access.md): families, the community question, supporter and family member sign-in, sessions, and managing people.
-- [updates.md](updates.md): posting, editing, and deleting updates, photos, the feed, reactions, and notifications.
+- [updates.md](updates.md): posting, editing, and deleting updates, photos, the feed, reactions, notes, ways to help, and notifications.
