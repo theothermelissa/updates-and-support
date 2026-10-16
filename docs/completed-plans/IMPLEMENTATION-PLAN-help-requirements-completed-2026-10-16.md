@@ -69,3 +69,5 @@ Browser check: as a family member (localhost) and a supporter (127.0.0.1), add r
 - A person who offers without a name and later gives one (on a request that requires it) shows under that name on the earlier offer too, the same as reactions. The spec says so.
 - A page loaded before deploy that edits a request now gets "This page is out of date. Please refresh it and try again."
 - The browser pane can't type into native date and time pickers; `form_input` sets them.
+- Melissa asked during review for one frame on every page signed in to a family. `src/components/familyShell.tsx` holds the shared container and navigation bar (name, Updates, How to help, Notes, menu with Edit name, People, and Sign out), and each page other than the feed has its own H2. "Edit name" came from `main` mid-review and moved into the shared menu, so it works on every page; each page reloads after a name change.
+- The request form is headed "What Would Help," with an unlabeled description box (named for screen readers), the date and time, then "Who Can Help."
