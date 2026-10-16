@@ -184,7 +184,7 @@ A covered request's text is struck through, with a green check in front of it. T
 
 **✋ I can help with this** is hidden from anyone who hasn't offered on a covered request.
 
-Only family members see who offered. Under each request, they see the list of everyone who offered, with **Remove** on each name. An offer made without a name shows as "Someone." Removing asks for confirmation. Supporters see the count and their own "You are helping," never anyone else's name, so offering doesn't invite comparison between supporters, while the family can still coordinate with and thank each person.
+Only family members see who offered. Under each request, they see the list of everyone who offered, with **Remove** on each name. An offer from someone without a name shows as "Someone"; once they give a name, for example on another request, it shows that name, as reactions do. Removing asks for confirmation. Supporters see the count and their own "You are helping," never anyone else's name, so offering doesn't invite comparison between supporters, while the family can still coordinate with and thank each person.
 
 The server sends a supporter only the number of offers and whether one of them is theirs: never another person's name, email, or id, and not the email they gave with their own offer. Family members see each name, with an email beside it when there is one: the email given with the offer, or else the one on the person's record. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
 

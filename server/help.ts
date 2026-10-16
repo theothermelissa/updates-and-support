@@ -158,7 +158,8 @@ type RequestInput = {
 
 // Every field is required, so a page from before a field existed can't clear it by leaving it out.
 function validRequest(input: RequestInput) {
-  if (input.date === undefined || input.time === undefined) throw new RequestError(400, "Expected date and time");
+  const fields = [input.requireName, input.requireEmail, input.date, input.time];
+  if (fields.includes(undefined)) throw new RequestError(400, "This page is out of date. Please refresh it and try again.");
   const date = validDate(input.date);
   return {
     body: validBody(input.body),
