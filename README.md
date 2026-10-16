@@ -10,7 +10,7 @@ What the app should do lives in `spec/`, starting with `spec/MASTER_SPEC.md`. Ho
 - **API:** Vercel serverless functions in `api/`, with the logic they call in `server/`
 - **Database:** Postgres via Prisma 7; schema in `prisma/schema.prisma`
 - **Hosting:** Vercel, with a Neon Postgres database from the Vercel marketplace
-- **Video notes:** Cloudinary stores and converts them; the browser uploads straight to it
+- **Photos and video notes:** Cloudinary stores them; the browser uploads straight to it. Both use `CLOUDINARY_URL`. Production and previews must be different Cloudinary accounts.
 - **CI:** GitHub Actions (`.github/workflows/ci.yml`)
 
 ## First-time setup
@@ -65,6 +65,8 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 
 **Migrations run during the Vercel build.** Vercel runs the `vercel-build` script, which applies pending migrations (`prisma migrate deploy`) before building the frontend. A PR's preview applies its migrations to the `preview` branch, and merging to `main` applies them to production. Migrations use Neon's direct connection, `DATABASE_URL_UNPOOLED`; the running app uses the pooled `DATABASE_URL`. Because production migrates before the new code is live, keep migrations backward-compatible with the code already running.
 
+**Photos and video notes share `CLOUDINARY_URL`.** Use two Cloudinary accounts: one for Production, and one for Preview and local work. Previews run unmerged code, so the preview account's key must never be pasted into Production. In each account, open Settings → Upload and delete any unsigned upload preset the account came with. When `CLOUDINARY_URL` is set, "Add photo" uploads to that account. Grey placeholders already saved stay grey.
+
 **Environment variables in Vercel:**
 
 | Variable | Where it comes from |
@@ -75,9 +77,9 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 | `APP_URL` | The production address, `https://orbul.com`. Production only; previews use their own deployment address. |
 | `ROOT_FAMILY_SLUG` | Optional. The address of the family shown at the site's root, `/`. Production: the real family's address, kept only in Vercel. Preview: `testfamily-preview`, so each preview's root shows the test family. |
 | `FAMILY_REDIRECTS` | Optional. Old family addresses that lead to current ones, as `old=new` pairs separated by commas. Production only. |
-| `CLOUDINARY_URL` | The Cloudinary environment's API environment variable, `cloudinary://key:secret@cloud`, from Cloudinary → Settings → API Keys. Production and Preview. |
-| `CLOUDINARY_FOLDER` | Where this app's videos go in Cloudinary: `updates-and-support/production` for Production, `updates-and-support/preview` for Preview. Keeps them apart from each other and from other projects in the same Cloudinary environment. |
-| `PHOTO_PLACEHOLDERS` | Optional. `1` turns on "Add photo" with grey placeholder photos that upload nothing, for trying photos without a Cloudinary account. Preview only; production ignores it even if set. |
+| `CLOUDINARY_URL` | Photos and video notes. The Cloudinary API environment variable, `cloudinary://key:secret@cloud`, from Cloudinary → Settings → API Keys. One Cloudinary account for Production, a different one for Preview and local work. Don't paste the preview account's key into Production. If this is already set for videos, real photos turn on with that same account. |
+| `CLOUDINARY_FOLDER` | Where this app's videos go in Cloudinary: `updates-and-support/production` for Production, `updates-and-support/preview` for Preview. Keeps them apart from each other and from other projects in the same Cloudinary environment. Photos use a per-family folder instead, and ignore this. |
+| `PHOTO_PLACEHOLDERS` | Optional. `1` turns on grey placeholder photos that upload nothing, only when `CLOUDINARY_URL` is unset. If `CLOUDINARY_URL` is set, new photos are real uploads even when this is `1`; placeholders already saved stay grey. Preview only; production ignores it even if set. |
 
 **Checking a pull request's preview** needs four local settings in `.env` (see `.env.example`): `PREVIEW_FAMILY_EMAIL`, the preview branch's two connection strings, and Vercel's bypass secret. Vercel keeps its own copies of the connection strings Sensitive, so they can't be pulled from there.
 

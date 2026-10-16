@@ -107,8 +107,21 @@ model Update {
   author    Person     @relation(fields: [authorId], references: [id])
   reactions Reaction[]
   notes     Note[]
+  photos    Photo[]
 
   @@index([familyId, createdAt])
+}
+
+// A real photo's Cloudinary public ID. One photo is on one update; deleting the update
+// removes the row. Placeholders are not stored here.
+model Photo {
+  id       String @id @default(cuid())
+  updateId String
+  publicId String @unique
+
+  update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
+
+  @@index([updateId])
 }
 
 // The fixed set of reactions; the UI gives each its emoji and label.

@@ -23,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!ctx.person) return unauthorized(res);
 
   if (req.method === "GET") {
-    return res.status(200).json({ updates: await listUpdates(getDb(), ctx.person) });
+    return res.status(200).json({ updates: await listUpdates(getDb(), ctx.person, undefined, photoSettingsFromEnv()) });
   }
   const body = jsonBody(req, res);
   if (!body) return;

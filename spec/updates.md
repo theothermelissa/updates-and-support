@@ -47,7 +47,7 @@ A family member can delete any update in their family after confirming. Deletion
 
 Photos are available once the operator turns them on with a setting (see the README). Until then, no "Add photo" button appears and the server accepts no photos.
 
-**Adding.** "Add photo" opens the device's photo picker for one photo, including iPhone photos, and puts it where the cursor is, as a card with the photo, a caption field, and "Remove." The photo uploads as soon as it's chosen, and its card shows "Uploading…" until it's done; saving waits until every photo has finished uploading. A photo over 10 MB is refused with a message saying so. Photos can't be dragged; to move one, remove it and add it again. Removing a photo deletes it permanently once the update is saved.
+**Adding.** "Add photo" opens the device's photo picker for one photo, including iPhone photos, and puts it where the cursor is, as a card with the photo and a caption field. An X in the photo's upper-right corner removes it. On a device with a pointer the X appears when the photo is hovered; on a phone, where there is no hover, it stays visible. The photo uploads as soon as it's chosen, and its card shows "Uploading…" until it's done; saving waits until every photo has finished uploading. A photo over 10 MB is refused with a message saying so. Photos can't be dragged; to move one, remove it and add it again. Removing a photo deletes it permanently once the update is saved.
 
 **Who sees them.** Photos and captions are seen by exactly the people who can see the update (see [access.md](access.md)). They never appear on the gate or in emails.
 

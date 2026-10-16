@@ -5,10 +5,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
   A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
 
-- **2026-10-16** — Resume photos: build slice 3, real photos with Cloudinary.
-  Slices 1 and 2 (formatting, placeholder photos) shipped; the plan is parked at `docs/parked-plans/IMPLEMENTATION-PLAN-photos.md` while the video recorder is built. Move it back to `IMPLEMENTATION-PLAN.md` to resume, and settle the shared-module entry below first.
-- **2026-10-16** — Share one Cloudinary module between photos and video notes.
-  Video notes use `server/videos.ts`, with a `VideoStore` interface, a fake for tests, and deletion from Cloudinary before the row is removed. The photos plan designs its own Cloudinary code and deletes rows even when Cloudinary is unreachable. Before photos' Cloudinary slice, decide on one deletion rule and reuse the module (`media_metadata`, `urlAnalytics: false`, and explicit `type`/`resource_type` were all needed).
+- **2026-10-15** — Clean up leftover Cloudinary photos.
+  A photo uploaded but never saved, a destroy that failed after the update was already deleted, or an update deleted while photos were off, stays in Cloudinary with nothing pointing to it. The signed upload fields can also be posted to Cloudinary's raw or video endpoint. A sweep could destroy authenticated images under `families/` that have no `Photo` row. Photos and video notes stay separate on purpose: videos are destroyed before the row is removed and the request fails if Cloudinary fails; photos are destroyed after the database commit and the request still succeeds.
 - **2026-10-16** — Sweep video uploads that never became notes.
   A video uploaded but never attached (refused for length, or a failed or abandoned post) stays in Cloudinary unseen. A script could destroy ticketed public IDs with no note after a day. Cut from video notes part 1 for speed.
 - **2026-10-16** — Give this app its own Cloudinary environment and check its credit use.

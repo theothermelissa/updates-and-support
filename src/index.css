@@ -134,3 +134,11 @@
     @apply underline underline-offset-4 hover:text-muted-foreground;
     }
 }
+
+/* The editor's remove control sits on the photo. A pointer reveals it on hover;
+   a phone has no hover, so this query does not match and the control stays visible. */
+@media (hover: hover) {
+  .group:not(:hover) > .editor-photo-remove:not(:focus-visible) {
+    opacity: 0;
+  }
+}
