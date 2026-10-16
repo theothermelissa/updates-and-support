@@ -1,5 +1,21 @@
 import { randomBytes } from "node:crypto";
-import { v2 as cloudinary } from "cloudinary";
+
+// The SDK reads CLOUDINARY_URL as it loads and throws if the value is malformed. Loaded here
+// rather than imported, so a bad value breaks only video notes, never the feed around them.
+type Sdk = typeof import("cloudinary").v2;
+let loaded: Sdk | null = null;
+let loadError: unknown = null;
+try {
+  loaded = (await import("cloudinary")).v2;
+} catch (err) {
+  loadError = err;
+  console.error("Cloudinary couldn't load; check CLOUDINARY_URL.", err);
+}
+
+function sdk(): Sdk {
+  if (!loaded) throw new Error(`Cloudinary isn't available: ${(loadError as Error)?.message}`);
+  return loaded;
+}
 
 // Everything the app asks of its video host. Server functions take a store, so tests pass a
 // fake and never reach Cloudinary.
@@ -34,7 +50,7 @@ export function newPublicId(): string {
 
 // Reads CLOUDINARY_URL (cloudinary://key:secret@cloud), which the SDK picks up itself.
 function config() {
-  const { cloud_name, api_key, api_secret } = cloudinary.config();
+  const { cloud_name, api_key, api_secret } = sdk().config();
   if (!cloud_name || !api_key || !api_secret) throw new Error("CLOUDINARY_URL is not set");
   return { cloud_name, api_key, api_secret };
 }
@@ -53,7 +69,7 @@ export const cloudinaryStore: VideoStore = {
       eager_async: "true",
       timestamp: String(Math.round(Date.now() / 1000)),
     };
-    const signature = cloudinary.utils.api_sign_request(signed, api_secret);
+    const signature = sdk().utils.api_sign_request(signed, api_secret);
     return {
       url: `https://api.cloudinary.com/v1_1/${cloud_name}/video/upload`,
       fields: { ...signed, signature, api_key },
@@ -64,7 +80,7 @@ export const cloudinaryStore: VideoStore = {
     config();
     try {
       // The length comes only with media_metadata.
-      const resource = await cloudinary.api.resource(publicId, { ...KIND, media_metadata: true });
+      const resource = await sdk().api.resource(publicId, { ...KIND, media_metadata: true });
       return typeof resource.duration === "number" ? { duration: resource.duration } : null;
     } catch (err) {
       if (httpCode(err) === 404) return null;
@@ -76,7 +92,7 @@ export const cloudinaryStore: VideoStore = {
     config();
     for (let i = 0; i < publicIds.length; i += 100) {
       // Cloudinary's limit per request. Missing videos come back "not_found" without an error.
-      await cloudinary.api.delete_resources(publicIds.slice(i, i + 100), { ...KIND, invalidate: true });
+      await sdk().api.delete_resources(publicIds.slice(i, i + 100), { ...KIND, invalidate: true });
     }
   },
 
@@ -85,7 +101,7 @@ export const cloudinaryStore: VideoStore = {
     // urlAnalytics: false leaves off the SDK's usage parameter, which reports to Cloudinary
     // which SDK made the link.
     const link = (raw_transformation: string, format: string) =>
-      cloudinary.url(publicId, { ...KIND, sign_url: true, secure: true, urlAnalytics: false, raw_transformation, format });
+      sdk().url(publicId, { ...KIND, sign_url: true, secure: true, urlAnalytics: false, raw_transformation, format });
     return { src: link(VIDEO, "mp4"), poster: link(POSTER, "jpg") };
   },
 };

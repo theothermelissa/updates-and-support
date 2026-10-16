@@ -19,8 +19,9 @@ export type Note = {
   updateId: string;
   // Empty for a video note.
   body: string;
-  // A video note's signed links to its video and still.
-  video: { src: string; poster: string } | null;
+  // A video note's signed links to its video and still, or `unavailable` when the server
+  // couldn't make them.
+  video: { src: string; poster: string } | { unavailable: true } | null;
   color: NoteColor;
   authorName: string;
   authorIsFamily: boolean;
