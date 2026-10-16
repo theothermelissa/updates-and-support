@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentFrom, docFromText, shownContent, textOf, validDoc } from "./richText.js";
+import { contentFrom, docFromText, photoCount, shownContent, textOf, validDoc } from "./richText.js";
 
 const text = (t: string, marks?: unknown[]) => (marks ? { type: "text", text: t, marks } : { type: "text", text: t });
 const p = (...content: unknown[]) => (content.length ? { type: "paragraph", content } : { type: "paragraph" });
@@ -184,5 +184,70 @@ describe("shownContent", () => {
     expect(shownContent(d, "Changed")).toEqual(doc(p(text("Changed"))));
     expect(shownContent(null, "Old")).toEqual(doc(p(text("Old"))));
     expect(shownContent({ type: "doc", content: "nonsense" }, "Fallback")).toEqual(doc(p(text("Fallback"))));
+  });
+});
+
+describe("photos", () => {
+  const on = { placeholders: true };
+  const photo = (attrs: unknown) => ({ type: "photo", attrs });
+  const grey = (caption = "") => photo({ caption, placeholder: true });
+  const refusesWith = (input: unknown, settings = on) =>
+    expect(() => validDoc(input, settings)).toThrow(expect.objectContaining({ status: 400 }));
+
+  it("accepts placeholders with and without captions, trimming captions and dropping url", () => {
+    expect(validDoc(doc(p(text("Before")), grey("  At the park  "), photo({ caption: "", placeholder: true, url: null }), p(text("After"))), on)).toEqual(
+      doc(p(text("Before")), grey("At the park"), grey(), p(text("After"))),
+    );
+  });
+
+  it("accepts an update that is only photos", () => {
+    expect(validDoc(doc(grey()), on)).toEqual(doc(grey()));
+  });
+
+  it("refuses placeholders while they're off", () => {
+    refusesWith(doc(p(text("x")), grey()), { placeholders: false });
+    refusesWith(doc(grey()), { placeholders: false });
+    expect(() => validDoc(doc(grey()))).toThrow(/turned off/);
+  });
+
+  it("refuses captions over 300 characters or not text", () => {
+    expect(() => validDoc(doc(grey(`  ${"x".repeat(300)}  `)), on)).not.toThrow();
+    refusesWith(doc(grey("x".repeat(301))));
+    refusesWith(doc(photo({ caption: 5, placeholder: true })));
+    refusesWith(doc(photo({ caption: null, placeholder: true })));
+    refusesWith(doc(photo({ placeholder: true })));
+  });
+
+  it("refuses a seventh photo", () => {
+    expect(() => validDoc(doc(...Array.from({ length: 6 }, () => grey())), on)).not.toThrow();
+    refusesWith(doc(...Array.from({ length: 7 }, () => grey())));
+  });
+
+  it("refuses photos in a list, and anything but a placeholder so far", () => {
+    refusesWith(doc(ul(li(p(text("x")), grey()))));
+    refusesWith(doc(ul(li(grey()))));
+    refusesWith(doc(p(grey())));
+    for (const attrs of [
+      { caption: "", placeholder: false },
+      { caption: "", placeholder: "true" },
+      { caption: "" },
+      { caption: "", placeholder: true, publicId: "families/x/abc" },
+      { caption: "", placeholder: false, publicId: "families/x/abc" },
+      { caption: "", publicId: "families/x/abc" },
+      { caption: "", placeholder: true, publicId: null },
+      { caption: "", placeholder: true, src: "https://tracker.example/pixel.gif" },
+      null,
+    ]) {
+      refusesWith(doc(photo(attrs)));
+    }
+    refusesWith(doc({ type: "photo" }));
+    refusesWith(doc({ ...grey(), content: [] }));
+  });
+
+  it("writes photos into the plain text and counts them", () => {
+    const d = validDoc(doc(p(text("Hi")), grey("Beach"), grey()), on);
+    expect(textOf(d)).toBe("Hi\n\n[Photo: Beach]\n\n[Photo]");
+    expect(photoCount(d)).toBe(2);
+    expect(photoCount(validDoc(doc(p(text("Hi")))))).toBe(0);
   });
 });

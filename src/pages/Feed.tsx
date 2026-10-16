@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { api } from "../api.js";
+import { api, type Me } from "../api.js";
 import type { Note } from "../notes.js";
 import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
 
 // Supporters never load the editor; family members load it when they first write or edit.
 const RichEditor = lazy(() => import("../editor/RichEditor.js"));
+
+type PhotoMode = Me["family"]["photos"];
 
 type Update = {
   id: string;
@@ -31,7 +33,13 @@ const NOTES_SHOWN = 6;
 
 // canEdit: the viewer is a family member. name: theirs, or null until they give one with a
 // note; onNamed passes it back once a note sets it.
-export function Feed(props: { slug: string; canEdit: boolean; name: string | null; onNamed: (name: string) => void }) {
+export function Feed(props: {
+  slug: string;
+  canEdit: boolean;
+  photos: PhotoMode;
+  name: string | null;
+  onNamed: (name: string) => void;
+}) {
   const { slug, canEdit } = props;
   const [updates, setUpdates] = useState<Update[] | null>(null);
   const [error, setError] = useState("");
@@ -74,7 +82,7 @@ export function Feed(props: { slug: string; canEdit: boolean; name: string | nul
     <section className="space-y-6">
       {canEdit && (
         <div className={UPDATE_WIDTH}>
-          <PostForm onPost={(content, notify) => change("updates", "POST", { content, notify })} />
+          <PostForm photos={props.photos} onPost={(content, notify) => change("updates", "POST", { content, notify })} />
         </div>
       )}
       {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -84,6 +92,7 @@ export function Feed(props: { slug: string; canEdit: boolean; name: string | nul
           key={update.id}
           update={update}
           canEdit={canEdit}
+          photos={props.photos}
           onEdit={(content) => change(`updates/${update.id}`, "PATCH", { content })}
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
@@ -97,7 +106,7 @@ export function Feed(props: { slug: string; canEdit: boolean; name: string | nul
   );
 }
 
-function PostForm({ onPost }: { onPost: (content: unknown, notify: boolean) => Promise<boolean> }) {
+function PostForm({ photos, onPost }: { photos: PhotoMode; onPost: (content: unknown, notify: boolean) => Promise<boolean> }) {
   const [content, setContent] = useState<unknown>(null);
   const [notify, setNotify] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -124,7 +133,7 @@ function PostForm({ onPost }: { onPost: (content: unknown, notify: boolean) => P
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
           <EditorSlot>
-            <RichEditor key={editorKey} onChange={setContent} />
+            <RichEditor key={editorKey} photos={photos} onChange={setContent} />
           </EditorSlot>
           <Label>
             <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} />
@@ -140,6 +149,7 @@ function PostForm({ onPost }: { onPost: (content: unknown, notify: boolean) => P
 function UpdateItem(props: {
   update: Update;
   canEdit: boolean;
+  photos: PhotoMode;
   onEdit: (content: unknown) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
@@ -184,7 +194,7 @@ function UpdateItem(props: {
         <CardContent className="text-base">
           {editing ? (
             <EditorSlot>
-              <RichEditor initial={update.content} onChange={setDraft} />
+              <RichEditor initial={update.content} photos={props.photos} onChange={setDraft} />
             </EditorSlot>
           ) : (
             <RichText doc={update.content} />

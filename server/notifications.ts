@@ -7,10 +7,10 @@ import type { Person } from "./generated/prisma/client.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Emails every verified, opted-in, active supporter of the family that there's a new update.
-// Family members, supporters without an email, and unverified, opted-out, or removed
-// supporters get nothing.
-export async function notifySupporters(db: Db, send: SendEmails, familyId: string): Promise<void> {
+// Emails every verified, opted-in, active supporter of the family that there's a new update,
+// with how many photos it has. Family members, supporters without an email, and unverified,
+// opted-out, or removed supporters get nothing.
+export async function notifySupporters(db: Db, send: SendEmails, familyId: string, photos = 0): Promise<void> {
   const family = await db.family.findUniqueOrThrow({
     where: { id: familyId },
     include: {
@@ -31,7 +31,7 @@ export async function notifySupporters(db: Db, send: SendEmails, familyId: strin
     family.people.flatMap(({ email, unsubscribeToken }) =>
       email
         ? [
-            notificationEmail(email, family.displayName, {
+            notificationEmail(email, family.displayName, photos, {
               site: `${appUrl()}${familyHomePath(family.slug)}`,
               unsubscribePage: `${base}/unsubscribe#token=${unsubscribeToken}`,
               oneClickUnsubscribe: `${appUrl()}/api/f/${family.slug}/unsubscribe?token=${unsubscribeToken}`,

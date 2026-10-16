@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { RequestError } from "../../server/errors.js";
 import { createUpdate, deleteUpdate, editUpdate, listUpdates } from "../../server/updates.js";
 import { createTestDb } from "./db.js";
@@ -190,4 +190,47 @@ it("refuses an empty or oversized update", async () => {
   await expect(createUpdate(db, ana!, { content: doc("x".repeat(20_001)) })).rejects.toMatchObject({ status: 400 });
   await expect(createUpdate(db, ana!, {})).rejects.toMatchObject({ status: 400 });
   expect(await db.update.count()).toBe(0);
+});
+
+describe("placeholder photos", () => {
+  const on = { placeholders: true };
+  const photo = (caption: string) => ({ type: "photo", attrs: { caption, placeholder: true } });
+  const withPhoto = (caption: string) => ({
+    type: "doc",
+    content: [doc("Before").content[0], photo(caption), doc("After").content[0]],
+  });
+
+  it("round-trips text and photos, showing captions to supporters but not to another family", async () => {
+    const { family, people: [ana] } = await makeFamily(db, "Rivera");
+    const { people: [chidi] } = await makeFamily(db, "Okafor", ["Chidi"]);
+    const sam = await db.person.create({ data: { familyId: family.id, role: "supporter", name: "Sam Friend" } });
+    await createUpdate(db, ana!, { content: withPhoto("Rivera beach day") }, undefined, on);
+    await createUpdate(db, chidi!, { content: doc("Okafor news") });
+
+    const [seen] = await listUpdates(db, sam);
+    expect(seen!.content).toEqual(withPhoto("Rivera beach day"));
+    expect(seen!.body).toBe("Before\n\n[Photo: Rivera beach day]\n\nAfter");
+    expect(JSON.stringify(await listUpdates(db, chidi!))).not.toContain("Rivera beach day");
+  });
+
+  it("accepts an update that is only a photo", async () => {
+    const { people: [ana] } = await makeFamily(db, "Rivera");
+    const update = await createUpdate(db, ana!, { content: { type: "doc", content: [photo("")] } }, undefined, on);
+    expect(update.body).toBe("[Photo]");
+  });
+
+  it("refuses placeholders while they're off, storing and changing nothing", async () => {
+    const { people: [ana] } = await makeFamily(db, "Rivera");
+    await expect(createUpdate(db, ana!, { content: withPhoto("x") })).rejects.toMatchObject({ status: 400 });
+    expect(await db.update.count()).toBe(0);
+
+    const update = await createUpdate(db, ana!, { content: withPhoto("Kept") }, undefined, on);
+    await expect(editUpdate(db, ana!, update.id, { content: withPhoto("Changed") })).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringContaining("Placeholder photos are turned off"),
+    });
+    const stored = await db.update.findUniqueOrThrow({ where: { id: update.id } });
+    expect(stored.content).toEqual(withPhoto("Kept"));
+    expect(stored.editedAt).toBeNull();
+  });
 });

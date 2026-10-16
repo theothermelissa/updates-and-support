@@ -76,6 +76,22 @@ it("doesn't turn selected text into a link to another scheme when an address is 
   expect(JSON.stringify(editor.getJSON())).toContain('"href":"https://example.com/x"');
 });
 
+it("never creates a photo from pasted HTML", () => {
+  const sent = paste('<figure data-photo=""><img src="https://example.com/a.jpg"><figcaption>Cap</figcaption></figure><p>Text</p>');
+  expect(JSON.stringify(sent)).not.toContain('"photo"');
+  expect(JSON.stringify(sent)).toContain("Text");
+});
+
+it("adds photos only at the top level, in a form the server accepts with placeholders on", () => {
+  editor = new Editor({ extensions, element: document.createElement("div"), content: "<ul><li><p>Item</p></li></ul>" });
+  editor.commands.setTextSelection(3);
+  editor.chain().insertContent({ type: "photo", attrs: { caption: "", placeholder: true } }).run();
+  const json = editor.getJSON();
+  expect(json.content?.map((n) => n.type)).toContain("photo");
+  expect(JSON.stringify(json.content?.find((n) => n.type === "bulletList"))).not.toContain("photo");
+  expect(() => validDoc(cleanDoc(json), { placeholders: true })).not.toThrow();
+});
+
 it("sends a link the server would refuse as plain text", () => {
   const sent = cleanDoc({
     type: "doc",
