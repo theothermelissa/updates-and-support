@@ -1,7 +1,7 @@
 import { MessageSquareHeartIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
-import { EmptyNoteCard, NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
+import { EmptyNoteButton, NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { ReactionControls } from "@/components/reactions";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
@@ -315,7 +315,7 @@ function UpdateItem(props: {
       {noteCount === 0 && (
         // Only on a wide screen, where notes sit beside the update; on a phone it would crowd the feed.
         <aside className="hidden min-w-0 flex-1 lg:block" aria-label="Notes">
-          <EmptyNoteCard onLeave={() => setWriting(true)} />
+          <EmptyNoteButton onLeave={() => setWriting(true)} />
         </aside>
       )}
       {noteCount > 0 && (

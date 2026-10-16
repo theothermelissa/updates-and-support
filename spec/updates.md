@@ -72,7 +72,7 @@ Each person has at most one reaction on a given update, and at most one on a giv
 
 The React button and the summary work the same way on an update and on a note.
 
-- **A React button.** It says "React" until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
+- **A React button.** It's round and shows a heart with a plus until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
 - **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
 
 On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the signature, with the time and **Delete** (see "Reacting to a note").
@@ -97,7 +97,7 @@ A note is either a written note or a video note. It has:
 
 ### Leaving a note
 
-Each update's footer has a "Leave a note" button, in the same row as React. It opens a dialog with two tabs, "Written note" and "Video note," starting on "Written note," which has a text box. Below either tab are a row of the palette's colors with one chosen at random and the name, then "Leave note" for a written note or "Post" for a video. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
+Each update's footer has a round "Leave a note" button showing a speech bubble with a heart, in the same row as React. It opens a dialog with two tabs, "Written note" and "Video note," starting on "Written note," which has a text box. Below either tab are a row of the palette's colors with one chosen at random and the name, then "Leave note" for a written note or "Post" for a video. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
 
 A note needs a name. The dialog shows "Your name": filled in and read-only for anyone who already has one, and empty for a supporter who hasn't given one. A name entered there goes on their record, so their later notes and reactions show it too, and the feed's email form later shows it the same way, filled in and read-only. The dialog never asks for an email.
 
@@ -123,7 +123,7 @@ Video notes are stored and delivered by Cloudinary, which also converts them to 
 
 An update's notes are always shown, newest first, as colored cards: beside the update's card on a wide screen, and below it on a phone. Up to six are shown; when there are more, a "See all 14 notes" link opens the wall showing only that update's notes.
 
-On a wide screen, an update with no notes has an empty note card beside it instead: note-sized and filled with the palette's Oak color, with a "Leave a note" button at its bottom left, where a note's React button sits. The button opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an empty card under every note-less update would crowd the feed; the footer's button serves instead. The empty card goes away when the update's first note appears, including when that note arrives through the feed's regular check.
+On a wide screen, an update with no notes has a round "Leave a note" button beside it instead, at the top, filled with the palette's Oak color. It opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an extra button under every note-less update would crowd the feed; the footer's button serves instead. The button goes away when the update's first note appears, including when that note arrives through the feed's regular check.
 
 ### The wall
 

@@ -25,7 +25,6 @@ export function NoteCard(props: {
   const colors = PALETTE[note.color];
   return (
     <Bubble
-      as="article"
       color={note.color}
       className={cn("text-base", note.video ? "space-y-2 p-1.5 pb-4" : "space-y-3 p-4")}
       style={{ color: colors.text }}
@@ -66,15 +65,20 @@ export function NoteCard(props: {
   );
 }
 
-// Holds a note's place beside an update with none yet: an Oak card with a button that opens
-// the note dialog, where a note's React button sits.
-export function EmptyNoteCard({ onLeave }: { onLeave: () => void }) {
+// Holds a note's place beside an update with none yet: a round "Leave a note" button in the
+// palette's Oak color that opens the note dialog.
+export function EmptyNoteButton({ onLeave }: { onLeave: () => void }) {
+  const colors = PALETTE.oak;
   return (
-    <Bubble color="oak" className="flex min-h-36 flex-col items-start justify-end p-4">
-      <Button variant="outline" className="size-11 rounded-full [&_svg]:size-5" aria-label="Leave a note" onClick={onLeave}>
-        <MessageSquareHeartIcon aria-hidden />
-      </Button>
-    </Bubble>
+    <Button
+      variant="outline"
+      className="size-11 rounded-full [&_svg]:size-5"
+      style={{ backgroundColor: colors.fill, color: colors.text, borderColor: `${colors.text}33` }}
+      aria-label="Leave a note"
+      onClick={onLeave}
+    >
+      <MessageSquareHeartIcon aria-hidden />
+    </Button>
   );
 }
 
@@ -85,17 +89,15 @@ const TAIL_HEIGHT = 12;
 // square bottom-left corner runs down into a tail. The outer element leaves room below for
 // the tail, so it never overlaps whatever comes next.
 function Bubble(props: {
-  as?: "article" | "div";
   color: NoteColor;
   className?: string;
   style?: React.CSSProperties;
   children: React.ReactNode;
 }) {
-  const Outer = props.as ?? "div";
   const colors = PALETTE[props.color];
   const border = `${colors.text}33`;
   return (
-    <Outer className="relative break-inside-avoid" style={{ paddingBottom: TAIL_HEIGHT }}>
+    <article className="relative break-inside-avoid" style={{ paddingBottom: TAIL_HEIGHT }}>
       <div
         className={cn("rounded-xl rounded-bl-none border", props.className)}
         style={{ backgroundColor: colors.fill, borderColor: border, ...props.style }}
@@ -114,7 +116,7 @@ function Bubble(props: {
         <path d={`M0 0V${TAIL_HEIGHT + 0.5}L${TAIL_WIDTH + 1} 0Z`} fill={colors.fill} />
         <path d={`M0.5 1V${TAIL_HEIGHT}L${TAIL_WIDTH} 0.5`} fill="none" stroke={border} strokeLinejoin="round" />
       </svg>
-    </Outer>
+    </article>
   );
 }
 
