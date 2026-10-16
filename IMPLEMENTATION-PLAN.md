@@ -6,7 +6,7 @@ Spec: [spec/updates.md → Notes beside an update](spec/updates.md#notes-beside-
 
 One front-end change in `src/`; no server, schema, or API changes.
 
-1. **`src/components/notes.tsx`**: add `EmptyNoteCard({ onLeave })`, a note-sized card with the same rounding and padding as a written `NoteCard`. It uses `PALETTE.oak.fill` for the background, a dashed border in `PALETTE.oak.text` at low opacity, and a centered "Leave a note" outline button, with a minimum height so it reads as a card rather than a strip.
+1. **`src/components/notes.tsx`**: add `EmptyNoteCard({ onLeave })`, a note-sized card with the same rounding and padding as a written `NoteCard`. It uses `PALETTE.oak.fill` for the background and the same faint border as a note, with a "Leave a note" outline button at its bottom left, where a note's React button sits, and a minimum height so it reads as a card rather than a strip.
 2. **`src/pages/Feed.tsx`**: in `UpdateCard`, when `noteCount === 0`, render the empty card inside an `<aside>` that is `hidden lg:block`, so phones and tablets don't show it. Its button calls `setWriting(true)`, which opens the existing `NoteDialog`.
 
 The live feed swaps the empty card for the first note on its own, because both come from `update.notes`.

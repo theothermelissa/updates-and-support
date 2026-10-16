@@ -64,14 +64,14 @@ export function NoteCard(props: {
   );
 }
 
-// Holds a note's place beside an update with none yet: an Oak card, dashed so it reads as
-// empty, with a button that opens the note dialog.
+// Holds a note's place beside an update with none yet: an Oak card with a button that opens
+// the note dialog, where a note's React button sits.
 export function EmptyNoteCard({ onLeave }: { onLeave: () => void }) {
   const colors = PALETTE.oak;
   return (
     <div
-      className="flex min-h-36 items-center justify-center rounded-xl border-2 border-dashed p-4"
-      style={{ backgroundColor: colors.fill, borderColor: `${colors.text}4D` }}
+      className="flex min-h-36 flex-col items-start justify-end rounded-xl border p-4"
+      style={{ backgroundColor: colors.fill, borderColor: `${colors.text}33` }}
     >
       <Button variant="outline" className="h-11 rounded-full px-4" onClick={onLeave}>
         Leave a note
