@@ -6,7 +6,7 @@ const reactions = (r: Partial<Reactions>): Reactions => ({ count: 0, kinds: [], 
 describe("summary", () => {
   it("gives up to three emoji, most-used first", () => {
     expect(summary(reactions({ count: 2, kinds: ["heart", "strong"] }))).toBe("❤️💪");
-    expect(summary(reactions({ count: 7, kinds: ["heart", "pray", "laugh", "hug"] }))).toBe("❤️🙏😂");
+    expect(summary(reactions({ count: 7, kinds: ["heart", "clap", "laugh", "hug"] }))).toBe("❤️👏😂");
   });
 
   it("puts the total in the accessible name", () => {
@@ -21,12 +21,12 @@ describe("whoReacted", () => {
       count: 5,
       mine: "heart",
       named: [
-        { name: "Ana Rivera", kind: "pray" },
+        { name: "Ana Rivera", kind: "clap" },
         { name: "Sam Friend", kind: "heart" },
       ],
     });
-    expect(whoReacted(r)).toEqual(["You ❤️", "Ana Rivera 🙏", "Sam Friend ❤️", "and 2 others"]);
-    expect(whoReacted({ ...r, count: 4 })).toEqual(["You ❤️", "Ana Rivera 🙏", "Sam Friend ❤️", "and 1 other"]);
+    expect(whoReacted(r)).toEqual(["You ❤️", "Ana Rivera 👏", "Sam Friend ❤️", "and 2 others"]);
+    expect(whoReacted({ ...r, count: 4 })).toEqual(["You ❤️", "Ana Rivera 👏", "Sam Friend ❤️", "and 1 other"]);
   });
 
   it("lists only named people when everyone has a name", () => {

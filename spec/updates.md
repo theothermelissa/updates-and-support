@@ -41,7 +41,7 @@ A family member can edit any update in their family, including one written by an
 
 ## Deleting
 
-A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions, notes, and photos (see "Photos"), and its notes' videos are deleted from Cloudinary. When the update has notes, the confirmation says they'll be deleted too.
+A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions, its notes and the reactions on those notes, and its photos (see "Photos"), and its notes' videos are deleted from Cloudinary. When the update has notes, the confirmation says they'll be deleted too.
 
 ## Photos
 
@@ -64,17 +64,18 @@ There is no reordering, no video, and supporters can't add photos.
 
 ## Reactions
 
-Everyone signed in to the family can react to an update: family members and supporters, including readers who haven't given a name or email. There are six reactions, shown only as emoji, with no labels: ❤️ 🙏 🤗 💪 🎉 😂.
+Everyone signed in to the family can react to an update or a note: family members and supporters, including readers who haven't given a name or email. There are six reactions, shown only as emoji, with no labels: ❤️ 🤗 💪 👏 🎉 😂.
 
-Each person has at most one reaction per update. Picking a different emoji replaces it; picking the same one again removes it. Editing an update keeps its reactions.
+Each person has at most one reaction on a given update, and at most one on a given note. Picking a different emoji replaces it; picking the same one again removes it. Editing an update keeps its reactions and its notes' reactions.
 
-In the update's footer, side by side:
+The React button and the summary work the same way on an update and on a note.
 
-- **A React button.** It says "React" until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
-- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🙏😂": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under the footer actions, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
-- **Leave a note**, and for family members **Edit** and **Delete** (see "The feed").
+- **A React button.** It says "React" until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
+- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
 
-**Everyone who can read the feed sees who reacted.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it.
+On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the signature, with the time and **Delete** (see "Reacting to a note").
+
+**Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it.
 
 A removed person's reactions are neither shown nor counted, and a removed person can't react, since they can't sign in. Restoring a supporter brings their reactions back.
 
@@ -124,9 +125,13 @@ An update's notes are always shown, newest first, as colored cards: beside the u
 
 The wall, at `/f/<slug>/wall` and linked from "Notes" beside the feed's menu, shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
 
+### Reacting to a note
+
+The rules, the React button, the tray, and the summary are the ones under "Reactions." They sit under the signature, with the time and Delete on that row.
+
 ### Deleting a note
 
-The note's author, and any family member, can delete a note, after an inline confirmation. Deletion is permanent. Deleting a video note also deletes its video from Cloudinary, as does deleting the update it's on. Notes can't be edited; to change one, delete it and leave another.
+The note's author, and any family member, can delete a note, after an inline confirmation. Deletion is permanent, and it deletes the note's reactions. Deleting a video note also deletes its video from Cloudinary, as does deleting the update it's on. Notes can't be edited; to change one, delete it and leave another.
 
 A removed person's notes are neither shown nor counted, and a removed person can't leave a note, since they can't sign in. Restoring a supporter brings their notes back.
 
