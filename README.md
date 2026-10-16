@@ -72,7 +72,7 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 | `RESEND_API_KEY` | A Resend API key with sending access. Production and Preview. |
 | `EMAIL_FROM` | `Updates and Support <updates@mail.orbul.com>`. Production and Preview. |
 | `APP_URL` | The production address, `https://orbul.com`. Production only; previews use their own deployment address. |
-| `ROOT_FAMILY_SLUG` | Optional. The address of the family shown at the site's root, `/`. Production only. |
+| `ROOT_FAMILY_SLUG` | Optional. The address of the family shown at the site's root, `/`. Production: the real family's address, kept only in Vercel. Preview: `testfamily-preview`, so each preview's root shows the test family. |
 | `FAMILY_REDIRECTS` | Optional. Old family addresses that lead to current ones, as `old=new` pairs separated by commas. Production only. |
 
 **Checking a pull request's preview** needs four local settings in `.env` (see `.env.example`): `PREVIEW_FAMILY_EMAIL`, the preview branch's two connection strings, and Vercel's bypass secret. Vercel keeps its own copies of the connection strings Sensitive, so they can't be pulled from there.

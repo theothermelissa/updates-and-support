@@ -14,6 +14,8 @@ An update has:
 
 The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, body, and an "edited" mark if it was edited.
 
+A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), a link to the People page for family members, and "Sign out."
+
 Family members also see a "Post an update" button and, on each update, "Edit" and "Delete."
 
 ## Posting
