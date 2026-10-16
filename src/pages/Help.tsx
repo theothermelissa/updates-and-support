@@ -74,12 +74,14 @@ export function Help({ slug }: { slug: string }) {
     >
       <p className="text-sm text-muted-foreground">{me.family.displayName}</p>
       {error && <ErrorMessage>{error}</ErrorMessage>}
+      {family && <h2 className="text-lg font-semibold tracking-tight">Add a Request</h2>}
       {family && (
         <RequestForm
           submitLabel="Add request"
           onSubmit={(fields) => change("help", "POST", fields).then((r) => r.ok)}
         />
       )}
+      {family && <h2 className="pt-4 text-lg font-semibold tracking-tight">All Requests</h2>}
       {requests.length === 0 && !family && <p>There aren't any requests right now.</p>}
       <div className="space-y-4">
         {sortRequests(requests, new Date()).map((request) => (
@@ -338,26 +340,10 @@ function RequestForm(props: {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Field label="What would help">
+      <h3 className="font-semibold">What Would Help</h3>
+      <Field label="Description">
         <Textarea value={body} onChange={(e) => setBody(e.target.value)} required maxLength={2000} rows={4} />
       </Field>
-      <Label>
-        <Checkbox checked={many} onCheckedChange={(checked) => setMany(checked === true)} />
-        Everyone can help with this
-      </Label>
-      {!many && (
-        <Field label="How many people can help">
-          <Input
-            type="number"
-            min={1}
-            max={99}
-            value={count}
-            onChange={(e) => setCount(e.target.value)}
-            required
-            className="w-24"
-          />
-        </Field>
-      )}
       <div className="flex flex-wrap gap-4">
         <Field label="Date (optional)">
           <Input
@@ -374,6 +360,24 @@ function RequestForm(props: {
           <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} disabled={!date} className="w-36" />
         </Field>
       </div>
+      <h3 className="pt-2 font-semibold">Who Can Help</h3>
+      <Label>
+        <Checkbox checked={many} onCheckedChange={(checked) => setMany(checked === true)} />
+        Everyone can help with this
+      </Label>
+      {!many && (
+        <Field label="How many people are needed?">
+          <Input
+            type="number"
+            min={1}
+            max={99}
+            value={count}
+            onChange={(e) => setCount(e.target.value)}
+            required
+            className="w-24"
+          />
+        </Field>
+      )}
       <Label>
         <Checkbox checked={requireName} onCheckedChange={(checked) => setRequireName(checked === true)} />
         Require name
