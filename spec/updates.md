@@ -7,26 +7,41 @@ How a family posts updates, how everyone reads and reacts to them, and how suppo
 An update has:
 
 - a **body** of plain text. Line breaks are kept, and web addresses become links. There is no other formatting.
+- up to six **photos**, in the order they were added (see "Photos")
 - its **author**, a family member, shown by name
 - when it was **posted**, and when it was last **edited**, if ever
 
 ## The feed
 
-The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, body, and an "edited" mark if it was edited.
+The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, body, photos, and an "edited" mark if it was edited. Photos appear under the body at the full width of the feed, one after another.
 
 Family members also see a "Post an update" button and, on each update, "Edit" and "Delete."
 
 ## Posting
 
-A family member writes the body and posts. The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone.
+A family member writes the body, optionally adds photos, and posts. The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone.
 
 ## Editing
 
-A family member can edit any update in their family, including one written by another family member. Editing changes the body, records the edit time, and never sends notifications.
+A family member can edit any update in their family, including one written by another family member. Editing changes the body and photos, records the edit time, and never sends notifications.
 
 ## Deleting
 
-A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions.
+A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions and its photos (see "Photos").
+
+## Photos
+
+Photos are available once the operator turns them on with a setting (see the README). Until then, no photo controls appear anywhere and the server accepts no photos.
+
+**Adding.** The post form has an "Add photos" button that opens the device's photo picker, for up to six photos per update, including iPhone photos. Each photo uploads as soon as it's chosen and shows as a small preview with a "Remove" button; "Post" waits until every chosen photo has finished uploading. A photo over 10 MB is refused with a message saying so. When editing, a family member can remove any of the update's photos and add more, up to six in all; removing a photo deletes it permanently when the edit is saved.
+
+**Who sees them.** Exactly the people who can see the update (see [access.md](access.md)). Photos never appear on the gate or in emails.
+
+**How they're kept private.** Photos are stored privately with Cloudinary, a photo-hosting service. Nobody can view a stored photo without a link the server signs with the app's secret key, and the server creates those links only in the feed it sends to someone signed in to the family. A link can't be guessed or altered to show a different photo or size. Every link shows a resized copy, at most 1600 pixels wide, with the photo's embedded details, such as location and camera, removed; the file as uploaded is never shown.
+
+**Deleting.** Deleting an update, or removing a photo while editing, deletes the photo from Cloudinary as well as from the app. If Cloudinary can't be reached at that moment, the photo still disappears from the app at once (see "Stated limits" in [access.md](access.md)).
+
+There are no captions, reordering, or videos, and supporters can't add photos.
 
 ## Reactions
 
@@ -49,7 +64,7 @@ Reacting never asks for confirmation, and reactions send no emails or notificati
 
 When an update is posted with "Notify supporters by email" checked, every supporter of the family who has a verified email, has notifications on, and has not been removed gets one email.
 
-- The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content.
+- The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content. When the update has photos, the subject says how many, as in "Sam's Updates has a new update (2 photos)"; the photos themselves are never attached or linked.
 - Each email has an unsubscribe link to a page with a "Turn off notifications" button, which works without signing in. The button, rather than the link alone, keeps email security scanners that open links from unsubscribing people.
 - Each email also has `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so mail apps that offer their own "Unsubscribe" button can turn notifications off in one click. Scanners don't send that request.
 - Family members are not notified.

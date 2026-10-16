@@ -25,6 +25,7 @@ A person who is both a supporter and a family member of different families has a
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
 - Family members add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
 - Family members post, edit, and delete text updates; everyone signed in to the family reads them in a feed. → [updates.md](updates.md)
+- Family members can add up to six photos to an update, once the operator turns photos on. → [updates.md](updates.md#photos)
 - Everyone signed in to the family can give each update one reaction from a fixed set of six emoji, and sees who reacted. → [updates.md](updates.md#reactions)
 - Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
 
@@ -33,7 +34,6 @@ A person who is both a supporter and a family member of different families has a
 These are planned but not yet specified. Each gets its own area spec when it becomes the next feature.
 
 - Self-serve family signup, replacing the operator script.
-- Photos in updates.
 - Export of a family's updates, so they never lose their journal if the app goes away.
 - Supporter messages of support to the family, visible to other supporters (the support wall), including unread markers, filtering by supporter and time, and text search for the family.
 - Video messages from supporters.
@@ -46,12 +46,12 @@ These apply to every page, endpoint, and feature.
 
 - **Health information is sensitive.** Update content is shown only to people signed in to that family, and only the server decides who that is. See [access.md](access.md).
 - **Families are isolated.** Being signed in to one family grants nothing in another, and no page or response reveals one family's data to another family's members or supporters.
-- **No third-party tracking.** No analytics, tracking pixels, ad scripts, or third-party embeds on any page.
+- **No third-party tracking.** No analytics, tracking pixels, ad scripts, or third-party embeds on any page. The one outside service pages talk to is Cloudinary, which stores and serves photos (see [updates.md](updates.md#photos)); pages send it no referrer.
 - **Not indexable.** Every page sends `noindex`, and `robots.txt` disallows all crawling.
-- **Emails carry no update content.** Notification and sign-in emails name the family and contain a link, nothing more, because emails are forwarded and shown in lock-screen previews.
+- **Emails carry no update content.** Notification and sign-in emails name the family and contain a link, nothing more, because emails are forwarded and shown in lock-screen previews. The one exception is how many photos a new update has.
 - **Email is sent through Resend** from a subdomain of `orbul.com`, so deliverability problems cannot affect the root domain.
 
 ## Area specs
 
 - [access.md](access.md): families, the community question, supporter and family member sign-in, sessions, and managing people.
-- [updates.md](updates.md): posting, editing, and deleting updates, the feed, and notifications.
+- [updates.md](updates.md): posting, editing, and deleting updates, photos, the feed, reactions, and notifications.
