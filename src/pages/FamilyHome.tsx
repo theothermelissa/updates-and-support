@@ -1,18 +1,9 @@
-import { MenuIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { ErrorMessage, Field, PageShell } from "@/components/page";
+import { FamilyShell } from "@/components/familyShell";
+import { ErrorMessage, Field } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
@@ -22,7 +13,6 @@ import { NotFound } from "./NotFound.js";
 
 export function FamilyHome({ slug }: { slug: string }) {
   const [me, setMe] = useState<Me | "loading" | "signed-out" | "not-found">("loading");
-  const [editingName, setEditingName] = useState(false);
 
   function load() {
     api<Me>(slug, "me").then(({ status, data }) => {
@@ -41,67 +31,12 @@ export function FamilyHome({ slug }: { slug: string }) {
     if (status === 200 && typeof me === "object") setMe({ ...me, person: data.person });
   }
 
-  async function signOut() {
-    await api(slug, "auth/sign-out", { method: "POST" });
-    setMe("signed-out");
-  }
-
   if (me === "loading") return null;
   if (me === "not-found") return <NotFound />;
   if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
-  const signedIn = me;
-
-  async function saveName(name: string): Promise<string | null> {
-    const { status, data } = await api<{ person?: Me["person"]; error?: string }>(slug, "name", {
-      method: "POST",
-      body: { name },
-    });
-    if (status !== 200 || !data?.person) return data?.error ?? "Something went wrong. Please try again.";
-    setMe({ ...signedIn, person: data.person });
-    return null;
-  }
 
   return (
-    <PageShell
-      wide
-      title={me.family.displayName}
-      actions={
-        <>
-          {(me.person.role === "family" || me.family.hasHelpRequests) && (
-            <Button variant="ghost" size="sm" asChild>
-              <a href={`/f/${slug}/help`}>How to help</a>
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" asChild>
-            <a href={`/f/${slug}/wall`}>Notes</a>
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Menu" className="text-muted-foreground">
-                <MenuIcon className="size-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {me.person.name && (
-                <>
-                  <DropdownMenuLabel className="font-normal text-muted-foreground">
-                    Signed in as <span className="font-medium text-foreground">{me.person.name}</span>
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem onSelect={() => setEditingName(true)}>Edit name</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              {me.person.role === "family" && (
-                <DropdownMenuItem asChild>
-                  <a href={`/f/${slug}/people`}>People</a>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onSelect={signOut}>Sign out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </>
-      }
-    >
+    <FamilyShell slug={slug} me={me} page="updates" onNameChanged={load}>
       {me.person.role === "supporter" && !me.person.email && (
         <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
       )}
@@ -130,65 +65,7 @@ export function FamilyHome({ slug }: { slug: string }) {
         onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
         onSignedOut={() => setMe("signed-out")}
       />
-      {me.person.name && (
-        <NameDialog open={editingName} name={me.person.name} onOpenChange={setEditingName} onSave={saveName} />
-      )}
-    </PageShell>
-  );
-}
-
-// The menu's "Edit name". Saving stores the name; cancelling leaves it as it was.
-function NameDialog(props: {
-  open: boolean;
-  name: string;
-  onOpenChange: (open: boolean) => void;
-  onSave: (name: string) => Promise<string | null>;
-}) {
-  return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        {props.open && <NameForm {...props} />}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function NameForm(props: {
-  name: string;
-  onOpenChange: (open: boolean) => void;
-  onSave: (name: string) => Promise<string | null>;
-}) {
-  const [name, setName] = useState(props.name);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    const failed = await props.onSave(name);
-    setBusy(false);
-    if (failed) setError(failed);
-    else props.onOpenChange(false);
-  }
-
-  return (
-    <form onSubmit={submit} className="grid gap-4">
-      <DialogHeader>
-        <DialogTitle>Edit name</DialogTitle>
-        <DialogDescription>This is the name people see for you.</DialogDescription>
-      </DialogHeader>
-      <Field label="Your name">
-        <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
-      </Field>
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
-          Cancel
-        </Button>
-        <Button disabled={busy || !name.trim()}>Save</Button>
-      </DialogFooter>
-    </form>
+    </FamilyShell>
   );
 }
 

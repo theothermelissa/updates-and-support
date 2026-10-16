@@ -3,8 +3,9 @@ import { getDb } from "../../../../server/db.js";
 import { createHelp, listHelp } from "../../../../server/help.js";
 import { familyContext, jsonBody, methodNotAllowed, sendRequestError, unauthorized } from "../../../../server/http.js";
 
-// GET: the family's requests, oldest first.
-// POST { body, slots }: a family member adds one. slots is a number, or null for "many."
+// GET: the family's requests, oldest first; the page orders them by date.
+// POST { body, slots, requireName, requireEmail, date, time }: a family member adds one.
+// slots is a number, or null for "many." date is "YYYY-MM-DD" and time "HH:MM", or null.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET" && req.method !== "POST") return methodNotAllowed(res);
   const ctx = await familyContext(getDb(), req, res);

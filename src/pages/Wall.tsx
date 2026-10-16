@@ -1,5 +1,6 @@
 import { XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { FamilyShell, PageTitle } from "@/components/familyShell";
 import { ErrorMessage, PageShell } from "@/components/page";
 import { NoteCard } from "@/components/notes";
 import { Button } from "@/components/ui/button";
@@ -79,16 +80,8 @@ export function Wall({ slug }: { slug: string }) {
   const shown = filter ? notes.filter((n) => n.updateId === filter) : notes;
   const update = updates.find((u) => u.id === filter);
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 py-8">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Notes of support</h1>
-          <p className="text-sm text-muted-foreground">{me.family.displayName}</p>
-        </div>
-        <Button variant="outline" size="sm" asChild>
-          <a href={`/f/${slug}`}>Back to updates</a>
-        </Button>
-      </header>
+    <FamilyShell slug={slug} me={me} page="notes" onNameChanged={load}>
+      <PageTitle>Notes of support</PageTitle>
       {filter && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/50 px-4 py-3 text-sm">
           <p className="min-w-0">
@@ -126,7 +119,7 @@ export function Wall({ slug }: { slug: string }) {
           ))}
         </div>
       )}
-    </main>
+    </FamilyShell>
   );
 }
 
