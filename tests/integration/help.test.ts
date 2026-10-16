@@ -37,8 +37,16 @@ async function setUp() {
   return { family, okafor, ana, luis, chidi, sam: sam.person, samToken: sam.sessionToken, olu };
 }
 
-function add(person: Person, body = "A ride to the clinic", slots: number | null = 1) {
-  return createHelp(db, person, { body, slots });
+// A request's other fields, as the form sends them by default.
+const DEFAULTS = { requireName: true, requireEmail: false, date: null, time: null };
+
+function add(
+  person: Person,
+  body = "A ride to the clinic",
+  slots: number | null = 1,
+  extra: Partial<Record<keyof typeof DEFAULTS, unknown>> = {},
+) {
+  return createHelp(db, person, { ...DEFAULTS, body, slots, ...extra });
 }
 
 const names = (request: HelpRequestView) => request.offers.map((offer) => [offer.name, offer.mine]);
@@ -48,7 +56,7 @@ describe("who can write a request", () => {
     const { ana, sam } = await setUp();
     const request = await add(ana, "First", 2);
     await offerHelp(db, undefined, sam, request.id, { helping: true });
-    const edited = await updateHelp(db, ana, request.id, { body: "Second", slots: 3 });
+    const edited = await updateHelp(db, ana, request.id, { ...DEFAULTS, body: "Second", slots: 3 });
     expect(edited.body).toBe("Second");
     expect(edited.slots).toBe(3);
     expect(edited.offers).toHaveLength(1);
@@ -63,9 +71,9 @@ describe("who can write a request", () => {
     const { ana, sam, chidi } = await setUp();
     const request = await add(ana);
     await expect(add(sam)).rejects.toMatchObject({ status: 403 });
-    await expect(updateHelp(db, sam, request.id, { body: "No", slots: 1 })).rejects.toMatchObject({ status: 403 });
+    await expect(updateHelp(db, sam, request.id, { ...DEFAULTS, body: "No", slots: 1 })).rejects.toMatchObject({ status: 403 });
     await expect(deleteHelp(db, sam, request.id)).rejects.toMatchObject({ status: 403 });
-    await expect(updateHelp(db, chidi, request.id, { body: "No", slots: 1 })).rejects.toMatchObject({ status: 404 });
+    await expect(updateHelp(db, chidi, request.id, { ...DEFAULTS, body: "No", slots: 1 })).rejects.toMatchObject({ status: 404 });
     await expect(deleteHelp(db, chidi, request.id)).rejects.toMatchObject({ status: 404 });
     expect(await db.helpRequest.count()).toBe(1);
     expect((await listHelp(db, ana))[0]!.body).toBe("A ride to the clinic");
@@ -80,7 +88,7 @@ describe("who can write a request", () => {
       { body: "Ok", slots: 100 },
       { body: "Ok", slots: "2" },
     ]) {
-      await expect(createHelp(db, ana, input)).rejects.toMatchObject({ status: 400 });
+      await expect(createHelp(db, ana, { ...DEFAULTS, ...input })).rejects.toMatchObject({ status: 400 });
     }
     expect(await db.helpRequest.count()).toBe(0);
     for (let i = 0; i < 100; i++) await add(ana, `Request ${i}`, null);
@@ -211,7 +219,7 @@ describe("offering", () => {
     await offerHelp(db, undefined, luis, request.id, { helping: true });
     expect((await listHelp(db, ana))[0]!.full).toBe(false);
 
-    const lowered = await updateHelp(db, ana, request.id, { body: "Open", slots: 1 });
+    const lowered = await updateHelp(db, ana, request.id, { ...DEFAULTS, body: "Open", slots: 1 });
     expect(lowered.offers).toHaveLength(2);
     expect(lowered.full).toBe(true);
     await expect(offerHelp(db, undefined, ana, request.id, { helping: true })).rejects.toMatchObject({ status: 409 });
@@ -245,6 +253,124 @@ describe("offering", () => {
     await expect(competing).rejects.toMatchObject({ status: 409 });
     const offers = await db.helpOffer.findMany();
     expect(offers.map((offer) => offer.personId)).toEqual([luis.id]);
+  });
+});
+
+describe("requirements and dates", () => {
+  it("stores a request's requirements, date, and time, and refuses bad or missing ones", async () => {
+    const { ana } = await setUp();
+    const request = await add(ana, "Dinner", 1, { requireName: false, requireEmail: true, date: "2026-10-17", time: "17:30" });
+    expect(request).toMatchObject({ requireName: false, requireEmail: true, date: "2026-10-17", time: "17:30" });
+    const cleared = await updateHelp(db, ana, request.id, { ...DEFAULTS, body: "Dinner", slots: 1, date: "", time: "" });
+    expect(cleared).toMatchObject({ requireName: true, requireEmail: false, date: null, time: null });
+
+    for (const extra of [
+      { date: "2026-02-30" },
+      { date: "10/17/2026" },
+      { date: "2026-10-17", time: "24:00" },
+      { date: "2026-10-17", time: "5:30" },
+      { time: "17:30" },
+      { requireName: "yes" },
+      { requireEmail: undefined },
+      { date: undefined },
+    ]) {
+      await expect(add(ana, "Bad", 1, extra)).rejects.toMatchObject({ status: 400 });
+      await expect(updateHelp(db, ana, request.id, { ...DEFAULTS, body: "Bad", slots: 1, ...extra })).rejects.toMatchObject({
+        status: 400,
+      });
+    }
+    // A page from before these fields existed sends only the words and places.
+    await expect(updateHelp(db, ana, request.id, { body: "Old page", slots: 1 })).rejects.toMatchObject({ status: 400 });
+    expect(await db.helpRequest.count()).toBe(1);
+    expect((await listHelp(db, ana))[0]!.body).toBe("Dinner");
+  });
+
+  it("counts an offer made without a name, and shows it to the family as nameless", async () => {
+    const { ana, sam, family } = await setUp();
+    const request = await add(ana, "Prayers tonight", 1, { requireName: false });
+    const reader = await answerCorrectly(db, family);
+    await offerHelp(db, undefined, reader.person, request.id, { helping: true });
+
+    const [forAna] = await listHelp(db, ana);
+    const [forSam] = await listHelp(db, sam);
+    expect(names(forAna!)).toEqual([[null, false]]);
+    for (const view of [forAna!, forSam!]) {
+      expect(view.offered).toBe(1);
+      expect(view.full).toBe(true);
+    }
+    await expect(offerHelp(db, undefined, sam, request.id, { helping: true })).rejects.toMatchObject({ status: 409 });
+    expect(await db.helpOffer.count()).toBe(1);
+  });
+
+  it("keeps a name already on the record, and saves none when the request doesn't need one", async () => {
+    const { ana, sam, family } = await setUp();
+    const request = await add(ana, "Be kind to a stranger", null, { requireName: false });
+    await offerHelp(db, undefined, sam, request.id, { helping: true });
+    const reader = await answerCorrectly(db, family, { browserId: "browser-b", network: "203.0.113.2" });
+    await offerHelp(db, undefined, reader.person, request.id, { helping: true, name: "Tess" });
+
+    expect(names((await listHelp(db, ana))[0]!)).toEqual([
+      ["Sam", false],
+      [null, false],
+    ]);
+    expect((await db.person.findUniqueOrThrow({ where: { id: reader.person.id } })).name).toBeNull();
+  });
+
+  it("requires an email from someone without one, and stores nothing when it's missing", async () => {
+    const { ana, family } = await setUp();
+    const request = await add(ana, "Pick up groceries", 2, { requireEmail: true });
+    const reader = await answerCorrectly(db, family);
+    for (const email of [undefined, "", "not an email"]) {
+      await expect(
+        offerHelp(db, undefined, reader.person, request.id, { helping: true, name: "Tess", email }),
+      ).rejects.toMatchObject({ status: 400 });
+    }
+    expect(await db.helpOffer.count()).toBe(0);
+    expect((await db.person.findUniqueOrThrow({ where: { id: reader.person.id } })).name).toBeNull();
+
+    await offerHelp(db, undefined, reader.person, request.id, { helping: true, name: "Tess", email: " Given@Offer.test " });
+    const offer = await db.helpOffer.findFirstOrThrow();
+    expect(offer.email).toBe("given@offer.test");
+    const person = await db.person.findUniqueOrThrow({ where: { id: reader.person.id } });
+    expect(person.email).toBeNull();
+    expect(person.name).toBe("Tess");
+  });
+
+  it("shows an email given with an offer only to the family", async () => {
+    const { ana, sam, family } = await setUp();
+    const request = await add(ana, "Pick up groceries", 3, { requireEmail: true });
+    const reader = await answerCorrectly(db, family);
+    const response = await offerHelp(db, undefined, reader.person, request.id, {
+      helping: true,
+      name: "Tess",
+      email: "given@offer.test",
+    });
+    await offerHelp(db, undefined, sam, request.id, { helping: true });
+    const tess = await db.person.findUniqueOrThrow({ where: { id: reader.person.id } });
+
+    expect((await listHelp(db, ana))[0]!.offers.map((o) => [o.name, o.email])).toEqual([
+      ["Tess", "given@offer.test"],
+      ["Sam", "sam@example.com"],
+    ]);
+    const [forTess] = await listHelp(db, tess);
+    expect(names(forTess!)).toEqual([["Tess", true]]);
+    for (const json of [JSON.stringify(forTess), JSON.stringify(await listHelp(db, sam)), JSON.stringify(response)]) {
+      expect(json).not.toContain("given@offer.test");
+    }
+  });
+
+  it("uses the email on the record, and stores none it didn't ask for", async () => {
+    const { ana, sam, family } = await setUp();
+    const required = await add(ana, "Pick up groceries", 2, { requireEmail: true });
+    const optional = await add(ana, "Walk the dog", 2);
+    await offerHelp(db, undefined, sam, required.id, { helping: true, email: "other@offer.test" });
+    const reader = await answerCorrectly(db, family);
+    await offerHelp(db, undefined, reader.person, optional.id, { helping: true, name: "Tess", email: "given@offer.test" });
+
+    expect((await db.helpOffer.findMany()).map((offer) => offer.email)).toEqual([null, null]);
+    const [forRequired, forOptional] = await listHelp(db, ana);
+    expect(forRequired!.offers.map((o) => o.email)).toEqual(["sam@example.com"]);
+    expect(forOptional!.offers.map((o) => o.email)).toEqual([null]);
   });
 });
 
