@@ -29,7 +29,7 @@ A person who is both a supporter and a family member of different families has a
 - A family member posts an update as a video of any length, up to 100 MB, with the same recorder as a video note. A video update has no text and can't be edited. → [updates.md](updates.md#video-updates)
 - Everyone signed in to the family can give each update and each note one reaction from a fixed set of six emoji, and sees who reacted. → [updates.md](updates.md#reactions)
 - Everyone signed in to the family can leave colored notes of support on an update, written or as a video of up to 60 seconds, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)
-- Family members post ways to help, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered. → [updates.md](updates.md#how-to-help)
+- Family members post ways to help, each with an optional date and time and a choice of whether offers need a name or an email, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered. → [updates.md](updates.md#how-to-help)
 - Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
 
 ### Later
@@ -61,6 +61,7 @@ The app follows the visual language of Vercel's Geist design system: the Geist S
 
 - **Light mode only.**
 - **Phone first.** Every page works at 360px wide without the page scrolling sideways. A wide table may scroll sideways within its own box.
+- **One frame for a family's pages.** Every page signed in to a family (the feed, How to help, the wall, and People) shares the same centered container and, at its top, the family's navigation bar: the family's name on the left and, on the right, "Updates," "How to help," "Notes," and a menu button. The current page's link is highlighted. Family members always see "How to help"; supporters see it once the family has at least one request. The menu shows who is signed in (when they've given a name), "Edit name" for anyone who has a name (see [access.md](access.md#changing-your-name)), a link to the People page for family members, and "Sign out." On a phone the links wrap below the name. Each page other than the feed starts with its own heading under the bar.
 - **Confirmations happen on the page.** A destructive action, such as deleting an update or removing a person, asks for confirmation with an inline "Yes / Cancel" step, never a browser dialog, because some in-app email browsers silently suppress dialogs.
 
 ## Area specs

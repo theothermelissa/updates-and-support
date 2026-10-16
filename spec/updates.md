@@ -21,7 +21,7 @@ There are no headings, colors, fonts, tables, code, quotes, or images from other
 
 The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Text appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. A video update shows its video instead (see "Video updates"). Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
-A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), "Edit name" for anyone who has a name (see [access.md](access.md#changing-your-name)), a link to the People page for family members, and "Sign out." Beside it, a "Notes" link leads to the family's wall (see "The wall"). Immediately to its left, a "How to help" link leads to the family's requests (see "How to help"). Family members always see that link. Supporters see it once the family has at least one request.
+The feed, like every page signed in to a family, sits under the family's navigation bar (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
 Each update has a footer of actions in one row: **React** and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
@@ -139,7 +139,7 @@ On a wide screen, an update with no notes has a round "Leave a note" button besi
 
 ### The wall
 
-The wall, at `/f/<slug>/wall` and linked from "Notes" beside the feed's menu, shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
+The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is headed "Notes of support." It shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
 
 ### Reacting to a note
 
@@ -153,18 +153,34 @@ A removed person's notes are neither shown nor counted, and a removed person can
 
 ## How to help
 
-The page at `/f/<slug>/help`, titled "How to help," lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
+The page at `/f/<slug>/help`, headed "How to Help" under the navigation bar, lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
 
 A request has:
 
 - a **body** of plain text, 1 to 2,000 characters. Line breaks are kept, and web addresses become links.
 - how many people can take it: **1**, a **number up to 99**, or **many** (the form's "Everyone can help with this" checkbox). Right after the body's last word, in smaller, lighter text, the page shows the count in parentheses, kept together on one line (see "Who has offered").
+- whether an offer needs a name: the form's **Require name** checkbox, checked by default. Unchecked suits requests like prayers or "be kind to a stranger," where anyone can offer without saying who they are.
+- whether an offer needs an email: the form's **Require email** checkbox, unchecked by default, for when the family needs a way to reach whoever helps.
+- an optional **date**, and an optional **time** that can be given only with a date. Both are kept exactly as typed, with no time zone, because the need happens where the family is. They show above the body in smaller, lighter text, such as "Sat, Oct 17" or "Sat, Oct 17 · 5:30 PM."
 
-Family members add, edit, and delete requests. Only they see the form for adding one, at the top of the page above the requests. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Deleting asks for confirmation on the page and removes every offer on that request. Requests are shown oldest first. A family can have at most 100.
+Family members add, edit, and delete requests. Only they see the form for adding one, at the top of the page under the heading "What Would Help," with the requests below it under "All Requests." The form starts with an unlabeled box for the description, then the date and time, then "Who Can Help," with "Everyone can help with this," "How many people are needed?", Require name, and Require email. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Editing can change anything, including the checkboxes, date, and time; offers already made stay as they are. Deleting asks for confirmation on the page and removes every offer on that request. A family can have at most 100.
+
+Requests are shown in this order:
+
+1. Upcoming dated requests, soonest first. On the same date, one without a time comes before those with one.
+2. Requests without a date, oldest first.
+3. Past requests, most recently past first.
+
+A request is past, by the clock of the device showing it, from the start of the next day when it has only a date, and from its time when it has both. A past request's text is struck through, like a covered one but without the check, and **✋ I can help with this** is hidden from anyone who hasn't offered on it. Since "past" depends on the viewer's clock, the server doesn't refuse offers on a past request.
 
 ### Offering to help
 
-Anyone signed in can press **✋ I can help with this**. An offer needs a name, the same way a note does: when the person doesn't have one, pressing the button shows "Your name" on that request with a Cancel button, and pressing it again with a name makes the offer and puts that name on their record. A person who already has a name offers under it and can't change it here. The page never asks for an email. Once someone has offered, the button goes away and "👍 You are helping" takes its place, whether or not the request is covered.
+Anyone signed in can press **✋ I can help with this**. What happens next depends on the request and on what's already on the person's record:
+
+- **A name**, when the request requires one and the person doesn't have one: pressing the button shows "Your name" on that request, the same way a note asks. The name goes on their record. A person who already has a name offers under it and can't change it here. On a request that doesn't require a name, a person without one offers without one, and a person with one still offers under it.
+- **An email**, when the request requires one and the person has no email on their record: pressing the button shows "Your email," saying only the family will see it. It's kept with that offer, as a way for the family to reach them, and nowhere else: it doesn't go on their record, isn't verified, sends nothing, doesn't appear on the People page, and doesn't sign them up for notifications. Withdrawing deletes it. A person with an email on their record, verified or not, isn't asked; the family sees that one.
+
+When both are needed, both fields show together, with a Cancel button, and pressing the button again makes the offer. Once someone has offered, the button goes away and "👍 You are helping" takes its place, whether or not the request is covered.
 
 To withdraw, the person presses the **×** just after "You are helping." On a computer it appears when resting on that line or reaching it with the keyboard; on a touch screen it is always shown. It opens a dialog, "Need to bow out? No problem — thanks for letting us know," with **Cancel** and **Confirm**. Confirming withdraws the offer.
 
@@ -182,9 +198,9 @@ A covered request's text is struck through, with a green check in front of it. T
 
 **✋ I can help with this** is hidden from anyone who hasn't offered on a covered request.
 
-Only family members see who offered. Under each request, they see the list of everyone who offered, with **Remove** on each name. Removing asks for confirmation. Supporters see the count and their own "You are helping," never anyone else's name, so offering doesn't invite comparison between supporters, while the family can still coordinate with and thank each person.
+Only family members see who offered. Under each request, they see the list of everyone who offered, with **Remove** on each name. An offer from someone without a name shows as "Someone"; once they give a name, for example on another request, it shows that name, as reactions do. Removing asks for confirmation. Supporters see the count and their own "You are helping," never anyone else's name, so offering doesn't invite comparison between supporters, while the family can still coordinate with and thank each person.
 
-The server sends a supporter only the number of offers and whether one of them is theirs: never another person's name, email, or id. Family members see each name, with the person's email beside it when they have one. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
+The server sends a supporter only the number of offers and whether one of them is theirs: never another person's name, email, or id, and not the email they gave with their own offer. Family members see each name, with an email beside it when there is one: the email given with the offer, or else the one on the person's record. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
 
 A removed person's offers are hidden and don't fill a place, and a removed person can't offer. Restoring a supporter brings their offers back, which can leave a numbered request with more offers than its number.
 

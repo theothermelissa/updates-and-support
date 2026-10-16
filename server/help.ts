@@ -1,7 +1,7 @@
 import type { Db } from "./db.js";
 import { appUrl, helpOfferEmail, type SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
-import { validName } from "./families.js";
+import { isValidEmail, normalizeEmail, validName } from "./families.js";
 import type { Person, Prisma } from "./generated/prisma/client.js";
 import { requireFamilyMember } from "./people.js";
 
@@ -9,12 +9,12 @@ const MAX_BODY = 2_000;
 const MAX_SLOTS = 99;
 const MAX_REQUESTS = 100;
 
-// What a viewer sees of an offer. A supporter gets only their own offer. Family members get
-// every offer, with the email when there is one and the offer's id so they can remove it.
-// Never a person's id.
+// What a viewer sees of an offer. A supporter gets only their own offer, with no email.
+// Family members get every offer, with the email when there is one and the offer's id so
+// they can remove it. Never a person's id. A null name is an offer made without one.
 export type HelpOfferView = {
   id: string | null;
-  name: string;
+  name: string | null;
   mine: boolean;
   email: string | null;
 };
@@ -24,6 +24,11 @@ export type HelpRequestView = {
   body: string;
   // Null means as many people as want to may offer.
   slots: number | null;
+  requireName: boolean;
+  requireEmail: boolean;
+  // As typed: "YYYY-MM-DD" and "HH:MM", with no time zone.
+  date: string | null;
+  time: string | null;
   full: boolean;
   // How many active offers there are, including any the viewer can't see.
   offered: number;
@@ -33,10 +38,11 @@ export type HelpRequestView = {
 const requestInclude = (familyId: string) =>
   ({
     offers: {
-      where: { person: { familyId, removedAt: null, name: { not: null } } },
+      where: { person: { familyId, removedAt: null } },
       select: {
         id: true,
         personId: true,
+        email: true,
         createdAt: true,
         person: { select: { name: true, email: true } },
       },
@@ -59,13 +65,18 @@ function view(request: LoadedRequest, viewer: Person): HelpRequestView {
     id: request.id,
     body: request.body,
     slots: request.slots,
+    requireName: request.requireName,
+    requireEmail: request.requireEmail,
+    date: request.date,
+    time: request.time,
     full: request.slots !== null && offers.length >= request.slots,
     offered: offers.length,
     offers: visible.map((offer) => ({
       id: family ? offer.id : null,
-      name: offer.person.name ?? "",
+      name: offer.person.name,
       mine: offer.personId === viewer.id,
-      email: family ? offer.person.email : null,
+      // An offer has its own email only when the person had none on their record.
+      email: family ? (offer.email ?? offer.person.email) : null,
     })),
   };
 }
@@ -109,18 +120,64 @@ function validSlots(slots: unknown): number | null {
   return slots;
 }
 
-export async function createHelp(
-  db: Db,
-  person: Person,
-  input: { body?: unknown; slots?: unknown },
-): Promise<HelpRequestView> {
+function validFlag(value: unknown, label: string): boolean {
+  if (typeof value !== "boolean") throw new RequestError(400, `Expected ${label}: true or false`);
+  return value;
+}
+
+// A real calendar date as "YYYY-MM-DD", or null (an empty field sends "").
+function validDate(value: unknown): string | null {
+  if (value === null || value === "") return null;
+  const match = typeof value === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  if (match) {
+    const [y, m, d] = match.slice(1).map(Number) as [number, number, number];
+    const check = new Date(Date.UTC(y, m - 1, d));
+    if (check.getUTCFullYear() === y && check.getUTCMonth() === m - 1 && check.getUTCDate() === d) return value as string;
+  }
+  throw new RequestError(400, "Please enter a valid date.");
+}
+
+// "HH:MM" on a 24-hour clock, or null. A time needs a date.
+function validTime(value: unknown, date: string | null): string | null {
+  if (value === null || value === "") return null;
+  if (typeof value !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+    throw new RequestError(400, "Please enter a valid time.");
+  }
+  if (date === null) throw new RequestError(400, "A time needs a date.");
+  return value;
+}
+
+type RequestInput = {
+  body?: unknown;
+  slots?: unknown;
+  requireName?: unknown;
+  requireEmail?: unknown;
+  date?: unknown;
+  time?: unknown;
+};
+
+// Every field is required, so a page from before a field existed can't clear it by leaving it out.
+function validRequest(input: RequestInput) {
+  const fields = [input.requireName, input.requireEmail, input.date, input.time];
+  if (fields.includes(undefined)) throw new RequestError(400, "This page is out of date. Please refresh it and try again.");
+  const date = validDate(input.date);
+  return {
+    body: validBody(input.body),
+    slots: validSlots(input.slots),
+    requireName: validFlag(input.requireName, "requireName"),
+    requireEmail: validFlag(input.requireEmail, "requireEmail"),
+    date,
+    time: validTime(input.time, date),
+  };
+}
+
+export async function createHelp(db: Db, person: Person, input: RequestInput): Promise<HelpRequestView> {
   requireFamilyMember(person);
-  const body = validBody(input.body);
-  const slots = validSlots(input.slots);
+  const data = validRequest(input);
   const existing = await db.helpRequest.count({ where: { familyId: person.familyId } });
   if (existing >= MAX_REQUESTS) throw new RequestError(400, `A family can have at most ${MAX_REQUESTS} requests.`);
   const request = await db.helpRequest.create({
-    data: { familyId: person.familyId, body, slots },
+    data: { familyId: person.familyId, ...data },
     include: requestInclude(person.familyId),
   });
   return view(request, person);
@@ -130,14 +187,13 @@ export async function updateHelp(
   db: Db,
   person: Person,
   id: string,
-  input: { body?: unknown; slots?: unknown },
+  input: RequestInput,
 ): Promise<HelpRequestView> {
   requireFamilyMember(person);
-  const body = validBody(input.body);
-  const slots = validSlots(input.slots);
+  const data = validRequest(input);
   const { count } = await db.helpRequest.updateMany({
     where: { id, familyId: person.familyId },
-    data: { body, slots },
+    data,
   });
   if (count === 0) throw new RequestError(404, "Request not found");
   const request = await loadOne(db, person, id);
@@ -162,25 +218,30 @@ export async function removeOffer(db: Db, person: Person, requestId: string, off
 }
 
 // The signed-in person offers, or withdraws. A numbered request locks its row so two people
-// can't take the last place. A new offer on a numbered request emails the other family members,
-// with no request text; a failed email leaves the offer in place.
+// can't take the last place. A name is asked for only when the request requires one and the
+// person has none; an email only when the request requires one and the person has none on
+// their record, and it's kept on the offer alone. Both are checked before anything is written.
+// A new offer on a numbered request emails the other family members, with no request text;
+// a failed email leaves the offer in place.
 export async function offerHelp(
   db: Db,
   send: SendEmails | undefined,
   person: Person,
   requestId: string,
-  input: { helping?: unknown; name?: unknown },
+  input: { helping?: unknown; name?: unknown; email?: unknown },
 ): Promise<{ name: string }> {
   if (typeof input.helping !== "boolean") throw new RequestError(400, "Expected helping: true or false");
   const outcome = await db.$transaction(async (tx) => {
-    const [request] = await tx.$queryRaw<{ id: string; slots: number | null }[]>`
-      SELECT id, slots FROM "HelpRequest"
+    const [request] = await tx.$queryRaw<
+      { id: string; slots: number | null; requireName: boolean; requireEmail: boolean }[]
+    >`
+      SELECT id, slots, "requireName", "requireEmail" FROM "HelpRequest"
       WHERE id = ${requestId} AND "familyId" = ${person.familyId}
       FOR UPDATE`;
     if (!request) throw new RequestError(404, "Request not found");
 
-    const [author] = await tx.$queryRaw<{ name: string | null }[]>`
-      SELECT name FROM "Person"
+    const [author] = await tx.$queryRaw<{ name: string | null; email: string | null }[]>`
+      SELECT name, email FROM "Person"
       WHERE id = ${person.id} AND "familyId" = ${person.familyId} AND "removedAt" IS NULL
       FOR UPDATE`;
     if (!author) throw new RequestError(403, "You can't offer help here");
@@ -195,16 +256,18 @@ export async function offerHelp(
     });
     if (!already && request.slots !== null) {
       const taken = await tx.helpOffer.count({
-        where: { requestId, person: { familyId: person.familyId, removedAt: null, name: { not: null } } },
+        where: { requestId, person: { familyId: person.familyId, removedAt: null } },
       });
       if (taken >= request.slots) throw new RequestError(409, "Someone else just took this");
     }
 
-    const name = author.name ?? validName(input.name);
-    if (!author.name) await tx.person.update({ where: { id: person.id }, data: { name } });
+    const newName = !author.name && request.requireName ? validName(input.name) : null;
+    const email = !already && request.requireEmail && !author.email ? validOfferEmail(input.email) : null;
+    const name = author.name ?? newName ?? "";
+    if (newName) await tx.person.update({ where: { id: person.id }, data: { name: newName } });
     if (already) return { name, notify: false };
 
-    await tx.helpOffer.create({ data: { requestId, personId: person.id } });
+    await tx.helpOffer.create({ data: { requestId, personId: person.id, email } });
     return { name, notify: request.slots !== null };
   });
 
@@ -216,6 +279,12 @@ export async function offerHelp(
     }
   }
   return { name: outcome.name };
+}
+
+function validOfferEmail(email: unknown): string {
+  const clean = typeof email === "string" ? normalizeEmail(email) : "";
+  if (!isValidEmail(clean)) throw new RequestError(400, "Please enter a valid email address.");
+  return clean;
 }
 
 async function emailFamily(db: Db, send: SendEmails, familyId: string, exceptPersonId: string) {

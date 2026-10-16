@@ -218,9 +218,16 @@ model VideoUpload {
 model HelpRequest {
   id        String   @id @default(cuid())
   familyId  String
-  body      String
-  slots     Int?
-  createdAt DateTime @default(now())
+  body         String
+  slots        Int?
+  // Whether an offer needs a name, and an email when the person has none on their record.
+  requireName  Boolean  @default(true)
+  requireEmail Boolean  @default(false)
+  // Exactly as typed, with no time zone: the need happens where the family is.
+  // "YYYY-MM-DD" and "HH:MM"; a time only with a date.
+  date         String?
+  time         String?
+  createdAt    DateTime @default(now())
 
   family Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
   offers HelpOffer[]
@@ -233,6 +240,9 @@ model HelpOffer {
   id        String   @id @default(cuid())
   requestId String
   personId  String
+  // Given with this offer when the request requires an email and the person has none on
+  // their record. Only family members see it; it isn't verified and goes nowhere else.
+  email     String?
   createdAt DateTime @default(now())
 
   request HelpRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)

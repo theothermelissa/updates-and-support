@@ -2,9 +2,6 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
-- **2026-10-16** — Add requirements and a date to help requests.
-  Agreed with Melissa while refining How to help. The add form gets "Require name" (on by default; off allows offers with no name, for asks like prayers, and the family sees "Someone") and "Require email" (stored as contact info for the family, not confirmed). Supporters still never see each other's offers. An optional date and an optional time, stored as typed with no time zone, because the need happens where the family is. Order: upcoming dated requests soonest first, then undated oldest first, then past ones. A past request is struck through: a date alone the day after, a date and time at that time on the viewer's clock. "Require phone" waits for the phone-notifications work. Needs a migration, spec, plan, and access tests.
-
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
   A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
 
@@ -23,7 +20,7 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 - **2026-10-15** — End a supporter's other sessions when their email is first verified.
   Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser. A family member's Verify on the People page deliberately signs no one out, so this applies only when the email's owner confirms.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
-  A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link. Once help requests can require an email, that email is stored unconfirmed too, and a typo there leaves the family with a wrong address; include it.
+  A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
 - **2026-10-14** — Lock the person row when signing in by magic link.
   A sign-in can race promotion or removal and keep a session that `deleteMany` missed. The verify-link sign-in for added supporters gets a `FOR UPDATE` lock; `signInWithLink` should reuse it.
 - **2026-10-14** — Show People page messages next to the form that caused them.
@@ -34,6 +31,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   Once a network reaches 30 wrong answers in an hour, every answer from it is refused, correct ones included. So one guesser on hospital or school Wi-Fi can lock out real supporters there for an hour. Watch for reports after the gate ships; if it happens, consider letting a correct answer through for a browser with no wrong answers of its own.
 - **2026-10-12** — Run a manual Reddit search on CaringBridge and alternatives.
   The CaringBridge research agent couldn't reach Reddit, so the user-sentiment findings in `docs/research/caringbridge.md` come from app stores, review sites, and forums. Worth 20 minutes before the post-MVP features are specced.
+- **2026-10-16** — Add "Require phone" to help requests.
+  Cut from help request requirements because the phone-notifications work owns phone numbers. It would mirror Require email: asked only when the record has none, stored on the offer, seen only by family.
 - **2026-10-12** — Give `/` a simple page.
   The site root shows "Not found" because the spec only defines family addresses. A one-line page naming the app would reassure a stray visitor, without listing or linking any family.
 - **2026-10-12** — Switch database URLs to `sslmode=verify-full`.
