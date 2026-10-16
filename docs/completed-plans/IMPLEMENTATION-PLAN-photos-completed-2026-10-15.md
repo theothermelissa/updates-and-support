@@ -6,7 +6,7 @@ Three slices, each its own PR and sized for one session, each safe to ship on it
 
 1. **Formatted text.** A Tiptap editor replaces the plain text box; updates are stored as a validated document. Existing updates look the same.
 2. **Photos with placeholders.** A photo node with captions, the photo count in email subjects, and grey placeholder photos on test sites (`PHOTO_PLACEHOLDERS=1`), so Melissa can try everything on a preview without a Cloudinary key. Production has no photo controls.
-3. **Real photos with Cloudinary.** Signed uploads, signed links, deletion from Cloudinary, the loading box. Off in production until Melissa sets the key (see "Turning photos on").
+3. **Real photos with Cloudinary.** Signed uploads, signed links, deletion from Cloudinary, the loading box. Real photos turn on wherever `CLOUDINARY_URL` is set, including production if that variable is already set for video notes. The preview account's key stays off Production (see "Turning photos on").
 
 ## Design
 
@@ -23,7 +23,7 @@ An update's content is a Tiptap (ProseMirror) JSON document, stored in a new nul
 
 Tiptap 3.32 writes every link attribute, nulls included (`href`, `target`, `rel`, `class`, `title`), and may write marks on a `hardBreak`; the validator accepts exactly those known extras and drops them, keeping only `href`. Every other key, node type, mark type, or attribute is a 400. If a Tiptap upgrade adds an attribute, the jsdom test below fails before users see 400s.
 
-**Validation** is a small hand-written function, `validDoc(input, settings, familyId)` in `server/richText.ts`. It walks the input and **builds a new document from the fields it checked**, so nothing it didn't look at can reach the database. On top of the shape:
+**Validation** is a small hand-written function, `validDoc(input, settings, check?)` in `server/richText.ts`. `check` is `{ familyId, kept? }`: the family the id must belong to, and the public ids already stored on the update being edited. It walks the input and **builds a new document from the fields it checked**, so nothing it didn't look at can reach the database. On top of the shape:
 - `href` must pass `allowedHref`: it parses with `new URL()`, has protocol `http:`, `https:`, or `mailto:`, is at most 2,000 characters, and contains no whitespace or control characters (so `java\nscript:` and ` javascript:` are refused rather than normalized). `allowedHref` lives in one shared file, `src/lib/links.ts` (with `linkify`, moved there), used by the validator, `docFromText`, the editor, and the renderer, so they can't disagree.
 - at most 20,000 characters of text in all (today's body limit), at most 10,000 nodes (hard breaks included; an old body can have many line breaks), at most 10 levels deep (three levels of nested lists); the walk stops at the first node past either limit, and checks a `marks` array's length before looking for repeats
 - not empty: at least one non-whitespace character of text, or (slice 2) a photo
@@ -143,13 +143,15 @@ Everything below was checked on 2026-10-15 against cloudinary.com/documentation 
 
 ## Turning photos on
 
-Use two free Cloudinary accounts: one for production, and one for previews and local work. Previews run unmerged code, so they must never hold the key that can sign links to, or delete, real families' photos.
+Photos and video notes share `CLOUDINARY_URL`. Real photos turn on wherever it is set. Production may already have it for video notes; merging turns photos on there with that existing account. Do not replace it with the preview account's key, and do not set Production as part of shipping this.
 
-1. Create both accounts. In each, open Settings → Upload and delete any **unsigned** upload preset the account came with.
-2. In each, copy the API environment variable from Settings → API Keys (`cloudinary://…`). It contains the secret: don't paste it into chat. Set the production account's with `npx vercel env add CLOUDINARY_URL production` and the preview account's with `npx vercel env add CLOUDINARY_URL preview`, pasting at the prompt. Put the preview account's in the local `.env`.
-3. Redeploy a preview and run the hand check, then redeploy production (`npx vercel redeploy <production url> --scope theothermelissa-s-team`) or merge any PR.
+Use two Cloudinary accounts: one for production, and one for previews and local work. Previews run unmerged code, so they must never hold the key that can sign links to, or delete, real families' photos.
 
-Turning photos off is unsetting the variable and redeploying. Stored photos stay in Cloudinary and come back when it's set again; photos show as grey boxes meanwhile. An update deleted while photos are off leaves its photos in Cloudinary with nothing pointing to them, so only the leftovers clean-up can find them.
+1. In each account, open Settings → Upload and delete any **unsigned** upload preset the account came with.
+2. The preview account's key belongs only in Vercel's Preview environment and in a local `.env`. It contains the secret: don't paste it into chat, and don't paste it into Production. The production account's key, if videos already use one, stays the Production value.
+3. On a preview, run the hand check below. The preview key is already set on Vercel Preview.
+
+Turning photos off is unsetting `CLOUDINARY_URL` and redeploying, which also turns video notes off. Stored photos stay in Cloudinary and come back when it's set again; photos show as grey boxes meanwhile. An update deleted while photos are off leaves its photos in Cloudinary with nothing pointing to them, so only the leftovers clean-up can find them.
 
 ## The preview database
 
@@ -181,7 +183,7 @@ The text-blocks attempt (closed PR #24) applied a `blocks` migration to the shar
 - **Test setup.** jsdom has no `ClipboardEvent`, so the paste test passes a plain `Event` to ProseMirror's `pasteHTML` and `pasteText`, which run the real paste path.
 - **Document types** live in `src/lib/doc.ts`, shared by the server and the browser.
 
-**Slice 2 implemented** on `feature/photo-placeholders` (PR #26). Melissa tested placeholders — grey photos and the X to remove a photo — on the preview on 2026-10-15 and approved shipping it. Slice 3 (real Cloudinary photos) is still unbuilt; this plan stays open.
+**Slice 2 implemented** on `feature/photo-placeholders` (PR #26). Melissa tested placeholders — grey photos and the X to remove a photo — on the preview on 2026-10-15 and approved shipping it.
 
 - **Typecheck and all unit and integration tests pass.** Each new rule was removed in turn and its test failed: the placeholder setting (unit and integration), production's refusal, the six-photo limit, the caption limit, the photo attribute allowlist, and the photo count in subjects.
 - **`photoSettingsFromEnv(env)`** takes the environment as an argument (defaulting to `process.env`), so its tests pass their own values instead of clearing variables.
@@ -191,3 +193,26 @@ The text-blocks attempt (closed PR #24) applied a `blocks` migration to the shar
 - **The editor always knows the photo node**, even when photos are off, so editing an update that has one never silently drops it; only the "Add photo" button is hidden.
 - **The 10 MB check** waits for real uploads in slice 3; a placeholder reads nothing from the chosen file.
 - **Vitest has no `@/` alias**, so `src/editor/photo.tsx` imports the UI components by relative path.
+
+**Slice 3 implemented** on `feature/cloudinary-photos`. Typecheck passes and all 263 tests pass. Each access rule was removed in turn and its test failed, then the rule was put back:
+
+- `requireFamilyMember` on the upload ticket: a supporter got 200 instead of 403.
+- The session check on `POST /photo-upload`: a missing session threw instead of returning 401.
+- The 404 when Cloudinary is unset: issuing a ticket threw instead of returning 404.
+- The family prefix on save: another family's id was stored instead of a 400.
+- Refusing a new id when Cloudinary is unset: the update was stored instead of a 400.
+- Signing a URL only when a `Photo` row exists for that update: a public id with no row got a link.
+- Rechecking the family prefix when signing: a row inserted with another family's id got a link.
+- Listing updates only for the viewer's family: the other family's feed contained the photo id.
+- The family scope on delete's row lock: deleting another family's update succeeded.
+- The family scope on edit's row lock: editing another family's update succeeded.
+
+- **Incoming strip, transformed delivery.** The signed upload includes `c_limit,w_1600,fl_force_strip`, so location and camera data are removed before Cloudinary stores the file. The feed's link is always `c_limit,w_1600/f_auto/q_auto` under `/image/authenticated/`, never the original and never `fl_keep`.
+- **`validDoc` takes `PhotoCheck`.** The ids already on the update being edited are an argument, so a saved photo stays valid after Cloudinary is turned off, and the function still doesn't read the database.
+- **Photos don't use the Cloudinary SDK.** Video notes still destroy the file before the row is removed and fail the request if Cloudinary fails. Photos destroy after the database commit, and the request still succeeds if Cloudinary fails. The two stay separate.
+- **Handler tests override `CLOUDINARY_URL`.** The integration setup loads `.env`, so the upload tests set a fake account (`abcd-secret`) and restore the previous value without printing it.
+- **The race test** holds the update's row lock, starts an edit that drops the photo, and checks that nothing is destroyed while that edit is still waiting. After the holder deletes the update, the edit is a 404 and Cloudinary is not called.
+- **Placeholders stay grey.** A saved placeholder is still a placeholder when real photos are on, and the feed gives it `url: null`. A new photo in that same update gets a signed link.
+- **Migration `20261017120000_photos`** adds `Photo` (`publicId` unique, cascade from `Update`). Placeholders are not rows.
+
+The hand check (HEIC, grey while loading, a tampered link refused, no GPS, deleted links dying) is still for a preview that uses the preview Cloudinary account, not the production one.
