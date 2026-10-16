@@ -29,7 +29,7 @@ The recorder is a `VideoRecorder` component in `src/components/recorder.tsx`, wi
   - Safari and recent Chrome record mp4. Firefox records webm.
   - Cloudinary converts any of them to mp4 for playback.
   - `videoBitsPerSecond: 2_500_000` keeps a full minute near 20MB.
-- **Countdown.** "Start recording" shows 3, 2, 1, one second each, in large type over the live view, then starts the `MediaRecorder`. During the countdown the button becomes "Cancel," which goes back to the live view.
+- **Countdown.** "Start recording" shows 3, 2, 1, one second each, in large type over the live view, then starts the `MediaRecorder`. During the countdown the button becomes "Cancel countdown," which goes back to the live view.
 - **Recording.** The recorder shows the time left out of 60 seconds ("0:42 left") and a "Stop" button. A 250ms timer measures elapsed time from the start time, so a slow tick can't stretch the limit. Recording stops at 60 seconds or at "Stop."
 - **Leaving the page stops recording.** If the page is hidden mid-recording (another tab, the phone locked, or a call), the recorder stops and goes to review with what it has. iOS suspends the camera in the background, and the recording would otherwise end in silence.
 - **Handover.** On stop, the chunks become a `File` named `video.mp4` or `video.webm`, and the form goes to review. Recordings skip the length check in `checkVideo`: they can't exceed 60 seconds, and their metadata often reports no length. The server checks the length after upload either way.
@@ -63,3 +63,16 @@ The rest is UI and timing, which the project's testing rules leave to hand and b
 - **No pause or resume while recording.** "Stop" ends the recording.
 - **No microphone level meter, and no check that the microphone is working.** Someone with a muted microphone finds out at review.
 - **No warning before posting a recording with silent audio.**
+
+## Discoveries
+
+- **What the browser pane covered.** The pane blocks the camera, so it showed the camera-unavailable state for real: the reason, and only "Upload a video." A canvas stream standing in for `getUserMedia` then exercised every recording state:
+  - the mirrored live view;
+  - the countdown, then recording with the time left;
+  - Stop;
+  - review that plays back unmirrored, with the camera tracks ended;
+  - Re-record back to the live view;
+  - Post, after which the recorded mp4 played in its card.
+
+  React's development double mount opens the camera twice; the first stream is stopped by the cleanup.
+- **"Cancel countdown."** During the countdown, a plain "Cancel" sat beside the dialog's own "Cancel," so the countdown's button says "Cancel countdown."
