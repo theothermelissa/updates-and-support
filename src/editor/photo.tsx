@@ -1,4 +1,5 @@
 import { Node, NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
+import { XIcon } from "lucide-react";
 import { Button } from "../components/ui/button.js";
 import { Input } from "../components/ui/input.js";
 
@@ -41,8 +42,15 @@ function PhotoCard({ node, updateAttributes, deleteNode }: ReactNodeViewProps) {
           aria-label="Photo caption"
           maxLength={MAX_CAPTION}
         />
-        <Button type="button" variant="outline" className="h-11" onClick={deleteNode}>
-          Remove
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-11"
+          onClick={deleteNode}
+          aria-label="Remove photo"
+        >
+          <XIcon />
         </Button>
       </div>
     </NodeViewWrapper>
