@@ -23,7 +23,7 @@ The feed is the family's main page. Everyone signed in to the family sees every 
 
 A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), a link to the People page for family members, and "Sign out." Beside it, a "Notes" link leads to the family's wall (see "The wall").
 
-Under each update are its reactions and its notes (see "Reactions" and "Notes"). Family members also see a "Post an update" button and, on each update, "Edit" and "Delete."
+Each update has a footer of actions in one row: **React** and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
 ## Writing an update
 
@@ -68,10 +68,11 @@ Everyone signed in to the family can react to an update: family members and supp
 
 Each person has at most one reaction per update. Picking a different emoji replaces it; picking the same one again removes it. Editing an update keeps its reactions.
 
-Under each update, side by side:
+In the update's footer, side by side:
 
 - **A React button.** It says "React" until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
-- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🙏😂": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under the reactions, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
+- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🙏😂": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under the footer actions, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
+- **Leave a note**, and for family members **Edit** and **Delete** (see "The feed").
 
 **Everyone who can read the feed sees who reacted.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it.
 
@@ -92,7 +93,7 @@ A note has:
 
 ### Leaving a note
 
-Each update has a "Leave a note" button. It opens a dialog with a text box, a row of the palette's colors with one chosen at random, and a "Leave note" button. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
+Each update's footer has a "Leave a note" button, in the same row as React. It opens a dialog with a text box, a row of the palette's colors with one chosen at random, and a "Leave note" button. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
 
 A note needs a name. The dialog shows "Your name": filled in and read-only for anyone who already has one, and empty for a supporter who hasn't given one. A name entered there goes on their record, so their later notes and reactions show it too, and the feed's email form later shows it the same way, filled in and read-only. The dialog never asks for an email.
 
