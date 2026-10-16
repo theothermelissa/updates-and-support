@@ -83,7 +83,7 @@ Thin handlers, as for reactions:
 - **`NoteDialog`**: shadcn `dialog` (new component, `npx shadcn add dialog`; it uses the `radix-ui` package already installed). Holds a textarea styled as the note card in its current color, a row of round color swatches (radio buttons under the hood, so they work from the keyboard and screen readers), the "Your name" field when the viewer has no name, and "Leave note" / "Cancel".
 - **Feed**: each update gets "Leave a note" and an "N notes" toggle beside the reactions; open notes render as a 1-column (phone) / 2-column (desktop) grid of `NoteCard`s. Deleting an update with notes says its notes will be deleted too.
 - **Name after the first note:** `FamilyHome` passes an `onNamed` callback down; the POST's returned `name` updates `me.person.name`, so the dialog stops asking, "Signed in as" appears, and the email form drops its name field.
-- **Wall page** `src/pages/Wall.tsx` at `/f/<slug>/wall` (added to `FAMILY_PATH` in `App.tsx`): `PageShell` with the family's name, CSS `columns-1 sm:columns-2 lg:columns-3` masonry of `NoteCard`s with `break-inside-avoid`. Signed out (401) → `location.replace` to the family's home page, which shows the gate, so Back doesn't loop. Linked as "Wall" in the feed header.
+- **Wall page** `src/pages/Wall.tsx` at `/f/<slug>/wall` (added to `FAMILY_PATH` in `App.tsx`): `PageShell` with the family's name, CSS `columns-1 sm:columns-2 lg:columns-3` masonry of `NoteCard`s with `break-inside-avoid`. Signed out (401) → `location.replace` to the family's home page, which shows the gate, so Back doesn't loop. Titled "Notes of support" with the family's name under it, and linked as "Notes" in the feed header.
 - **Email prompt** leaves out the name field when the viewer already has a name.
 
 ## Tests
@@ -116,7 +116,7 @@ Palette, `NoteCard`, `NoteDialog`, the feed's "Leave a note" and notes toggle, t
 
 **Verify:** in the browser pane at 375px and desktop width: as a nameless supporter, leave a note (asked for a name), change its color, see it under the update; leave a second without being asked; delete your own; as a family member, delete someone else's and delete an update with notes.
 
-### 3. The wall
+### 3. The wall ✅
 
 `Wall.tsx`, the route, the header link.
 
@@ -133,6 +133,7 @@ Typecheck, test, PR, CI, `npm run preview:seed` and `npm run preview`, and hand 
 - The color swatches use Radix's radio group primitive directly (from the `radix-ui` package already installed), so only shadcn's `dialog` was added. The feed's link rendering moved into a shared `LinkedText` in `src/components/page.tsx`, used by updates and notes.
 - The note dialog decides whether to ask for a name when it opens. Deciding it live made the name field vanish mid-submit, as soon as the saved name reached the page.
 - Verified in the browser pane at 375px and desktop width: a nameless reader is asked for a name once, then not again; "Signed in as" appears; the email form asks only for an email; deleting one's own note confirms inline; a family member sees Delete on every note, the "Family" marker on their own, and "Delete this update and its note?"; a name sent with a family member's note is ignored. No sideways scroll at 375px.
+- The wall's CSS columns fill top to bottom, so "newest first" reads down the first column, then the next. Verified at 375px (one column, no sideways scroll) and desktop width (two to three columns); a signed-out visit lands on the gate.
 - `src/linkify.test.ts` already covers `javascript:` and `data:` text, so the unit tests need no new linkify case.
 - Each access rule in `server/notes.ts` and `addEmail`'s name rule was removed in turn; every removal failed at least one test.
 

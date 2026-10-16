@@ -43,6 +43,9 @@ export function FamilyHome({ slug }: { slug: string }) {
       title={me.family.displayName}
       actions={
         <>
+          <Button variant="ghost" size="sm" asChild>
+            <a href={`/f/${slug}/wall`}>Notes</a>
+          </Button>
           {me.person.role === "family" && (
             <Button variant="ghost" size="sm" asChild>
               <a href={`/f/${slug}/people`}>People</a>
