@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ErrorMessage, Field, PageShell } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ import { NotFound } from "./NotFound.js";
 
 export function FamilyHome({ slug }: { slug: string }) {
   const [me, setMe] = useState<Me | "loading" | "signed-out" | "not-found">("loading");
+  const [editingName, setEditingName] = useState(false);
 
   function load() {
     api<Me>(slug, "me").then(({ status, data }) => {
@@ -47,6 +49,18 @@ export function FamilyHome({ slug }: { slug: string }) {
   if (me === "loading") return null;
   if (me === "not-found") return <NotFound />;
   if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
+  const signedIn = me;
+
+  async function saveName(name: string): Promise<string | null> {
+    const { status, data } = await api<{ person?: Me["person"]; error?: string }>(slug, "name", {
+      method: "POST",
+      body: { name },
+    });
+    if (status !== 200 || !data?.person) return data?.error ?? "Something went wrong. Please try again.";
+    setMe({ ...signedIn, person: data.person });
+    return null;
+  }
+
   return (
     <PageShell
       wide
@@ -73,6 +87,7 @@ export function FamilyHome({ slug }: { slug: string }) {
                   <DropdownMenuLabel className="font-normal text-muted-foreground">
                     Signed in as <span className="font-medium text-foreground">{me.person.name}</span>
                   </DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => setEditingName(true)}>Edit name</DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
@@ -115,15 +130,80 @@ export function FamilyHome({ slug }: { slug: string }) {
         onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
         onSignedOut={() => setMe("signed-out")}
       />
+      {me.person.name && (
+        <NameDialog open={editingName} name={me.person.name} onOpenChange={setEditingName} onSave={saveName} />
+      )}
     </PageShell>
   );
 }
 
-// For a supporter who hasn't given an email. Optional, and never in the way of reading. Someone
-// who already gave a name with a note sees it read-only; names change on their profile.
+// The menu's "Edit name". Saving stores the name; cancelling leaves it as it was.
+function NameDialog(props: {
+  open: boolean;
+  name: string;
+  onOpenChange: (open: boolean) => void;
+  onSave: (name: string) => Promise<string | null>;
+}) {
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        {props.open && <NameForm {...props} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NameForm(props: {
+  name: string;
+  onOpenChange: (open: boolean) => void;
+  onSave: (name: string) => Promise<string | null>;
+}) {
+  const [name, setName] = useState(props.name);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const failed = await props.onSave(name);
+    setBusy(false);
+    if (failed) setError(failed);
+    else props.onOpenChange(false);
+  }
+
+  return (
+    <form onSubmit={submit} className="grid gap-4">
+      <DialogHeader>
+        <DialogTitle>Edit name</DialogTitle>
+        <DialogDescription>This is the name people see for you.</DialogDescription>
+      </DialogHeader>
+      <Field label="Your name">
+        <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
+      </Field>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button disabled={busy || !name.trim()}>Save</Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+// For a supporter who hasn't given an email. Optional, and never in the way of reading.
+// The name is filled in when they have one. It's sent only if they change it, so a name
+// saved somewhere else isn't put back by a form that was already open.
 function EmailPrompt(props: { slug: string; reload: () => void; storedName: string | null }) {
   const { slug, reload, storedName } = props;
-  const [name, setName] = useState("");
+  const [name, setName] = useState(storedName ?? "");
+  const [nameEdited, setNameEdited] = useState(false);
+  // The prompt is on the page before a note saves a name. Until they type in the field,
+  // show the name on their record.
+  useEffect(() => {
+    if (!nameEdited) setName(storedName ?? "");
+  }, [storedName, nameEdited]);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
@@ -136,7 +216,7 @@ function EmailPrompt(props: { slug: string; reload: () => void; storedName: stri
     setError("");
     const { status, data } = await api<{ result?: "verify" | "sign-in-link"; error?: string }>(slug, "email", {
       method: "POST",
-      body: storedName ? { email } : { name, email },
+      body: storedName === null || nameEdited ? { name, email } : { email },
     });
     setBusy(false);
     // A new email, or signed out in the meantime: reloading shows what's next.
@@ -176,11 +256,16 @@ function EmailPrompt(props: { slug: string; reload: () => void; storedName: stri
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Your name">
-            {storedName ? (
-              <Input value={storedName} readOnly className="bg-muted text-muted-foreground" />
-            ) : (
-              <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
-            )}
+            <Input
+              value={name}
+              onChange={(e) => {
+                setNameEdited(true);
+                setName(e.target.value);
+              }}
+              required
+              maxLength={100}
+              autoFocus={storedName === null}
+            />
           </Field>
           <Field label="Your email">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus={storedName !== null} />

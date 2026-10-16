@@ -66,8 +66,8 @@ export function NoteCard(props: {
 // What the dialog leaves: a written note's body, or a posted video's public ID.
 export type NoteDraft = { body?: string; video?: string; color: NoteColor; name?: string };
 
-// The "Leave a note" dialog. Starts in a random color. Shows the viewer's name read-only, or
-// asks for one from someone without it; a name is changed on their profile, never here.
+// The "Leave a note" dialog. Starts in a random color. The name is filled in when they have
+// one, and they can change it; it's saved with the note.
 // `onLeave` returns an error message, or null once the note is saved.
 export function NoteDialog(props: {
   open: boolean;
@@ -101,9 +101,7 @@ function NoteForm(props: {
   const [uploaded, setUploaded] = useState<{ file: File; publicId: string } | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [color, setColor] = useState<NoteColor>(() => randomColor());
-  const [name, setName] = useState("");
-  // Fixed when the dialog opens, so the field doesn't change once a new name is saved.
-  const [askName] = useState(props.name === null);
+  const [name, setName] = useState(props.name ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const colors = PALETTE[color];
@@ -112,7 +110,7 @@ function NoteForm(props: {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const named = askName ? { name } : {};
+    const named = { name };
     let failed: string | null;
     if (mode === "write") {
       failed = await props.onLeave({ body, color, ...named });
@@ -193,11 +191,7 @@ function NoteForm(props: {
         ))}
       </RadioGroupPrimitive.Root>
       <Field label="Your name">
-        {askName ? (
-          <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-        ) : (
-          <Input value={props.name ?? ""} readOnly className="bg-muted text-muted-foreground" />
-        )}
+        <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
       </Field>
       {progress !== null && (
         <p className="text-sm text-muted-foreground" role="status">
@@ -209,7 +203,7 @@ function NoteForm(props: {
         <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
           Cancel
         </Button>
-        <Button disabled={busy || !ready || (askName && !name.trim())}>
+        <Button disabled={busy || !ready || !name.trim()}>
           {mode === "write" ? "Leave note" : error ? "Try again" : "Post"}
         </Button>
       </DialogFooter>
