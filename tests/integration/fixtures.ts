@@ -91,16 +91,19 @@ export function fakeVideoStore() {
   const videos = new Map<string, number>();
   const calls: { method: keyof VideoStore; publicIds: string[] }[] = [];
   let failDestroy = false;
-  let failUrls = false;
+  // Every call that needs the host's configuration fails, as with a malformed CLOUDINARY_URL.
+  let misconfigured = false;
   let hold: Promise<void> | null = null;
   let release = () => {};
   const store: VideoStore = {
     uploadParams(publicId) {
       calls.push({ method: "uploadParams", publicIds: [publicId] });
+      if (misconfigured) throw new Error("Video host misconfigured");
       return { url: "https://upload.example.test/video/upload", fields: { public_id: publicId } };
     },
     async describe(publicId) {
       calls.push({ method: "describe", publicIds: [publicId] });
+      if (misconfigured) throw new Error("Video host misconfigured");
       const duration = videos.get(publicId);
       return duration === undefined ? null : { duration };
     },
@@ -111,7 +114,7 @@ export function fakeVideoStore() {
       for (const id of publicIds) videos.delete(id);
     },
     urls(publicId) {
-      if (failUrls) throw new Error("Video host misconfigured");
+      if (misconfigured) throw new Error("Video host misconfigured");
       return { src: `https://videos.example.test/${publicId}.mp4`, poster: `https://videos.example.test/${publicId}.jpg` };
     },
   };
@@ -120,7 +123,7 @@ export function fakeVideoStore() {
     videos,
     calls,
     failDestroy: (fail: boolean) => (failDestroy = fail),
-    failUrls: (fail: boolean) => (failUrls = fail),
+    misconfigure: (on: boolean) => (misconfigured = on),
     holdDestroy() {
       hold = new Promise((resolve) => (release = resolve));
       return () => release();

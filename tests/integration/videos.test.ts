@@ -177,15 +177,26 @@ describe("who sees a video", () => {
   });
 });
 
-describe("when the video host can't make links", () => {
+describe("when the video host is misconfigured", () => {
   it("still shows the feed and the wall, with the video marked unavailable", async () => {
     const { ana, sam, update, videos } = await setUp();
     await attach(videos, sam, update.id, await upload(videos, sam));
     await createNote(db, sam, { updateId: update.id, body: "Written", color: "sky" }, videos.store);
-    videos.failUrls(true);
+    videos.misconfigure(true);
     const feed = (await listUpdates(db, ana, videos.store)).find((u) => u.id === update.id)!;
     expect(feed.notes.map((n) => n.video)).toEqual([null, { unavailable: true }]);
     expect((await listNotes(db, ana, videos.store)).map((n) => n.video)).toEqual([null, { unavailable: true }]);
+  });
+
+  it("refuses tickets and attaching with a 503, using up no ticket", async () => {
+    const { sam, update, videos } = await setUp();
+    const { publicId } = await issueVideoUpload(db, sam, videos.store);
+    videos.videos.set(publicId, 10);
+    videos.misconfigure(true);
+    await expect(issueVideoUpload(db, sam, videos.store)).rejects.toMatchObject({ status: 503 });
+    expect(await db.videoUpload.count()).toBe(1);
+    await expect(attach(videos, sam, update.id, publicId)).rejects.toMatchObject({ status: 503 });
+    expect(await db.note.count()).toBe(0);
   });
 });
 
