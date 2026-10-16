@@ -7,6 +7,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 - **2026-10-15** — End a supporter's other sessions when their email is first verified.
   Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser. A family member's Verify on the People page deliberately signs no one out, so this applies only when the email's owner confirms.
+- **2026-10-15** — Replace `confirm()` on the feed's Delete with an inline confirmation.
+  `src/pages/Feed.tsx` asks with `confirm()`, which in-app email browsers and the desktop browser pane suppress, so Delete silently does nothing there (as Remove once did). Noticed while planning reactions.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
   A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
 - **2026-10-14** — Lock the person row when signing in by magic link.
@@ -26,6 +28,6 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 - **2026-10-13** — Give schema-changing PRs their own preview database if the shared one keeps colliding.
   All previews share the schema-only `preview` branch, which breaks when two open PRs change the schema or a PR's migration is abandoned; the fix today is recreating `preview` by hand (README → Deployment). If that happens often, script a schema-only Neon branch per PR with a branch-scoped Vercel variable and cleanup on merge.
 - **2026-10-15** — Prune anonymous supporter records with no live sessions.
-  Each correct answer creates a record, so they pile up, one per device per answer. They're never listed, loaded, or counted, so this is only tidiness until the table grows large.
+  Each correct answer creates a record, so they pile up, one per device per answer. They're never listed, but their reactions stay counted (unnamed) after the reader is signed out, for example by an answer change; pruning a record cascades to its reactions.
 - **2026-10-15** — Add dark mode.
   The shadcn theme in `src/index.css` already defines dark colors; turning them on (following the system setting) mostly means checking every page in both modes. Cut from the Geist restyle for speed.

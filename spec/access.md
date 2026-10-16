@@ -145,7 +145,7 @@ Family members have a **People** page, at `/f/<slug>/people` and linked from the
 
 Supporters without an email aren't listed, since there is nothing to show. Instead the page shows how many devices are signed in without a verified email. Each device counts separately, so one person reading on a phone and a laptop counts twice, and listed supporters who haven't verified yet count too.
 
-Supporters never see this page, the list, the count, or each other's details; the server refuses them to anyone but a family member of that family.
+Supporters never see this page, the list, the count, or each other's details; the server refuses them to anyone but a family member of that family. The one thing supporters see of each other is the name on a reaction (see [updates.md](updates.md#reactions)).
 
 A family member can **remove** a supporter after confirming. Removal:
 
@@ -193,6 +193,8 @@ Supporters who give an email appear in the supporter list with the name and emai
 Someone who knows the answer can also give the email of a real person who isn't on the family's list yet. If that person confirms the email, the device that gave it becomes a supporter with a verified email: it stays signed in when the answer changes, and it appears in the supporter list under whatever name it gave. The verification email tells anyone who didn't ask for it to ignore it.
 
 A verified email means either its owner confirmed it or a family member verified it, and a family member's verification is trusted as is. Because the community question keeps casual observers out rather than guarding against someone who already knows the answer, the app adds no confirmation step or sign-out to protect against a mistaken verification. If a family member verifies an entry made by someone posing as a person they know, that device stays signed in when the answer changes and gets notification emails, until the family removes that supporter and changes the answer. The remaining real cost is a mistyped address: verifying it sends notification emails to whoever owns that address until the supporter is removed.
+
+Anyone who knows the answer sees the names of everyone who has reacted to an update, so they can learn that a particular person follows this family. Names are whatever each person gave, so someone could also react under another person's name; the family sees named supporters in its supporter list and can remove them. Reactions from readers who never gave a name are counted without a name and can't be removed one by one, since the family can't see who those readers are. They stay even after the reader is signed out, for example by a change to the answer.
 
 Giving an email reveals whether it already belongs to the family: a new email goes on the supporter's record, while a known one gets a sign-in link. Someone who knows the answer could use that to learn whether a particular person follows this family. Each check leaves a trace, since a new email appears in the supporter list and a known one receives an email. Hiding it would mean holding every new email until it's verified, which isn't worth the complexity for most families.
 

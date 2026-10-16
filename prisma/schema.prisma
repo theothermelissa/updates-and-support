@@ -54,6 +54,7 @@ model Person {
   magicLinks MagicLink[]
   sessions   Session[]
   updates    Update[]
+  reactions  Reaction[]
 
   @@unique([familyId, email])
 }
@@ -96,10 +97,35 @@ model Update {
   createdAt DateTime  @default(now())
   editedAt  DateTime?
 
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  author Person @relation(fields: [authorId], references: [id])
+  family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  author    Person     @relation(fields: [authorId], references: [id])
+  reactions Reaction[]
 
   @@index([familyId, createdAt])
+}
+
+// The fixed set of reactions; the UI gives each its emoji and label.
+enum ReactionKind {
+  heart
+  pray
+  hug
+  strong
+  party
+  laugh
+}
+
+// A person's one reaction to an update; picking another replaces it.
+model Reaction {
+  id        String       @id @default(cuid())
+  updateId  String
+  personId  String
+  kind      ReactionKind
+  createdAt DateTime     @default(now())
+
+  update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([updateId, personId])
 }
 
 // A wrong answer at a family's gate, counted against per-browser and per-network limits.
