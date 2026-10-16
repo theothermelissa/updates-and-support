@@ -1,4 +1,11 @@
-import { Fragment, useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Confirm, ErrorMessage, Field, PageShell } from "@/components/page";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
 import { NotFound } from "./NotFound.js";
 
@@ -128,21 +135,31 @@ export function People({ slug }: { slug: string }) {
   if (people === "not-found") return <NotFound />;
   if (people === "signed-out" || people === "forbidden") {
     return (
-      <main>
+      <PageShell title="People">
         <p>Only family members can see this page.</p>
         <p>
           <a href={`/f/${slug}`}>Back to updates</a>
         </p>
-      </main>
+      </PageShell>
     );
   }
   return (
-    <main>
-      <p>
-        <a href={`/f/${slug}`}>Back to updates</a>
-      </p>
-      <h1>People</h1>
-      {message && <p className={message.error ? "error" : undefined}>{message.text}</p>}
+    <PageShell
+      title="People"
+      actions={
+        <Button variant="outline" size="sm" asChild>
+          <a href={`/f/${slug}`}>Back to updates</a>
+        </Button>
+      }
+    >
+      {message &&
+        (message.error ? (
+          <ErrorMessage>{message.text}</ErrorMessage>
+        ) : (
+          <Alert>
+            <AlertDescription>{message.text}</AlertDescription>
+          </Alert>
+        ))}
 
       <FamilyMembers
         members={people.familyMembers}
@@ -150,62 +167,71 @@ export function People({ slug }: { slug: string }) {
         onAdd={addFamilyMember}
       />
 
-      <h2>Supporters ({people.supporters.length})</h2>
-      {people.devicesWithoutVerifiedEmail > 0 && (
-        <p>
-          Signed in without a verified email: {devices(people.devicesWithoutVerifiedEmail)}, including anyone reading
-          without giving an email, whom you can't see here. Removing or changing an accepted answer (below) signs them
-          all out.
-        </p>
-      )}
-      <AddSupporter onAdd={addSupporter} />
-      {people.supporters.length === 0 ? (
-        <p>No supporters have given an email yet.</p>
-      ) : (
-        <SupporterTable
-          rows={people.supporters}
-          action="Remove"
-          confirm={(s) =>
-            `Remove ${s.name}? They'll be signed out, and this email can't be used here again. If they know the answer, they can still read without an email until you change it.`
-          }
-          onAction={(s) => setRemoved(s, true)}
-          onVerify={verify}
-        />
-      )}
+      <Section title={`Supporters (${people.supporters.length})`}>
+        {people.devicesWithoutVerifiedEmail > 0 && (
+          <p className="text-muted-foreground">
+            Signed in without a verified email: {devices(people.devicesWithoutVerifiedEmail)}, including anyone reading
+            without giving an email, whom you can't see here. Removing or changing an accepted answer (below) signs them
+            all out.
+          </p>
+        )}
+        <AddSupporter onAdd={addSupporter} />
+        {people.supporters.length === 0 ? (
+          <p className="text-muted-foreground">No supporters have given an email yet.</p>
+        ) : (
+          <SupporterTable
+            rows={people.supporters}
+            action="Remove"
+            confirm={(s) =>
+              `Remove ${s.name}? They'll be signed out, and this email can't be used here again. If they know the answer, they can still read without an email until you change it.`
+            }
+            onAction={(s) => setRemoved(s, true)}
+            onVerify={verify}
+          />
+        )}
+      </Section>
 
       {people.removed.length > 0 && (
-        <>
-          <h2>Removed ({people.removed.length})</h2>
-          <p>Removed supporters can't sign in or give their email again. Restoring lets them sign in again, with notifications off.</p>
+        <Section title={`Removed (${people.removed.length})`}>
+          <p className="text-muted-foreground">
+            Removed supporters can't sign in or give their email again. Restoring lets them sign in again, with
+            notifications off.
+          </p>
           <SupporterTable rows={people.removed} action="Restore" onAction={(s) => setRemoved(s, false)} />
-        </>
+        </Section>
       )}
 
-      <h2>Community question</h2>
-      <p>
-        Anyone who answers this can read the updates. Removing or changing an accepted answer signs out everyone without
-        a verified email ({devices(people.devicesWithoutVerifiedEmail)} right now); supporters with a verified email stay
-        signed in. Adding an answer or rewording the question signs no one out. If someone you don't recognize got in,
-        remove them <em>and</em> change the answer.
-      </p>
-      <form onSubmit={saveQuestion}>
-        <p>
-          <label>
-            Question
-            <br />
-            <input value={question} onChange={(e) => setQuestion(e.target.value)} required maxLength={500} size={50} />
-          </label>
+      <Section title="Community question">
+        <p className="text-muted-foreground">
+          Anyone who answers this can read the updates. Removing or changing an accepted answer signs out everyone
+          without a verified email ({devices(people.devicesWithoutVerifiedEmail)} right now); supporters with a verified
+          email stay signed in. Adding an answer or rewording the question signs no one out. If someone you don't
+          recognize got in, remove them <em>and</em> change the answer.
         </p>
-        <p>
-          <label>
-            Accepted answers, one per line (capitals and a leading "the" don't matter)
-            <br />
-            <textarea value={answers} onChange={(e) => setAnswers(e.target.value)} required rows={4} cols={50} />
-          </label>
-        </p>
-        <button>Save question</button>
-      </form>
-    </main>
+        <Card>
+          <CardContent>
+            <form onSubmit={saveQuestion} className="space-y-4">
+              <Field label="Question">
+                <Input value={question} onChange={(e) => setQuestion(e.target.value)} required maxLength={500} />
+              </Field>
+              <Field label={'Accepted answers, one per line (capitals and a leading "the" don\'t matter)'}>
+                <Textarea value={answers} onChange={(e) => setAnswers(e.target.value)} required rows={4} />
+              </Field>
+              <Button>Save question</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </Section>
+    </PageShell>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-4 pt-4">
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      {children}
+    </section>
   );
 }
 
@@ -231,74 +257,69 @@ function FamilyMembers({
     }
   }
 
+  const removingMember = members.find((m) => m.id === removing);
   return (
-    <>
-      <h2>Family members ({members.length})</h2>
-      <div style={{ overflowX: "auto" }}>
-        <table>
-          <tbody>
-            {members.map((m) => (
-              <Fragment key={m.id}>
-                <tr>
-                  <td>{m.isYou ? `${m.name} (you)` : m.name}</td>
-                  <td>{m.email}</td>
-                  <td>{!m.isYou && <button onClick={() => setRemoving(m.id)}>Remove</button>}</td>
-                </tr>
-                {removing === m.id && (
-                  <tr>
-                    <td colSpan={3}>
-                      Remove {m.name}? They'll be signed out and can no longer see or post updates.{" "}
-                      <button
-                        onClick={() => {
-                          setRemoving(null);
-                          onRemove(m);
-                        }}
-                      >
-                        Yes, remove
-                      </button>{" "}
-                      <button onClick={() => setRemoving(null)}>Cancel</button>
-                    </td>
-                  </tr>
+    <Section title={`Family members (${members.length})`}>
+      <Table>
+        <TableBody>
+          {members.map((m) => (
+            <TableRow key={m.id}>
+              <TableCell>{m.isYou ? `${m.name} (you)` : m.name}</TableCell>
+              <TableCell>{m.email}</TableCell>
+              <TableCell className="text-right">
+                {!m.isYou && (
+                  <Button variant="ghost" size="sm" onClick={() => setRemoving(m.id)}>
+                    Remove
+                  </Button>
                 )}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {removingMember && (
+        <Confirm
+          yes="Yes, remove"
+          onYes={() => {
+            setRemoving(null);
+            onRemove(removingMember);
+          }}
+          onCancel={() => setRemoving(null)}
+        >
+          Remove {removingMember.name}? They'll be signed out and can no longer see or post updates.
+        </Confirm>
+      )}
 
-      <h3>Add a family member</h3>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          setConfirmingAdd(true);
-        }}
-      >
-        <p>
-          <label>
-            Name <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-          </label>
-        </p>
-        <p>
-          <label>
-            Email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
-        </p>
-        {confirmingAdd ? (
-          <p>
-            Add {name} ({email}) as a family member? They'll be able to post, edit, and delete updates and see all
-            supporters.{" "}
-            <button type="button" onClick={add}>
-              Yes, add
-            </button>{" "}
-            <button type="button" onClick={() => setConfirmingAdd(false)}>
-              Cancel
-            </button>
-          </p>
-        ) : (
-          <button>Add</button>
-        )}
-      </form>
-    </>
+      <Card>
+        <CardHeader>
+          <CardTitle>Add a family member</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setConfirmingAdd(true);
+            }}
+            className="space-y-4"
+          >
+            <Field label="Name">
+              <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+            </Field>
+            <Field label="Email">
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </Field>
+            {confirmingAdd ? (
+              <Confirm yes="Yes, add" onYes={add} onCancel={() => setConfirmingAdd(false)}>
+                Add {name} ({email}) as a family member? They'll be able to post, edit, and delete updates and see all
+                supporters.
+              </Confirm>
+            ) : (
+              <Button>Add</Button>
+            )}
+          </form>
+        </CardContent>
+      </Card>
+    </Section>
   );
 }
 
@@ -319,23 +340,23 @@ function AddSupporter({ onAdd }: { onAdd: (name: string, email: string) => Promi
   }
 
   return (
-    <>
-      <h3>Add a supporter</h3>
-      <form onSubmit={submit}>
-        <p>
-          <label>
-            Name <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-          </label>
-        </p>
-        <p>
-          <label>
-            Email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
-        </p>
-        <p>Double-check the email: whoever owns it will be able to read the updates.</p>
-        <button disabled={busy}>Add supporter</button>
-      </form>
-    </>
+    <Card>
+      <CardHeader>
+        <CardTitle>Add a supporter</CardTitle>
+        <CardDescription>Double-check the email: whoever owns it will be able to read the updates.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-4">
+          <Field label="Name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+          </Field>
+          <Field label="Email">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </Field>
+          <Button disabled={busy}>Add supporter</Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -348,76 +369,72 @@ function SupporterTable({
 }: {
   rows: Supporter[];
   action: string;
-  // Asks inline rather than with confirm(), which some in-app email browsers suppress.
   confirm?: (s: Supporter) => string;
   onAction: (s: Supporter) => void;
   onVerify?: (s: Supporter) => void;
 }) {
   const [confirming, setConfirming] = useState<string | null>(null);
   const showRemoved = rows.some((r) => r.removedAt);
-  // Scrolls sideways on its own on narrow phones, so the page itself never does.
+  const confirmingRow = rows.find((r) => r.id === confirming);
+  // The table scrolls sideways on its own on narrow phones, so the page itself never does. The
+  // confirmation sits below it, so it stays in view.
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Verified</th>
-            <th>Notifications</th>
-            <th>Joined</th>
-            {showRemoved && <th>Removed</th>}
-            <th />
-          </tr>
-        </thead>
-        <tbody>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Verified</TableHead>
+            <TableHead>Notifications</TableHead>
+            <TableHead>Joined</TableHead>
+            {showRemoved && <TableHead>Removed</TableHead>}
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((s) => (
-            <Fragment key={s.id}>
-              <tr>
-                <td>{s.name}</td>
-                <td>{s.email}</td>
-                <td>
-                  {s.emailVerified ? (
-                    "Yes"
-                  ) : (
-                    <>
-                      Not yet
-                      {onVerify && (
-                        <>
-                          {" "}
-                          <button onClick={() => onVerify(s)}>Verify</button>
-                        </>
-                      )}
-                    </>
-                  )}
-                </td>
-                <td>{s.notificationsOn ? "On" : "Off"}</td>
-                <td>{date(s.joinedAt)}</td>
-                {s.removedAt && <td>{date(s.removedAt)}</td>}
-                <td>
-                  <button onClick={() => (confirm ? setConfirming(s.id) : onAction(s))}>{action}</button>
-                </td>
-              </tr>
-              {confirm && confirming === s.id && (
-                <tr>
-                  <td colSpan={showRemoved ? 7 : 6}>
-                    {confirm(s)}{" "}
-                    <button
-                      onClick={() => {
-                        setConfirming(null);
-                        onAction(s);
-                      }}
-                    >
-                      Yes, {action.toLowerCase()}
-                    </button>{" "}
-                    <button onClick={() => setConfirming(null)}>Cancel</button>
-                  </td>
-                </tr>
-              )}
-            </Fragment>
+            <TableRow key={s.id}>
+              <TableCell>{s.name}</TableCell>
+              <TableCell>{s.email}</TableCell>
+              <TableCell>
+                {s.emailVerified ? (
+                  "Yes"
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Not yet
+                    {onVerify && (
+                      <Button variant="outline" size="xs" onClick={() => onVerify(s)}>
+                        Verify
+                      </Button>
+                    )}
+                  </span>
+                )}
+              </TableCell>
+              <TableCell>{s.notificationsOn ? "On" : "Off"}</TableCell>
+              <TableCell>{date(s.joinedAt)}</TableCell>
+              {s.removedAt && <TableCell>{date(s.removedAt)}</TableCell>}
+              <TableCell className="text-right">
+                <Button variant="ghost" size="sm" onClick={() => (confirm ? setConfirming(s.id) : onAction(s))}>
+                  {action}
+                </Button>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+      {confirm && confirmingRow && (
+        <Confirm
+          yes={`Yes, ${action.toLowerCase()}`}
+          onYes={() => {
+            setConfirming(null);
+            onAction(confirmingRow);
+          }}
+          onCancel={() => setConfirming(null)}
+        >
+          {confirm(confirmingRow)}
+        </Confirm>
+      )}
+    </>
   );
 }

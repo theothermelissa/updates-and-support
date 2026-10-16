@@ -42,7 +42,7 @@ A correct answer signs the visitor in on that device at once and shows the feed.
 
 ### Getting notification emails
 
-Giving an email is optional, and reading never waits on it. A signed-in supporter without an email sees a prompt at the top of the feed, "Get an email when there's a new update," which asks for their name and email and says the family will see both. The prompt stays until they give an email.
+Giving an email is optional, and reading never waits on it. A signed-in supporter without an email sees a prompt at the top of the feed: "Get an email when there's a new update," with an "Add your email" button. The button opens a form that asks for their name and email and says the family will see both; "Cancel" closes it again. The prompt stays until they give an email.
 
 What happens depends on whom the email already belongs to in this family:
 

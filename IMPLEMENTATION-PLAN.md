@@ -184,4 +184,5 @@ Turning photos off again is unsetting the variable and redeploying. Stored photo
   - the family scope in `listUpdates`: "lists only the person's own family's updates"
   - `requireFamilyMember` in create, edit, and delete: "lets a supporter read but not create, edit, or delete"
 - **Signatures.** `createUpdate` and `editUpdate` take the request's `{ blocks, body }` object, and the feed's updates carry `blocks` instead of `body`. Tests that posted a string now post `{ body }`.
+- **`main` was restyled while slice 1 was in progress** (shadcn/ui and the header menu). Merging it conflicted in `Feed.tsx`, `index.html`, and `spec/MASTER_SPEC.md`, and GitHub runs no CI on a conflicting PR, so CI was silently missing until the merge. The block editor was reapplied on the restyled feed with the shared `Textarea` and `Button` at default size, for tap targets. `MASTER_SPEC.md`'s new rule that pages never contact another server now names photos as its one exception, so slice 3 must keep that wording true.
 - The edit lock has no test of its own in slice 1, since only slice 3's photo deletion makes a lost edit dangerous; slice 3's race test covers it.

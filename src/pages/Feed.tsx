@@ -1,4 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
+import { Confirm, ErrorMessage } from "@/components/page";
+import { cn } from "cn";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
 import { linkify } from "../linkify.js";
 import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
@@ -41,10 +48,10 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
   }
 
   return (
-    <section>
+    <section className="space-y-6">
       {canEdit && <PostForm onPost={(blocks, notify) => change("updates", "POST", { blocks, notify })} />}
-      {error && <p className="error">{error}</p>}
-      {updates?.length === 0 && <p>No updates yet.</p>}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {updates?.length === 0 && <p className="text-muted-foreground">No updates yet.</p>}
       {updates?.map((update) => (
         <UpdateItem
           key={update.id}
@@ -75,24 +82,25 @@ function blocksOf(draft: Draft): TextBlock[] {
 // A column of text boxes, each with "Remove" while there's more than one, and "Add text".
 function BlockEditor({ draft, onChange }: { draft: Draft; onChange: (draft: Draft) => void }) {
   return (
-    <div className="blocks">
-      {draft.map((d) => (
-        <div key={d.key}>
-          <textarea
-            rows={6}
+    <div className="space-y-3">
+      {draft.map((d, i) => (
+        <div key={d.key} className="space-y-1">
+          <Textarea
+            className="min-h-32"
             value={d.text}
             onChange={(e) => onChange(draft.map((x) => (x.key === d.key ? { ...x, text: e.target.value } : x)))}
+            aria-label={draft.length > 1 ? `Text ${i + 1}` : "Update"}
           />
           {draft.length > 1 && (
-            <button type="button" onClick={() => onChange(draft.filter((x) => x.key !== d.key))}>
+            <Button type="button" variant="ghost" onClick={() => onChange(draft.filter((x) => x.key !== d.key))}>
               Remove
-            </button>
+            </Button>
           )}
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...draft, ...draftOf([""])])}>
+      <Button type="button" variant="outline" onClick={() => onChange([...draft, ...draftOf([""])])}>
         Add text
-      </button>
+      </Button>
     </div>
   );
 }
@@ -113,17 +121,21 @@ function PostForm({ onPost }: { onPost: (blocks: TextBlock[], notify: boolean) =
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2>Post an update</h2>
-      <BlockEditor draft={draft} onChange={setDraft} />
-      <p>
-        <label>
-          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Notify
-          supporters by email
-        </label>
-      </p>
-      <button disabled={posting || blocksOf(draft).length === 0}>Post</button>
-    </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Post an update</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-4">
+          <BlockEditor draft={draft} onChange={setDraft} />
+          <Label>
+            <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} />
+            Notify supporters by email
+          </Label>
+          <Button disabled={posting || blocksOf(draft).length === 0}>Post</Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -148,59 +160,65 @@ function UpdateItem(props: {
 
   return (
     <article>
-      <hr />
-      <p>
-        <strong>{update.authorName}</strong> · {new Date(update.createdAt).toLocaleString()}
-        {update.editedAt && " · edited"}
-      </p>
-      {draft === null ? (
-        update.blocks.map((block, i) => (
-          <p key={i} style={{ whiteSpace: "pre-wrap" }}>
-            {linkify(block.text).map((segment, j) =>
-              "href" in segment ? (
-                <a key={j} href={segment.href} target="_blank" rel="noopener noreferrer">
-                  {segment.href}
-                </a>
-              ) : (
-                segment.text
-              ),
-            )}
+      {/* Visible overflow, so the reaction tray is never clipped by the card's edge. */}
+      <Card className="overflow-visible">
+        <CardHeader>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{update.authorName}</span> ·{" "}
+            {new Date(update.createdAt).toLocaleString()}
+            {update.editedAt && " · edited"}
           </p>
-        ))
-      ) : (
-        <BlockEditor draft={draft} onChange={setDraft} />
-      )}
-      {props.canEdit &&
-        (draft === null ? (
-          <>
-            <p>
-              <button onClick={() => setDraft(draftOf(update.blocks.map((b) => b.text)))}>Edit</button>{" "}
-              <button onClick={() => setConfirmingDelete(true)}>Delete</button>
-            </p>
-            {confirmingDelete && (
-              <p>
-                Delete this update? This can't be undone.{" "}
-                <button
-                  onClick={() => {
-                    setConfirmingDelete(false);
-                    props.onDelete();
-                  }}
-                >
-                  Yes, delete
-                </button>{" "}
-                <button onClick={() => setConfirmingDelete(false)}>Cancel</button>
-              </p>
+        </CardHeader>
+        <CardContent className="text-base">
+          {draft === null ? (
+            <div className="space-y-4">
+              {update.blocks.map((block, i) => (
+                <p key={i} className="break-words whitespace-pre-wrap">
+                  {linkify(block.text).map((segment, j) =>
+                    "href" in segment ? (
+                      <a key={j} href={segment.href} target="_blank" rel="noopener noreferrer">
+                        {segment.href}
+                      </a>
+                    ) : (
+                      segment.text
+                    ),
+                  )}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <BlockEditor draft={draft} onChange={setDraft} />
+          )}
+          <Reactions update={update} onReact={props.onReact} />
+        </CardContent>
+        {props.canEdit && (
+          <CardFooter className="flex flex-wrap items-center gap-2 border-t py-3">
+            {draft !== null ? (
+              <>
+                <Button onClick={save} disabled={saving || blocksOf(draft).length === 0}>
+                  Save
+                </Button>
+                <Button variant="outline" onClick={() => setDraft(null)}>
+                  Cancel
+                </Button>
+              </>
+            ) : confirmingDelete ? (
+              <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirmingDelete(false)}>
+                Delete this update? This can't be undone.
+              </Confirm>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setDraft(draftOf(update.blocks.map((b) => b.text)))}>
+                  Edit
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
+                  Delete
+                </Button>
+              </>
             )}
-          </>
-        ) : (
-          <p>
-            <button onClick={save} disabled={saving || blocksOf(draft).length === 0}>
-              Save
-            </button>{" "}
-            <button onClick={() => setDraft(null)}>Cancel</button>
-          </p>
-        ))}
-      <Reactions update={update} onReact={props.onReact} />
+          </CardFooter>
+        )}
+      </Card>
     </article>
   );
 }
@@ -256,11 +274,17 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
   const mine = REACTIONS.find((x) => x.kind === r.mine);
   return (
     <>
-      <div className="reactions">
-        <span className="react" ref={area} onPointerEnter={(e) => hoverTray(e, true)} onPointerLeave={(e) => hoverTray(e, false)}>
-          <button
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <span
+          className="relative"
+          ref={area}
+          onPointerEnter={(e) => hoverTray(e, true)}
+          onPointerLeave={(e) => hoverTray(e, false)}
+        >
+          <Button
             ref={button}
-            className={mine ? "react-button mine" : "react-button"}
+            variant="outline"
+            className={cn("h-11 min-w-11 rounded-full px-4", mine && "border-foreground bg-muted text-2xl")}
             aria-label={mine ? `Your reaction: ${mine.name}. Change it` : "React"}
             aria-expanded={tray}
             disabled={pending}
@@ -270,11 +294,21 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
             }}
           >
             {mine ? mine.emoji : "React"}
-          </button>
+          </Button>
           {tray && (
-            <span className="tray" role="group" aria-label="Pick a reaction">
+            <span
+              className="absolute bottom-full left-0 z-10 mb-1 flex gap-0.5 rounded-full border bg-popover p-1 shadow-md"
+              role="group"
+              aria-label="Pick a reaction"
+            >
               {REACTIONS.map((x) => (
-                <button key={x.kind} aria-label={x.name} aria-pressed={x.kind === r.mine} onClick={() => pick(x.kind)}>
+                <button
+                  key={x.kind}
+                  className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
+                  aria-label={x.name}
+                  aria-pressed={x.kind === r.mine}
+                  onClick={() => pick(x.kind)}
+                >
                   {x.emoji}
                 </button>
               ))}
@@ -283,23 +317,28 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
         </span>
         {r.count > 0 && (
           <span
-            className="summary"
+            className="relative"
             onPointerEnter={(e) => e.pointerType === "mouse" && setNames((n) => (n === "pinned" ? n : "hover"))}
             onPointerLeave={() => setNames((n) => (n === "hover" ? "closed" : n))}
           >
             <button
-              className="plain"
+              className="rounded-sm py-2 text-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               aria-label={summaryLabel(r)}
               aria-expanded={names === "pinned"}
               onClick={() => setNames((n) => (n === "pinned" ? "closed" : "pinned"))}
             >
               {summary(r)}
             </button>
-            {names === "hover" && <NameList r={r} className="popover" />}
+            {names === "hover" && (
+              <NameList
+                r={r}
+                className="absolute top-full left-0 z-10 rounded-md bg-foreground px-3 py-1.5 text-sm whitespace-nowrap text-background"
+              />
+            )}
           </span>
         )}
       </div>
-      {names === "pinned" && <NameList r={r} className="names" />}
+      {names === "pinned" && <NameList r={r} className="mt-2 text-sm text-muted-foreground" />}
     </>
   );
 }

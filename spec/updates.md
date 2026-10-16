@@ -18,6 +18,8 @@ An update has at least one block, at most 20 blocks, at most six of them photo b
 
 The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Blocks appear in order: text as paragraphs, and each photo at the full width of the feed with its caption, if any, beneath it.
 
+A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), a link to the People page for family members, and "Sign out."
+
 Family members also see a "Post an update" button and, on each update, "Edit" and "Delete."
 
 ## Writing an update

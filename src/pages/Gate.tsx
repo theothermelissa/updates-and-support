@@ -1,4 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { ErrorMessage, Field, PageShell } from "@/components/page";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { api } from "../api.js";
 
 type GateResult = { result?: "wrong" | "limited" | "joined"; error?: string };
@@ -33,24 +37,22 @@ export function Gate({ slug, onJoined }: { slug: string; onJoined: () => void })
 
   if (!info) return null;
   return (
-    <main>
-      <h1>{info.displayName}</h1>
-      <form onSubmit={submit}>
-        <p>
-          <label>
-            {info.question}
-            <br />
-            <input value={answer} onChange={(e) => setAnswer(e.target.value)} required />
-          </label>
-        </p>
-        <button disabled={busy}>Continue</button>
-      </form>
-      {message && <p className="error">{message}</p>}
-      <p>
+    <PageShell title={info.displayName}>
+      <Card>
+        <CardContent>
+          <form onSubmit={submit} className="space-y-4">
+            <Field label={info.question}>
+              <Input value={answer} onChange={(e) => setAnswer(e.target.value)} required />
+            </Field>
+            <Button disabled={busy}>Continue</Button>
+          </form>
+        </CardContent>
+      </Card>
+      {message && <ErrorMessage>{message}</ErrorMessage>}
+      <p className="flex flex-col gap-1 text-sm">
         <a href={`/f/${slug}/family`}>Already joined? Sign in by email</a>
-        <br />
         <a href={`/f/${slug}/family`}>Family sign-in</a>
       </p>
-    </main>
+    </PageShell>
   );
 }

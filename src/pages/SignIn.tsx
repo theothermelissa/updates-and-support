@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ErrorMessage, PageShell } from "@/components/page";
+import { Button } from "@/components/ui/button";
 import { api } from "../api.js";
 
 // The emailed link lands here. Only pressing the button spends it, because email
@@ -16,21 +18,20 @@ export function SignIn({ slug }: { slug: string }) {
   }
 
   return (
-    <main>
-      <h1>Sign in</h1>
+    <PageShell title="Sign in">
       {!token ? (
-        <p className="error">
+        <ErrorMessage>
           This link is incomplete. <a href={`/f/${slug}/family`}>Get a new one</a>.
-        </p>
+        </ErrorMessage>
       ) : state === "failed" ? (
-        <p className="error">
+        <ErrorMessage>
           This link has expired or was already used. <a href={`/f/${slug}/family`}>Get a new one</a>.
-        </p>
+        </ErrorMessage>
       ) : (
-        <button onClick={signIn} disabled={state === "signing-in"}>
+        <Button size="lg" onClick={signIn} disabled={state === "signing-in"}>
           Sign in
-        </button>
+        </Button>
       )}
-    </main>
+    </PageShell>
   );
 }
