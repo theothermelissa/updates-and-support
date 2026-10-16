@@ -83,6 +83,7 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
   const [sentLink, setSentLink] = useState(false);
   const [error, setError] = useState("");
 
@@ -111,6 +112,18 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
       </Card>
     );
   }
+  if (!open) {
+    return (
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-base font-medium">Get an email when there's a new update</p>
+          <Button size="lg" onClick={() => setOpen(true)}>
+            Add your email
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   return (
     <Card>
       <CardHeader>
@@ -120,12 +133,17 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Your name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
           </Field>
           <Field label="Your email">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </Field>
-          <Button disabled={busy}>Keep me updated</Button>
+          <div className="flex gap-2">
+            <Button disabled={busy}>Keep me updated</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
           {error && <ErrorMessage>{error}</ErrorMessage>}
         </form>
       </CardContent>
