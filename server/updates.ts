@@ -5,9 +5,10 @@ import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
 import { destroyVideos, noteSelect, noteView, visibleNotes, type NoteView } from "./notes.js";
 import { notifySupporters } from "./notifications.js";
+import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
 import { reactionsView, type ReactionsView } from "./reactions.js";
-import { contentFrom, shownContent } from "./richText.js";
+import { contentFrom, photoCount, shownContent } from "./richText.js";
 import { cloudinaryStore, type VideoStore } from "./videos.js";
 
 export type UpdateView = {
@@ -54,16 +55,17 @@ export async function createUpdate(
   person: Person,
   input: { content?: unknown; body?: unknown },
   notifyWith?: SendEmails,
+  settings: PhotoSettings = NO_PHOTOS,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
-  const { content, body } = contentFrom(input);
+  const { content, body } = contentFrom(input, settings);
   const update = await db.update.create({
     data: { familyId: person.familyId, authorId: person.id, content, body },
     include: { author: { select: { name: true } } },
   });
   if (notifyWith) {
     try {
-      await notifySupporters(db, notifyWith, person.familyId);
+      await notifySupporters(db, notifyWith, person.familyId, photoCount(content));
     } catch (err) {
       console.error(`Notifications failed for family ${person.familyId}: ${(err as Error).message}`);
     }
@@ -77,9 +79,10 @@ export async function editUpdate(
   person: Person,
   id: string,
   input: { content?: unknown; body?: unknown },
+  settings: PhotoSettings = NO_PHOTOS,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
-  const { content, body } = contentFrom(input);
+  const { content, body } = contentFrom(input, settings);
   // Scoped by family: another family's update ID behaves like one that doesn't exist.
   const { count } = await db.update.updateMany({
     where: { id, familyId: person.familyId },

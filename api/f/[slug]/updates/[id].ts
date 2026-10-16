@@ -8,6 +8,7 @@ import {
   sendRequestError,
   unauthorized,
 } from "../../../../server/http.js";
+import { photoSettingsFromEnv } from "../../../../server/photoSettings.js";
 import { deleteUpdate, editUpdate } from "../../../../server/updates.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -24,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const body = jsonBody(req, res);
     if (!body) return;
-    res.status(200).json({ update: await editUpdate(getDb(), ctx.person, id, body) });
+    res.status(200).json({ update: await editUpdate(getDb(), ctx.person, id, body, photoSettingsFromEnv()) });
   } catch (err) {
     sendRequestError(res, err);
   }

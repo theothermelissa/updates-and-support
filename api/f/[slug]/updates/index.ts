@@ -8,6 +8,7 @@ import {
   unauthorized,
 } from "../../../../server/http.js";
 import { sendEmails } from "../../../../server/email.js";
+import { photoSettingsFromEnv } from "../../../../server/photoSettings.js";
 import { createUpdate, listUpdates } from "../../../../server/updates.js";
 
 // Supporters are emailed only when the post form's checkbox asked for it.
@@ -27,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = jsonBody(req, res);
   if (!body) return;
   try {
-    res.status(201).json({ update: await createUpdate(getDb(), ctx.person, body, notifyWith(body)) });
+    res.status(201).json({ update: await createUpdate(getDb(), ctx.person, body, notifyWith(body), photoSettingsFromEnv()) });
   } catch (err) {
     sendRequestError(res, err);
   }

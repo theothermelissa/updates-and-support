@@ -49,6 +49,15 @@ function node(n: Obj, key: number, depth: number): ReactNode {
       return <li key={key}>{children(n, depth)}</li>;
     case "hardBreak":
       return <br key={key} />;
+    case "photo": {
+      const caption = isObj(n.attrs) && typeof n.attrs.caption === "string" ? n.attrs.caption : "";
+      return (
+        <figure key={key} className="space-y-2 whitespace-normal">
+          <div className="aspect-[4/3] w-full rounded-lg bg-muted" role="img" aria-label="Placeholder photo" />
+          {caption && <figcaption className="text-sm text-muted-foreground">{caption}</figcaption>}
+        </figure>
+      );
+    }
     case "text":
       return typeof n.text === "string" ? <Fragment key={key}>{marked(n.text, n.marks)}</Fragment> : null;
     default:

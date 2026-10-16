@@ -77,6 +77,7 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 | `FAMILY_REDIRECTS` | Optional. Old family addresses that lead to current ones, as `old=new` pairs separated by commas. Production only. |
 | `CLOUDINARY_URL` | The Cloudinary environment's API environment variable, `cloudinary://key:secret@cloud`, from Cloudinary → Settings → API Keys. Production and Preview. |
 | `CLOUDINARY_FOLDER` | Where this app's videos go in Cloudinary: `updates-and-support/production` for Production, `updates-and-support/preview` for Preview. Keeps them apart from each other and from other projects in the same Cloudinary environment. |
+| `PHOTO_PLACEHOLDERS` | Optional. `1` turns on "Add photo" with grey placeholder photos that upload nothing, for trying photos without a Cloudinary account. Preview only; production ignores it even if set. |
 
 **Checking a pull request's preview** needs four local settings in `.env` (see `.env.example`): `PREVIEW_FAMILY_EMAIL`, the preview branch's two connection strings, and Vercel's bypass secret. Vercel keeps its own copies of the connection strings Sensitive, so they can't be pulled from there.
 

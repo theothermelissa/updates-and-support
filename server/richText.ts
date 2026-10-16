@@ -1,6 +1,7 @@
-import type { Block, Doc, HardBreak, ListItem, Mark, Paragraph, Text } from "../src/lib/doc.js";
+import type { Block, Doc, HardBreak, ListItem, Mark, Paragraph, Photo, Text } from "../src/lib/doc.js";
 import { allowedHref, linkify } from "../src/lib/links.js";
 import { RequestError } from "./errors.js";
+import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 
 const MAX_TEXT = 20_000;
 const MAX_NODES = 10_000;
@@ -8,31 +9,36 @@ const MAX_DEPTH = 10;
 const MAX_MARKS = 3;
 const MIN_START = 1;
 const MAX_START = 9_999;
+const MAX_PHOTOS = 6;
+const MAX_CAPTION = 300;
 
 // Attributes Tiptap writes on every link. They're accepted and dropped; only href is kept.
 const LINK_EXTRAS = ["target", "rel", "class", "title"];
 
 const unsupported = () => new RequestError(400, "This update has formatting the app doesn't support");
 
-type Walk = { nodes: number; chars: number; visible: boolean };
+type Walk = { nodes: number; chars: number; visible: boolean; photos: number; settings: PhotoSettings };
 type Obj = Record<string, unknown>;
 
 // Checks a document sent by the editor and returns a new one built only from the fields it
 // checked, so nothing unexpected can reach the database. Anything not allowed is a 400.
-export function validDoc(input: unknown): Doc {
-  const walk: Walk = { nodes: 0, chars: 0, visible: false };
+export function validDoc(input: unknown, settings: PhotoSettings = NO_PHOTOS): Doc {
+  const walk: Walk = { nodes: 0, chars: 0, visible: false, photos: 0, settings };
   const doc = node(input, 1, walk, ["content"]);
   if (doc.type !== "doc") throw unsupported();
-  const content = children(doc, 1, walk, block, true);
+  const content = children(doc, 1, walk, topLevel, true);
   if (!walk.visible) throw new RequestError(400, "An update can't be empty");
   return { type: "doc", content };
 }
 
 // What a request sends as an update: content, or for pages loaded before formatting, the
 // plain text body. Returns the checked document and its plain text, stored side by side.
-export function contentFrom(input: { content?: unknown; body?: unknown }): { content: Doc; body: string } {
+export function contentFrom(
+  input: { content?: unknown; body?: unknown },
+  settings: PhotoSettings = NO_PHOTOS,
+): { content: Doc; body: string } {
   let content: Doc;
-  if (input.content !== undefined) content = validDoc(input.content);
+  if (input.content !== undefined) content = validDoc(input.content, settings);
   else if (typeof input.body === "string") content = validDoc(docFromText(input.body.trim()));
   else throw new RequestError(400, "Expected the update's content");
   return { content, body: textOf(content) };
@@ -73,14 +79,20 @@ export function docFromText(text: string): Doc {
 }
 
 // A document as plain text, for the body column, the wall, and code from before formatting:
-// paragraphs separated by blank lines, list items as "- " or "1. " lines, indented when nested.
+// paragraphs separated by blank lines, list items as "- " or "1. " lines, indented when nested,
+// and photos as "[Photo]" or "[Photo: caption]".
 export function textOf(doc: Doc): string {
   return blocksText(doc.content, "\n\n", "");
 }
 
-function blocksText(blocks: Block[], separator: string, indent: string): string {
+export function photoCount(doc: Doc): number {
+  return doc.content.filter((b) => b.type === "photo").length;
+}
+
+function blocksText(blocks: (Block | Photo)[], separator: string, indent: string): string {
   return blocks
     .map((b) => {
+      if (b.type === "photo") return b.attrs.caption ? `[Photo: ${b.attrs.caption}]` : "[Photo]";
       if (b.type === "paragraph") return indent + paragraphText(b);
       return b.content
         .map((item, i) => {
@@ -117,6 +129,30 @@ function children<T>(
   if (parent.content === undefined && !required) return [];
   if (!Array.isArray(parent.content) || (required && parent.content.length === 0)) throw unsupported();
   return parent.content.map((child) => check(child, depth + 1, walk));
+}
+
+function topLevel(input: unknown, depth: number, walk: Walk): Block | Photo {
+  return isObj(input) && input.type === "photo" ? photo(input, depth, walk) : block(input, depth, walk);
+}
+
+// Photos come only from "Add photo", and so far only as placeholders, for test sites.
+function photo(input: unknown, depth: number, walk: Walk): Photo {
+  const n = node(input, depth, walk, ["attrs"]);
+  if (!isObj(n.attrs)) throw unsupported();
+  // The feed may send a photo's url; it's never stored.
+  onlyKeys(n.attrs, ["caption", "placeholder", "url"]);
+  const { caption, placeholder } = n.attrs;
+  if (placeholder !== true || typeof caption !== "string") throw unsupported();
+  if (!walk.settings.placeholders) {
+    throw new RequestError(400, "Placeholder photos are turned off on this site. Remove the grey photo boxes to save.");
+  }
+  if (++walk.photos > MAX_PHOTOS) throw new RequestError(400, `An update can have at most ${MAX_PHOTOS} photos`);
+  const trimmed = caption.trim();
+  if (trimmed.length > MAX_CAPTION) {
+    throw new RequestError(400, `A caption can have at most ${MAX_CAPTION} characters`);
+  }
+  walk.visible = true;
+  return { type: "photo", attrs: { caption: trimmed, placeholder: true } };
 }
 
 function block(input: unknown, depth: number, walk: Walk): Block {
