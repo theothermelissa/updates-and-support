@@ -6,29 +6,61 @@ How a family posts updates, how everyone reads them, reacts to them, and leaves 
 
 An update has:
 
-- a **body** of plain text. Line breaks are kept, and web addresses become links. There is no other formatting.
+- its **content**: formatted text with optional photos, in the order the family member wrote them. The formatting is deliberately small:
+  - paragraphs and line breaks
+  - **bold** and *italic*
+  - links, to web addresses (`http:` or `https:`) and email addresses (`mailto:`)
+  - bulleted and numbered lists, which can be nested
+  - photos, each with an optional **caption** of plain text up to 300 characters (see "Photos")
 - its **author**, a family member, shown by name
 - when it was **posted**, and when it was last **edited**, if ever
 
+There are no headings, colors, fonts, tables, code, quotes, or images from other websites. An update can't be empty, and it has at most 20,000 characters of text, at most six photos, and lists nested at most three levels deep.
+
 ## The feed
 
-The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, body, and an "edited" mark if it was edited.
+The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Content appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
 A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), a link to the People page for family members, and "Sign out." Beside it, a "Notes" link leads to the family's wall (see "The wall").
 
 Under each update are its reactions and its notes (see "Reactions" and "Notes"). Family members also see a "Post an update" button and, on each update, "Edit" and "Delete."
 
+## Writing an update
+
+Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
+
+Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
+
 ## Posting
 
-A family member writes the body and posts. The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone.
+A family member writes the update and posts. The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone.
 
 ## Editing
 
-A family member can edit any update in their family, including one written by another family member. Editing changes the body, records the edit time, and never sends notifications.
+A family member can edit any update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications.
 
 ## Deleting
 
-A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions and notes. When the update has notes, the confirmation says they'll be deleted too.
+A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions, notes, and photos (see "Photos"). When the update has notes, the confirmation says they'll be deleted too.
+
+## Photos
+
+Photos are available once the operator turns them on with a setting (see the README). Until then, no "Add photo" button appears and the server accepts no photos.
+
+**Adding.** "Add photo" opens the device's photo picker for one photo, including iPhone photos, and puts it where the cursor is, as a card with the photo, a caption field, and "Remove." The photo uploads as soon as it's chosen, and its card shows "Uploading…" until it's done; saving waits until every photo has finished uploading. A photo over 10 MB is refused with a message saying so. Photos can't be dragged; to move one, remove it and add it again. Removing a photo deletes it permanently once the update is saved.
+
+**Who sees them.** Photos and captions are seen by exactly the people who can see the update (see [access.md](access.md)). They never appear on the gate or in emails.
+
+**How they're kept private.** Photos are stored privately with Cloudinary, a photo-hosting service.
+- Before storing a photo, Cloudinary shrinks it to at most 1600 pixels wide and removes its embedded details, such as location and camera, so the file as taken is never kept.
+- Nobody can view a stored photo without a link the server signs with the app's secret key, and the server creates those links only in the feed it sends to someone signed in to the family. A link can't be guessed or altered to show a different photo or size.
+- While a photo loads, a grey box holds its place.
+
+**Deleting.** Deleting an update, or removing a photo while editing, deletes the photo from Cloudinary as well as from the app. If Cloudinary can't be reached at that moment, the photo still disappears from the app at once (see "Stated limits" in [access.md](access.md)).
+
+**Placeholder photos, for testing.** On test sites (previews and local development) where the operator has turned on placeholder photos with their own setting, choosing a photo uploads nothing: it is saved as a placeholder, shown as a plain grey box in a 4:3 shape with its caption beneath. Placeholders behave like photos in every other way: they count toward the six, take captions, can be removed, and count in notification subjects. The production site never accepts placeholders, whatever its settings. Where real photos are also turned on, new photos are real, and placeholders saved earlier stay grey boxes.
+
+There is no reordering, no video, and supporters can't add photos.
 
 ## Reactions
 
@@ -84,7 +116,7 @@ A removed person's notes are neither shown nor counted, and a removed person can
 
 When an update is posted with "Notify supporters by email" checked, every supporter of the family who has a verified email, has notifications on, and has not been removed gets one email.
 
-- The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content.
+- The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content. When the update has photos, the subject says how many, as in "Sam's Updates has a new update (2 photos)"; the photos themselves are never attached or linked.
 - Each email has an unsubscribe link to a page with a "Turn off notifications" button, which works without signing in. The button, rather than the link alone, keeps email security scanners that open links from unsubscribing people.
 - Each email also has `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so mail apps that offer their own "Unsubscribe" button can turn notifications off in one click. Scanners don't send that request.
 - Family members are not notified.

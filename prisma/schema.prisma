@@ -95,7 +95,10 @@ model Update {
   id        String    @id @default(cuid())
   familyId  String
   authorId  String
+  // The update's plain text, kept in step with content (see server/richText.ts).
   body      String
+  // The formatted document, checked by validDoc. Null for updates posted before formatting.
+  content   Json?
   createdAt DateTime  @default(now())
   editedAt  DateTime?
 
