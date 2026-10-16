@@ -22,5 +22,6 @@ export type PersonView = {
   notificationsOn: boolean;
   emailVerified: boolean;
 };
-// photos: what "Add photo" does in the editor, or "off" for no button.
-export type Me = { family: { displayName: string; photos: "placeholder" | "off" }; person: PersonView };
+// photos: what "Add photo" does in the editor. "real" uploads to Cloudinary; "placeholder"
+// draws a grey box; "off" hides the button.
+export type Me = { family: { displayName: string; photos: "real" | "placeholder" | "off" }; person: PersonView };

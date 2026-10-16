@@ -5,18 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { allowedHref } from "../lib/links.js";
 import { DOC_CLASSES } from "../richText.js";
+import { photoSizeMessage, uploadPhoto } from "../photos.js";
 import { cleanDoc, extensions } from "./extensions.js";
-import { MAX_PHOTOS } from "./photo.js";
+import { MAX_PHOTOS, setPhotoAttrs } from "./photo.js";
 
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const EMAIL = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
 
 // The update editor and its toolbar. Loaded only when a family member writes or edits, so
 // supporters never download it. onChange gets the document to send, or null while it's empty.
-// photos: what "Add photo" does, or "off" for no button.
+// photos: what "Add photo" does. "real" uploads the file; "placeholder" draws a grey box;
+// "off" hides the button. Saving waits until every real photo has finished uploading.
 export default function RichEditor(props: {
   initial?: unknown;
-  photos: "placeholder" | "off";
+  photos: "real" | "placeholder" | "off";
+  slug: string;
   onChange: (doc: JSONContent | null) => void;
 }) {
   const editor = useEditor({
@@ -30,13 +33,12 @@ export default function RichEditor(props: {
         "aria-label": "Update",
       },
     },
-    onUpdate: ({ editor }) =>
-      props.onChange(editor.state.doc.textContent.trim() || photoCount(editor) > 0 ? cleanDoc(editor.getJSON()) : null),
+    onUpdate: ({ editor }) => props.onChange(docToSend(editor)),
   });
 
   return (
     <div className="space-y-2">
-      <Toolbar editor={editor} photos={props.photos} />
+      <Toolbar editor={editor} photos={props.photos} slug={props.slug} />
       <EditorContent editor={editor} />
     </div>
   );
@@ -50,7 +52,21 @@ function photoCount(editor: Editor): number {
   return count;
 }
 
-function Toolbar({ editor, photos }: { editor: Editor; photos: "placeholder" | "off" }) {
+// Null while a photo is still uploading or failed, so Post and Save stay disabled.
+function docToSend(editor: Editor): JSONContent | null {
+  let pending = false;
+  editor.state.doc.forEach((node) => {
+    if (node.type.name !== "photo") return;
+    const { placeholder, publicId, uploading, error } = node.attrs;
+    if (placeholder === true) return;
+    if (uploading || error || typeof publicId !== "string" || !publicId) pending = true;
+  });
+  if (pending) return null;
+  if (!editor.state.doc.textContent.trim() && photoCount(editor) === 0) return null;
+  return cleanDoc(editor.getJSON());
+}
+
+function Toolbar({ editor, photos, slug }: { editor: Editor; photos: "real" | "placeholder" | "off"; slug: string }) {
   const active = useEditorState({
     editor,
     selector: ({ editor }) => ({
@@ -63,11 +79,33 @@ function Toolbar({ editor, photos }: { editor: Editor; photos: "placeholder" | "
     }),
   });
   const picker = useRef<HTMLInputElement>(null);
+  const [photoError, setPhotoError] = useState("");
 
   // A placeholder uploads nothing: the chosen file is only the cue to add a grey box.
-  function addPhoto() {
-    editor.chain().focus().insertContent({ type: "photo", attrs: { caption: "", placeholder: true } }).run();
-    if (picker.current) picker.current.value = "";
+  // A real photo uploads immediately and the card shows the local preview until it's done.
+  async function addPhoto(file: File) {
+    if (photos !== "real") {
+      editor.chain().focus().insertContent({ type: "photo", attrs: { caption: "", placeholder: true } }).run();
+      return;
+    }
+    const tooBig = photoSizeMessage(file);
+    if (tooBig) {
+      setPhotoError(tooBig);
+      return;
+    }
+    setPhotoError("");
+    const clientId = crypto.randomUUID();
+    const preview = URL.createObjectURL(file);
+    editor.chain().focus().insertContent({ type: "photo", attrs: { caption: "", clientId, preview, uploading: true } }).run();
+    try {
+      const publicId = await uploadPhoto(slug, file);
+      setPhotoAttrs(editor, clientId, { publicId, uploading: false, error: null });
+    } catch (err) {
+      setPhotoAttrs(editor, clientId, {
+        uploading: false,
+        error: err instanceof Error ? err.message : "The photo didn't upload. Please try again.",
+      });
+    }
   }
   const [link, setLink] = useState<string | null>(null);
   const [linkError, setLinkError] = useState("");
@@ -150,10 +188,25 @@ function Toolbar({ editor, photos }: { editor: Editor; photos: "placeholder" | "
               <ImagePlusIcon />
               {active.photos >= MAX_PHOTOS ? `${MAX_PHOTOS} photos is the most` : "Add photo"}
             </Button>
-            <input ref={picker} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.length && addPhoto()} />
+            <input
+              ref={picker}
+              type="file"
+              accept="image/*,.heic,.heif"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void addPhoto(file);
+                e.target.value = "";
+              }}
+            />
           </>
         )}
       </div>
+      {photoError && (
+        <p className="text-sm text-destructive" role="alert">
+          {photoError}
+        </p>
+      )}
       {link !== null && (
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
