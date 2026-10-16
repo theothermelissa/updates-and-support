@@ -9,4 +9,6 @@ export type ListItem = { type: "listItem"; content: Block[] };
 export type BulletList = { type: "bulletList"; content: ListItem[] };
 export type OrderedList = { type: "orderedList"; attrs: { start: number; type: null }; content: ListItem[] };
 export type Block = Paragraph | BulletList | OrderedList;
-export type Doc = { type: "doc"; content: Block[] };
+// A photo sits directly in the document, never in a list. Only placeholders exist so far.
+export type Photo = { type: "photo"; attrs: { caption: string; placeholder: true } };
+export type Doc = { type: "doc"; content: (Block | Photo)[] };

@@ -43,3 +43,18 @@ it("draws nothing for a malformed document, rather than failing", () => {
   }
   expect(render(doc(null, { type: "paragraph", content: [{ type: "text" }] }))).toBe("<p></p>");
 });
+
+it("draws a placeholder photo as a grey box, with its caption beneath when it has one", () => {
+  const box = '<div class="aspect-[4/3] w-full rounded-lg bg-muted" role="img" aria-label="Placeholder photo"></div>';
+  expect(
+    render(
+      doc(
+        { type: "photo", attrs: { caption: "At the <park>", placeholder: true } },
+        { type: "photo", attrs: { caption: "", placeholder: true } },
+      ),
+    ),
+  ).toBe(
+    `<figure class="space-y-2 whitespace-normal">${box}<figcaption class="text-sm text-muted-foreground">At the &lt;park&gt;</figcaption></figure>` +
+      `<figure class="space-y-2 whitespace-normal">${box}</figure>`,
+  );
+});

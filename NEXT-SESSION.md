@@ -5,6 +5,14 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
   A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
 
+- **2026-10-16** — Build the in-page video recorder (video notes, part 2).
+  `spec/updates.md` → "Video notes" describes it: a live camera view, a 3-2-1 countdown, a 60-second timer with Stop, then automatic playback with "Post" and "Re-record." Part 1 shipped storage, access, and "Upload a video"; the recorder feeds the same review and upload path in `src/components/notes.tsx`. Recorded files can report no length in the browser (MediaRecorder), and the server's check covers that.
+- **2026-10-16** — Share one Cloudinary module between photos and video notes.
+  Video notes use `server/videos.ts`, with a `VideoStore` interface, a fake for tests, and deletion from Cloudinary before the row is removed. The photos plan designs its own Cloudinary code and deletes rows even when Cloudinary is unreachable. Before photos' Cloudinary slice, decide on one deletion rule and reuse the module (`media_metadata`, `urlAnalytics: false`, and explicit `type`/`resource_type` were all needed).
+- **2026-10-16** — Sweep video uploads that never became notes.
+  A video uploaded but never attached (refused for length, or a failed or abandoned post) stays in Cloudinary unseen. A script could destroy ticketed public IDs with no note after a day. Cut from video notes part 1 for speed.
+- **2026-10-16** — Give this app its own Cloudinary environment and check its credit use.
+  The app shares Melissa's free-plan environment with her other, inactive projects, so its key can reach their assets, and storage, bandwidth, and conversions share one credit pool. Check usage after launch week, and move to a separate environment if another project becomes active.
 - **2026-10-16** — Build a profile page where people change their own name.
   Notes and the email form show a stored name read-only, by Melissa's decision: names change on a profile, which doesn't exist yet. A changed name re-signs that person's earlier notes and reactions. Came up while building notes.
 - **2026-10-16** — Let a family member delete all of one author's notes at once.

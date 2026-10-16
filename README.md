@@ -10,6 +10,7 @@ What the app should do lives in `spec/`, starting with `spec/MASTER_SPEC.md`. Ho
 - **API:** Vercel serverless functions in `api/`, with the logic they call in `server/`
 - **Database:** Postgres via Prisma 7; schema in `prisma/schema.prisma`
 - **Hosting:** Vercel, with a Neon Postgres database from the Vercel marketplace
+- **Video notes:** Cloudinary stores and converts them; the browser uploads straight to it
 - **CI:** GitHub Actions (`.github/workflows/ci.yml`)
 
 ## First-time setup
@@ -74,6 +75,9 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 | `APP_URL` | The production address, `https://orbul.com`. Production only; previews use their own deployment address. |
 | `ROOT_FAMILY_SLUG` | Optional. The address of the family shown at the site's root, `/`. Production: the real family's address, kept only in Vercel. Preview: `testfamily-preview`, so each preview's root shows the test family. |
 | `FAMILY_REDIRECTS` | Optional. Old family addresses that lead to current ones, as `old=new` pairs separated by commas. Production only. |
+| `CLOUDINARY_URL` | The Cloudinary environment's API environment variable, `cloudinary://key:secret@cloud`, from Cloudinary → Settings → API Keys. Production and Preview. |
+| `CLOUDINARY_FOLDER` | Where this app's videos go in Cloudinary: `updates-and-support/production` for Production, `updates-and-support/preview` for Preview. Keeps them apart from each other and from other projects in the same Cloudinary environment. |
+| `PHOTO_PLACEHOLDERS` | Optional. `1` turns on "Add photo" with grey placeholder photos that upload nothing, for trying photos without a Cloudinary account. Preview only; production ignores it even if set. |
 
 **Checking a pull request's preview** needs four local settings in `.env` (see `.env.example`): `PREVIEW_FAMILY_EMAIL`, the preview branch's two connection strings, and Vercel's bypass secret. Vercel keeps its own copies of the connection strings Sensitive, so they can't be pulled from there.
 

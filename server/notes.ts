@@ -2,11 +2,17 @@ import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import { validName } from "./families.js";
 import { NoteColor, type Person, type Prisma } from "./generated/prisma/client.js";
+import { cloudinaryStore, newPublicId, type VideoStore } from "./videos.js";
 
 const COLORS = Object.values(NoteColor);
 const MAX_BODY = 1_000;
 // Notes one person may leave in an hour, so someone with the answer can't flood the wall.
 const MAX_PER_HOUR = 20;
+// Upload tickets one person may get in an hour, used or not, so no one can fill storage
+// with uploads they never post.
+const MAX_TICKETS_PER_HOUR = 20;
+// The spec's 60 seconds, plus one for how containers round a video's length.
+const MAX_SECONDS = 61;
 
 // What a viewer sees of a note: the author's name, never their ID or email. `mine` lets the
 // author delete it; `authorIsFamily` marks family members' notes, which a supporter can't
@@ -15,6 +21,8 @@ export type NoteView = {
   id: string;
   updateId: string;
   body: string;
+  // Signed links for a video note, built only for someone allowed to see the note.
+  video: { src: string; poster: string } | null;
   color: NoteColor;
   authorName: string;
   authorIsFamily: boolean;
@@ -34,6 +42,7 @@ export const noteSelect = {
   id: true,
   updateId: true,
   body: true,
+  videoId: true,
   color: true,
   createdAt: true,
   authorId: true,
@@ -42,11 +51,12 @@ export const noteSelect = {
 
 type LoadedNote = Prisma.NoteGetPayload<{ select: typeof noteSelect }>;
 
-export function noteView(note: LoadedNote, viewerId: string): NoteView {
+export function noteView(note: LoadedNote, viewerId: string, store: VideoStore): NoteView {
   return {
     id: note.id,
     updateId: note.updateId,
     body: note.body,
+    video: note.videoId ? store.urls(note.videoId) : null,
     color: note.color,
     // Notes are only written with a name.
     authorName: note.author.name ?? "",
@@ -56,17 +66,49 @@ export function noteView(note: LoadedNote, viewerId: string): NoteView {
   };
 }
 
-// Leaves a note on an update in the person's own family. A person without a name must give
-// one, and it goes on their record; a person with a name signs with it and can't change it here.
-// Returns the note and the name it's signed with, so the client can show the new name.
+// Gives the person a ticket to upload one video straight to the video host, and the signed
+// fields for it. The server picks the public ID, and only this person can attach it to a note.
+export async function issueVideoUpload(
+  db: Db,
+  person: Person,
+  store: VideoStore = cloudinaryStore,
+): Promise<{ publicId: string; url: string; fields: Record<string, string> }> {
+  const publicId = newPublicId();
+  await db.$transaction(async (tx) => {
+    // Locks the person's row, as createNote does: a removal at the same moment lands first or
+    // waits, and a burst of requests can't all pass the count at once.
+    const [current] = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Person"
+      WHERE id = ${person.id} AND "familyId" = ${person.familyId} AND "removedAt" IS NULL
+      FOR UPDATE`;
+    if (!current) throw new RequestError(403, "You can't leave a note here");
+    const since = new Date(Date.now() - 60 * 60 * 1000);
+    const recent = await tx.videoUpload.count({ where: { personId: person.id, createdAt: { gte: since } } });
+    if (recent >= MAX_TICKETS_PER_HOUR) {
+      throw new RequestError(429, "You've uploaded a lot of videos. Please try again later.");
+    }
+    await tx.videoUpload.create({ data: { publicId, personId: person.id } });
+  });
+  return { publicId, ...store.uploadParams(publicId) };
+}
+
+// Leaves a note on an update in the person's own family: written, with a body, or a video,
+// with the public ID of an upload ticket the person was given. A person without a name must
+// give one, and it goes on their record; a person with a name signs with it and can't change
+// it here. Returns the note and the name it's signed with, so the client can show the new name.
 export async function createNote(
   db: Db,
   person: Person,
-  input: { updateId?: unknown; body?: unknown; color?: unknown; name?: unknown },
+  input: { updateId?: unknown; body?: unknown; video?: unknown; color?: unknown; name?: unknown },
+  store: VideoStore = cloudinaryStore,
 ): Promise<{ note: NoteView; name: string }> {
   const { updateId, color } = input;
   if (typeof updateId !== "string") throw new RequestError(400, "Expected an updateId");
-  const body = validBody(input.body);
+  if (input.video !== undefined && input.body !== undefined) {
+    throw new RequestError(400, "A note has a body or a video, not both");
+  }
+  const videoId = input.video === undefined ? null : await validVideo(db, person, input.video, store);
+  const body = videoId ? "" : validBody(input.body);
   if (!COLORS.includes(color as NoteColor)) throw new RequestError(400, "Unknown color");
 
   try {
@@ -93,40 +135,69 @@ export async function createNote(
       if (!author.name) await tx.person.update({ where: { id: person.id }, data: { name } });
 
       const note = await tx.note.create({
-        data: { updateId, authorId: person.id, body, color: color as NoteColor },
+        data: { updateId, authorId: person.id, body, videoId, color: color as NoteColor },
         select: noteSelect,
       });
-      return { note: noteView(note, person.id), name };
+      return { note: noteView(note, person.id, store), name };
     });
   } catch (err) {
-    // The update was deleted a moment ago. Caught outside the transaction, which the
-    // foreign-key error has already aborted.
-    if ((err as { code?: string }).code === "P2003") throw new RequestError(404, "Update not found");
+    // Caught outside the transaction, which these errors have already aborted. P2003: the
+    // update was deleted a moment ago. P2002: the video is already on a note.
+    const code = (err as { code?: string }).code;
+    if (code === "P2003") throw new RequestError(404, "Update not found");
+    if (code === "P2002") throw new RequestError(400, "That video is already on a note");
     throw err;
   }
 }
 
+// A video the person may attach: first a ticket issued to them, and only then, so the server
+// never asks the shared video host about anything it didn't issue to this person, an
+// uploaded video within the length limit.
+async function validVideo(db: Db, person: Person, video: unknown, store: VideoStore): Promise<string> {
+  if (typeof video !== "string") throw new RequestError(400, "Unknown video");
+  const ticket = await db.videoUpload.findFirst({ where: { publicId: video, personId: person.id } });
+  if (!ticket) throw new RequestError(400, "Unknown video");
+  const uploaded = await store.describe(video);
+  if (!uploaded) throw new RequestError(400, "The video didn't finish uploading. Please try again.");
+  if (uploaded.duration > MAX_SECONDS) throw new RequestError(400, "A video can be up to 60 seconds long");
+  return video;
+}
+
 // Every visible note in the person's family, newest first, for the wall.
-export async function listNotes(db: Db, person: Person): Promise<NoteView[]> {
+export async function listNotes(db: Db, person: Person, store: VideoStore = cloudinaryStore): Promise<NoteView[]> {
   const notes = await db.note.findMany({
     where: visibleNotes(person.familyId),
     orderBy: { createdAt: "desc" },
     select: noteSelect,
   });
-  return notes.map((n) => noteView(n, person.id));
+  return notes.map((n) => noteView(n, person.id, store));
 }
 
 // A family member may delete any note in their family; anyone else only their own. A note
-// they can't delete behaves like one that doesn't exist.
-export async function deleteNote(db: Db, person: Person, id: string): Promise<void> {
-  const { count } = await db.note.deleteMany({
-    where: {
-      id,
-      ...visibleNotes(person.familyId),
-      ...(person.role === "family" ? {} : { authorId: person.id }),
-    },
-  });
+// they can't delete behaves like one that doesn't exist. A video note's video is deleted
+// first, so a failure there leaves the note to try again rather than a video nobody can delete.
+export async function deleteNote(db: Db, person: Person, id: string, store: VideoStore = cloudinaryStore): Promise<void> {
+  const where = {
+    id,
+    ...visibleNotes(person.familyId),
+    ...(person.role === "family" ? {} : { authorId: person.id }),
+  };
+  const note = await db.note.findFirst({ where, select: { videoId: true } });
+  if (!note) throw new RequestError(404, "Note not found");
+  if (note.videoId) await destroyVideos(store, [note.videoId]);
+  const { count } = await db.note.deleteMany({ where });
   if (count === 0) throw new RequestError(404, "Note not found");
+}
+
+// Deletes videos from the host, turning its failure into a refusal the person can retry.
+export async function destroyVideos(store: VideoStore, publicIds: string[]): Promise<void> {
+  if (publicIds.length === 0) return;
+  try {
+    await store.destroy(publicIds);
+  } catch (err) {
+    console.error("Deleting videos failed", err);
+    throw new RequestError(502, "Couldn't delete the video. Please try again.");
+  }
 }
 
 function validBody(body: unknown): string {

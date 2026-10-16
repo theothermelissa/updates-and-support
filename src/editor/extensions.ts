@@ -1,13 +1,17 @@
 import StarterKit from "@tiptap/starter-kit";
 import type { JSONContent } from "@tiptap/react";
 import { allowedHref } from "../lib/links.js";
+import { Document, Photo } from "./photo.js";
 
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
-// Only what an update allows: paragraphs, line breaks, bold, italic, links, and lists.
-// Anything else pasted in keeps its text and loses its formatting.
+// Only what an update allows: paragraphs, line breaks, bold, italic, links, lists, and
+// photos. Anything else pasted in keeps its text and loses its formatting.
 export const extensions = [
+  Document,
+  Photo,
   StarterKit.configure({
+    document: false,
     heading: false,
     blockquote: false,
     codeBlock: false,
