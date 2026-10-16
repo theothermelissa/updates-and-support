@@ -66,7 +66,7 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
     id: note.id,
     updateId: note.updateId,
     body: note.body,
-    video: note.videoId ? videoLinks(store, note.videoId) : null,
+    video: note.videoId ? shownVideo(store, note.videoId) : null,
     color: note.color,
     // Notes are only written with a name.
     authorName: note.author.name ?? "",
@@ -77,7 +77,9 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
   };
 }
 
-function videoLinks(store: VideoStore, publicId: string): NoteView["video"] {
+// Signed links for someone allowed to see the video, or `unavailable` when the host can't
+// make them, so one video can't break the page. Notes and updates both use it.
+export function shownVideo(store: VideoStore, publicId: string): { src: string; poster: string } | { unavailable: true } {
   try {
     return store.urls(publicId);
   } catch (err) {
@@ -87,7 +89,8 @@ function videoLinks(store: VideoStore, publicId: string): NoteView["video"] {
 }
 
 // Gives the person a ticket to upload one video straight to the video host, and the signed
-// fields for it. The server picks the public ID, and only this person can attach it to a note.
+// fields for it. The server picks the public ID, and only this person can attach it to a note
+// or an update.
 export async function issueVideoUpload(
   db: Db,
   person: Person,
@@ -165,6 +168,8 @@ export async function createNote(
         throw new RequestError(429, "You've left a lot of notes. Please try again later.");
       }
 
+      if (videoId) await lockUnusedVideo(tx, person.id, videoId);
+
       const name = input.name === undefined && author.name ? author.name : validName(input.name);
       if (name !== author.name) await tx.person.update({ where: { id: person.id }, data: { name } });
 
@@ -184,17 +189,51 @@ export async function createNote(
   }
 }
 
+// A video the person may attach to a note: their ticket, then an uploaded video within a minute.
+function validVideo(db: Db, person: Person, video: unknown, store: VideoStore): Promise<string> {
+  return claimVideo(db, person, video, store, { maxSeconds: MAX_SECONDS });
+}
+
 // A video the person may attach: first a ticket issued to them, and only then, so the server
-// never asks the shared video host about anything it didn't issue to this person, an
-// uploaded video within the length limit.
-async function validVideo(db: Db, person: Person, video: unknown, store: VideoStore): Promise<string> {
+// never asks the shared video host about anything it didn't issue to this person, an uploaded
+// video within the limits it was given. Notes pass a length; updates pass a size.
+export async function claimVideo(
+  db: Db,
+  person: Person,
+  video: unknown,
+  store: VideoStore,
+  limits: { maxSeconds?: number; maxBytes?: number },
+): Promise<string> {
   if (typeof video !== "string") throw new RequestError(400, "Unknown video");
   const ticket = await db.videoUpload.findFirst({ where: { publicId: video, personId: person.id } });
   if (!ticket) throw new RequestError(400, "Unknown video");
   const uploaded = await fromHost(() => store.describe(video));
   if (!uploaded) throw new RequestError(400, "The video didn't finish uploading. Please try again.");
-  if (uploaded.duration > MAX_SECONDS) throw new RequestError(400, "A video can be up to 60 seconds long");
+  if (limits.maxSeconds !== undefined && uploaded.duration > limits.maxSeconds) {
+    throw new RequestError(400, "A video can be up to 60 seconds long");
+  }
+  if (limits.maxBytes !== undefined && (uploaded.bytes === null || uploaded.bytes > limits.maxBytes)) {
+    throw new RequestError(
+      400,
+      uploaded.bytes !== null && uploaded.bytes > limits.maxBytes
+        ? "That video is too large. Please choose one under 100 MB."
+        : "The video didn't finish uploading. Please try again.",
+    );
+  }
   return video;
+}
+
+// Locks the person's ticket, then refuses it if a note or an update already has it. The lock
+// makes two attaches of the same ticket take turns, so the check can't pass for both.
+export async function lockUnusedVideo(tx: Prisma.TransactionClient, personId: string, publicId: string): Promise<void> {
+  const [ticket] = await tx.$queryRaw<{ publicId: string }[]>`
+    SELECT "publicId" FROM "VideoUpload"
+    WHERE "publicId" = ${publicId} AND "personId" = ${personId}
+    FOR UPDATE`;
+  if (!ticket) throw new RequestError(400, "Unknown video");
+  const note = await tx.note.findFirst({ where: { videoId: publicId }, select: { id: true } });
+  const update = await tx.update.findFirst({ where: { videoId: publicId }, select: { id: true } });
+  if (note || update) throw new RequestError(400, "That video is already posted");
 }
 
 // Every visible note in the person's family, newest first, for the wall.

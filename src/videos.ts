@@ -20,12 +20,14 @@ export function videoDuration(file: File): Promise<number | null> {
   });
 }
 
-// Why a file can't be posted, or null if it can.
-export async function checkVideo(file: File): Promise<string | null> {
+// Why a file can't be posted, or null if it can. `maxSeconds` null skips the length check,
+// for an update's video, which has no time limit. The size limit always applies.
+export async function checkVideo(file: File, maxSeconds: number | null = MAX_SECONDS): Promise<string | null> {
   if (!file.type.startsWith("video/")) return "That file isn't a video.";
   if (file.size > MAX_BYTES) return "That video is too large. Please choose one under 100 MB.";
+  if (maxSeconds === null) return null;
   const seconds = await videoDuration(file);
-  if (seconds !== null && seconds > MAX_SECONDS + 0.5) return "A video can be up to 60 seconds long.";
+  if (seconds !== null && seconds > maxSeconds + 0.5) return `A video can be up to ${maxSeconds} seconds long.`;
   return null;
 }
 
