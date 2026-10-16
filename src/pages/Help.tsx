@@ -9,11 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api, type Me } from "../api.js";
-import { capacityLabel } from "../help.js";
+import { capacityLabel, isPast, sortRequests, whenLabel } from "../help.js";
 
-type Offer = { id: string | null; name: string; mine: boolean; email: string | null };
+// A null name is an offer made without one.
+type Offer = { id: string | null; name: string | null; mine: boolean; email: string | null };
+// What the family sets on a request. date is "YYYY-MM-DD" and time "HH:MM", or null.
+type RequestFields = {
+  body: string;
+  slots: number | null;
+  requireName: boolean;
+  requireEmail: boolean;
+  date: string | null;
+  time: string | null;
+};
 // A supporter's offers hold only their own; offered counts everyone's.
-type HelpRequest = { id: string; body: string; slots: number | null; full: boolean; offered: number; offers: Offer[] };
+type HelpRequest = RequestFields & { id: string; full: boolean; offered: number; offers: Offer[] };
 
 export function Help({ slug }: { slug: string }) {
   const [me, setMe] = useState<Me | null>(null);
@@ -67,22 +77,21 @@ export function Help({ slug }: { slug: string }) {
       {family && (
         <RequestForm
           submitLabel="Add request"
-          onSubmit={(body, slots) => change("help", "POST", { body, slots }).then((r) => r.ok)}
+          onSubmit={(fields) => change("help", "POST", fields).then((r) => r.ok)}
         />
       )}
       {requests.length === 0 && !family && <p>There aren't any requests right now.</p>}
       <div className="space-y-4">
-        {requests.map((request) => (
+        {sortRequests(requests, new Date()).map((request) => (
           <RequestCard
             key={request.id}
             request={request}
             family={family}
-            needsName={me.person.name === null}
-            onSave={(body, slots) => change(`help/${request.id}`, "PATCH", { body, slots }).then((r) => r.ok)}
+            needsName={request.requireName && me.person.name === null}
+            needsEmail={request.requireEmail && me.person.email === null}
+            onSave={(fields) => change(`help/${request.id}`, "PATCH", fields).then((r) => r.ok)}
             onDelete={() => change(`help/${request.id}`, "DELETE").then((r) => r.ok)}
-            onOffer={(helping, name) =>
-              change(`help/${request.id}/offer`, "POST", name === undefined ? { helping } : { helping, name }).then((r) => r.ok)
-            }
+            onOffer={(helping, details) => change(`help/${request.id}/offer`, "POST", { helping, ...details }).then((r) => r.ok)}
             onRemove={(offerId) => change(`help/${request.id}/offers/${offerId}`, "DELETE").then((r) => r.ok)}
           />
         ))}
@@ -95,9 +104,10 @@ function RequestCard(props: {
   request: HelpRequest;
   family: boolean;
   needsName: boolean;
-  onSave: (body: string, slots: number | null) => Promise<boolean>;
+  needsEmail: boolean;
+  onSave: (fields: RequestFields) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
-  onOffer: (helping: boolean, name?: string) => Promise<boolean>;
+  onOffer: (helping: boolean, details?: { name?: string; email?: string }) => Promise<boolean>;
   onRemove: (offerId: string) => Promise<boolean>;
 }) {
   const { request } = props;
@@ -105,23 +115,29 @@ function RequestCard(props: {
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [name, setName] = useState("");
-  const [askingName, setAskingName] = useState(false);
+  const [email, setEmail] = useState("");
+  const [asking, setAsking] = useState(false);
   const [bowingOut, setBowingOut] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const mine = request.offers.some((offer) => offer.mine);
-  const showButton = !request.full && !mine;
+  const past = isPast(request.date, request.time, new Date());
+  const showButton = !request.full && !past && !mine;
+  const needsDetails = props.needsName || props.needsEmail;
 
   async function offer(e: FormEvent) {
     e.preventDefault();
-    // Someone without a name is asked for one only once they press the button.
-    if (props.needsName && !askingName) return setAskingName(true);
-    if (props.needsName && name.trim() === "") return;
+    // A name or email the request needs is asked for only once they press the button.
+    if (needsDetails && !asking) return setAsking(true);
     setPending(true);
-    const ok = await props.onOffer(true, props.needsName ? name : undefined);
+    const ok = await props.onOffer(true, {
+      ...(props.needsName && { name }),
+      ...(props.needsEmail && { email }),
+    });
     setPending(false);
     if (ok) {
       setName("");
-      setAskingName(false);
+      setEmail("");
+      setAsking(false);
     }
   }
 
@@ -129,10 +145,10 @@ function RequestCard(props: {
     <article className="space-y-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10">
       {editing ? (
         <RequestForm
-          initial={{ body: request.body, slots: request.slots }}
+          initial={request}
           submitLabel="Save"
-          onSubmit={async (body, slots) => {
-            const ok = await props.onSave(body, slots);
+          onSubmit={async (fields) => {
+            const ok = await props.onSave(fields);
             if (ok) setEditing(false);
             return ok;
           }}
@@ -141,14 +157,17 @@ function RequestCard(props: {
       ) : (
         <div className="flex items-start gap-2">
           {request.full && <CheckIcon className="mt-0.5 size-5 shrink-0 text-green-800" role="img" aria-label="Covered" />}
-          {/* The count is inline-block, so the line through a covered request skips it. */}
-          <LinkedText text={request.body} className={`min-w-0 flex-1 ${request.full ? "line-through" : ""}`}>
-            {/* inline-block, so the parentheses wrap with what's inside them. A margin rather
-                than a space, so a covered request's line through stops at its text. */}
-            <span className="ml-1 inline-block text-sm text-muted-foreground">
-              ({capacityLabel(request.slots, request.offered)})
-            </span>
-          </LinkedText>
+          {/* The count is inline-block, so the line through a covered or past request skips it. */}
+          <div className="min-w-0 flex-1">
+            {request.date && <p className="text-sm text-muted-foreground">{whenLabel(request.date, request.time)}</p>}
+            <LinkedText text={request.body} className={request.full || past ? "line-through" : ""}>
+              {/* inline-block, so the parentheses wrap with what's inside them. A margin rather
+                  than a space, so a covered request's line through stops at its text. */}
+              <span className="ml-1 inline-block text-sm text-muted-foreground">
+                ({capacityLabel(request.slots, request.offered)})
+              </span>
+            </LinkedText>
+          </div>
           {props.family && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -185,17 +204,29 @@ function RequestCard(props: {
       )}
       {showButton && !editing && (
         <form onSubmit={offer} className="space-y-3">
-          {props.needsName && askingName && (
+          {asking && props.needsName && (
             <Field label="Your name">
               <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
+            </Field>
+          )}
+          {asking && props.needsEmail && (
+            <Field label={<span>Your email <span className="font-normal text-muted-foreground">(only the family will see this)</span></span>}>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                maxLength={254}
+                autoFocus={!props.needsName}
+              />
             </Field>
           )}
           <div className="flex gap-2">
             <Button type="submit" variant="outline" disabled={pending}>
               <span aria-hidden="true">✋</span>I can help with this
             </Button>
-            {props.needsName && askingName && (
-              <Button type="button" variant="ghost" onClick={() => setAskingName(false)}>
+            {asking && (
+              <Button type="button" variant="ghost" onClick={() => setAsking(false)}>
                 Cancel
               </Button>
             )}
@@ -248,7 +279,7 @@ function OfferList(props: {
       {props.offers.map((offer, i) => (
         <li key={offer.id ?? i} className="space-y-2">
           <p>
-            {offer.mine ? "You" : offer.name}
+            {offer.mine ? "You" : (offer.name ?? "Someone")}
             {offer.email && <span className="text-muted-foreground"> · {offer.email}</span>}
             {offer.id && props.removing !== offer.id && (
               <button type="button" className="ml-3 underline underline-offset-2" onClick={() => props.setRemoving(offer.id)}>
@@ -258,7 +289,7 @@ function OfferList(props: {
           </p>
           {offer.id && props.removing === offer.id && (
             <Confirm yes="Yes, remove" onYes={() => props.onRemove(offer.id!)} onCancel={() => props.setRemoving(null)}>
-              Remove {offer.mine ? "your" : `${offer.name}'s`} offer?
+              {offer.mine ? "Remove your offer?" : offer.name ? `Remove ${offer.name}'s offer?` : "Remove this offer?"}
             </Confirm>
           )}
         </li>
@@ -268,26 +299,40 @@ function OfferList(props: {
 }
 
 function RequestForm(props: {
-  initial?: { body: string; slots: number | null };
+  initial?: RequestFields;
   submitLabel: string;
-  onSubmit: (body: string, slots: number | null) => Promise<boolean>;
+  onSubmit: (fields: RequestFields) => Promise<boolean>;
   onCancel?: () => void;
 }) {
   const [body, setBody] = useState(props.initial?.body ?? "");
   const [many, setMany] = useState(props.initial ? props.initial.slots === null : false);
   const [count, setCount] = useState(String(props.initial?.slots ?? 1));
+  const [requireName, setRequireName] = useState(props.initial?.requireName ?? true);
+  const [requireEmail, setRequireEmail] = useState(props.initial?.requireEmail ?? false);
+  const [date, setDate] = useState(props.initial?.date ?? "");
+  const [time, setTime] = useState(props.initial?.time ?? "");
   const [busy, setBusy] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const slots = many ? null : Number(count);
     setBusy(true);
-    const ok = await props.onSubmit(body, slots);
+    const ok = await props.onSubmit({
+      body,
+      slots: many ? null : Number(count),
+      requireName,
+      requireEmail,
+      date: date || null,
+      time: date && time ? time : null,
+    });
     setBusy(false);
     if (ok && !props.initial) {
       setBody("");
       setMany(false);
       setCount("1");
+      setRequireName(true);
+      setRequireEmail(false);
+      setDate("");
+      setTime("");
     }
   }
 
@@ -313,6 +358,30 @@ function RequestForm(props: {
           />
         </Field>
       )}
+      <div className="flex flex-wrap gap-4">
+        <Field label="Date (optional)">
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              if (!e.target.value) setTime("");
+            }}
+            className="w-44"
+          />
+        </Field>
+        <Field label="Time (optional)">
+          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} disabled={!date} className="w-36" />
+        </Field>
+      </div>
+      <Label>
+        <Checkbox checked={requireName} onCheckedChange={(checked) => setRequireName(checked === true)} />
+        Require name
+      </Label>
+      <Label>
+        <Checkbox checked={requireEmail} onCheckedChange={(checked) => setRequireEmail(checked === true)} />
+        Require email
+      </Label>
       <div className="flex gap-2">
         <Button disabled={busy}>{props.submitLabel}</Button>
         {props.onCancel && (

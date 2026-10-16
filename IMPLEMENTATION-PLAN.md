@@ -32,7 +32,7 @@ The server does not refuse offers on a past request: "past" depends on the viewe
 - **`src/help.ts`** gains pure functions, unit-tested:
   - `isPast(date, time, now)`: date only → past from the next day's start; date + time → from that minute; by the device's local clock.
   - `sortRequests(requests, now)`: upcoming dated (date, then no-time before times, then time), then undated in server order (oldest first), then past, most recently past first.
-  - `whenLabel(date, time)`: "Fri, Oct 17" or "Fri, Oct 17 · 5:30 PM".
+  - `whenLabel(date, time)`: "Sat, Oct 17" or "Sat, Oct 17 · 5:30 PM".
   - Both `isPast` and `whenLabel` build a local `Date` from the parts with one shared helper, so there's no time zone shift and no second, subtly different parse.
 - **`src/pages/Help.tsx`**:
   - The request form gets "Require name" (checked) and "Require email" checkboxes and native `<input type="date">` and `<input type="time">` fields, each optional. The time field is disabled until a date is set; clearing the date clears the time.
