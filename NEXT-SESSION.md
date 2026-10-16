@@ -2,6 +2,12 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
+- **2026-10-16** — Warn before leaving a page with an unposted update or note.
+  Moving between pages is now instant, which makes it easier to click away from a half-written update and lose it. Leaving with a draft should ask first (on the page, not with `confirm()`).
+
+- **2026-10-16** — Restore scroll position on Back, and show a light loading state under the nav bar.
+  Cut from the persistent navigation bar for speed: Back lands at the top of the feed rather than where the reader was, and the content area is briefly empty while a page fetches.
+
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
   A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
 
