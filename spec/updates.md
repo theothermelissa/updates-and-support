@@ -158,9 +158,9 @@ One offer per person per request. When a numbered request already has that many 
 
 Under the request, once anyone has offered, one sentence names them:
 
-- one person: "Ana Rivera can help with this"
-- two: "Ana Rivera and Sam can help with this"
-- more: "Ana Rivera, Sam, and 2 others can help with this," with "1 other" when a single name is left out
+- one person: "Ana Rivera is helping," or "You are helping" when the viewer is that person
+- two: "Ana Rivera and Sam are helping"
+- more: "Ana Rivera, Sam, and 2 others are helping," with "1 other" when a single name is left out
 
 The viewer is first, as "You." On a computer, resting on the sentence shows everyone who offered. Tapping it shows that list under the sentence, and tapping again hides it. A "many" request always shows the list, and so does a family member's view of any request, with **Remove** on each name. Removing asks for confirmation.
 

@@ -8,8 +8,8 @@ export function capacityLabel(slots: number | null): string {
 
 export function helpSummary(names: string[]): string {
   if (names.length === 0) return "";
-  if (names.length === 1) return `${names[0]} can help with this`;
-  if (names.length === 2) return `${names[0]} and ${names[1]} can help with this`;
+  if (names.length === 1) return `${names[0]} ${names[0] === "You" ? "are" : "is"} helping`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are helping`;
   const others = names.length - 2;
-  return `${names[0]}, ${names[1]}, and ${others} ${others === 1 ? "other" : "others"} can help with this`;
+  return `${names[0]}, ${names[1]}, and ${others} ${others === 1 ? "other" : "others"} are helping`;
 }

@@ -45,7 +45,7 @@ UI layout is checked in the browser: add a request, offer, withdraw, cover a one
 
 Typecheck passes, and all 299 tests pass. The migration applied to the test database. Removing each of these made its test fail, and restoring it made the test pass again: the request's family on an offer, hiding emails from supporters, and hiding a removed person's offer.
 
-In the browser, as a family member: the link sits left of Notes, a one-person request shows the green check and "You can help with this" once offered, withdrawing clears both, and a "many" request lists the name without a check. As a supporter who just answered the question: the link is there because requests exist, the list shows the name only, and the page asks for a name before offering. At 360px wide the title wraps and the page does not scroll sideways.
+In the browser, as a family member: the link sits left of Notes, a one-person request shows the green check and "You are helping" once offered, withdrawing clears both, and a "many" request lists the name without a check. As a supporter who just answered the question: the link is there because requests exist, the list shows the name only, and the page asks for a name before offering. At 360px wide the title wraps and the page does not scroll sideways.
 
 ## Cut for speed
 
