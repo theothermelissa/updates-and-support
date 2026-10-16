@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
 import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { cn } from "cn";
@@ -199,41 +199,44 @@ function UpdateItem(props: {
           ) : (
             <RichText doc={update.content} />
           )}
-          <Reactions update={update} onReact={props.onReact} />
-          <Button variant="outline" className="mt-3 h-11 rounded-full px-4" onClick={() => setWriting(true)}>
-            Leave a note
-          </Button>
-          <NoteDialog open={writing} onOpenChange={setWriting} slug={props.slug} name={props.name} onLeave={props.onLeaveNote} />
         </CardContent>
-        {props.canEdit && (
-          <CardFooter className="flex flex-wrap items-center gap-2 border-t py-3">
-            {editing ? (
-              <>
-                <Button onClick={save} disabled={saving || draft === null}>
-                  Save
+        <CardFooter className="flex flex-wrap items-center gap-2">
+          {editing ? (
+            <>
+              <Button onClick={save} disabled={saving || draft === null}>
+                Save
+              </Button>
+              <Button variant="outline" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+            </>
+          ) : confirmingDelete ? (
+            <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirmingDelete(false)}>
+              Delete this update{noteCount > 0 && ` and its ${noteCount === 1 ? "note" : `${noteCount} notes`}`}? This
+              can't be undone.
+            </Confirm>
+          ) : (
+            <>
+              <Reactions update={update} onReact={props.onReact}>
+                <Button variant="outline" className="h-11 rounded-full px-4" onClick={() => setWriting(true)}>
+                  Leave a note
                 </Button>
-                <Button variant="outline" onClick={() => setEditing(false)}>
-                  Cancel
-                </Button>
-              </>
-            ) : confirmingDelete ? (
-              <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirmingDelete(false)}>
-                Delete this update{noteCount > 0 && ` and its ${noteCount === 1 ? "note" : `${noteCount} notes`}`}? This
-                can't be undone.
-              </Confirm>
-            ) : (
-              <>
-                <Button variant="outline" onClick={startEditing}>
-                  Edit
-                </Button>
-                <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
-                  Delete
-                </Button>
-              </>
-            )}
-          </CardFooter>
-        )}
+              </Reactions>
+              {props.canEdit && (
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <Button variant="outline" onClick={startEditing}>
+                    Edit
+                  </Button>
+                  <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
+                    Delete
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardFooter>
       </Card>
+      <NoteDialog open={writing} onOpenChange={setWriting} slug={props.slug} name={props.name} onLeave={props.onLeaveNote} />
       {noteCount > 0 && (
         <aside className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-1" aria-label="Notes">
           {update.notes.slice(0, NOTES_SHOWN).map((note) => (
@@ -268,7 +271,15 @@ const HOVER_DELAY = 300;
 
 // A React button that opens a tray of the six emoji, and a summary ("❤️🙏😂")
 // that shows who reacted. With a mouse, hovering opens either one; on a phone, tapping does.
-function Reactions({ update, onReact }: { update: Update; onReact: (kind: string | null) => Promise<boolean> }) {
+function Reactions({
+  update,
+  onReact,
+  children,
+}: {
+  update: Update;
+  onReact: (kind: string | null) => Promise<boolean>;
+  children: ReactNode;
+}) {
   const r = update.reactions;
   const [tray, setTray] = useState(false);
   const [names, setNames] = useState<"closed" | "hover" | "pinned">("closed");
@@ -314,8 +325,8 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
 
   const mine = REACTIONS.find((x) => x.kind === r.mine);
   return (
-    <>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span
           className="relative"
           ref={area}
@@ -378,9 +389,10 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
             )}
           </span>
         )}
+        {children}
       </div>
-      {names === "pinned" && <NameList r={r} className="mt-2 text-sm text-muted-foreground" />}
-    </>
+      {names === "pinned" && <NameList r={r} className="text-sm text-muted-foreground" />}
+    </div>
   );
 }
 
