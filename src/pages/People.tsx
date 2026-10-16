@@ -1,13 +1,15 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { FamilyShell, PageTitle } from "@/components/familyShell";
-import { Confirm, ErrorMessage, Field, PageShell } from "@/components/page";
+import { PageTitle } from "@/components/familyShell";
+import { Confirm, ErrorMessage, Field } from "@/components/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { api, type Me } from "../api.js";
+import { api } from "../api.js";
+import { followLink } from "../navigate.js";
+import type { FamilyPageProps } from "./FamilyFrame.js";
 import { NotFound } from "./NotFound.js";
 
 type Supporter = {
@@ -39,18 +41,11 @@ function devices(count: number) {
 
 // Family members' page for family members, supporters, and the community question. The server
 // refuses the data to anyone else; this page only shows what it's given.
-export function People({ slug }: { slug: string }) {
+export function People({ slug, home, me }: FamilyPageProps) {
   const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState("");
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-  const [me, setMe] = useState<Me | null>(null);
-
-  function loadMe() {
-    api<Me>(slug, "me").then(({ status, data }) => status === 200 && setMe(data));
-  }
-
-  useEffect(loadMe, [slug]);
 
   function load() {
     api<People>(slug, "people").then(({ status, data }) => {
@@ -62,7 +57,8 @@ export function People({ slug }: { slug: string }) {
     });
   }
 
-  useEffect(load, [slug]);
+  // Again when the reader's name changes, since the family members list shows it.
+  useEffect(load, [slug, me.person.name]);
 
   async function setRemoved(person: { id: string }, removed: boolean) {
     const { status, data } = await api<{ error?: string }>(slug, `people/${person.id}`, {
@@ -143,26 +139,18 @@ export function People({ slug }: { slug: string }) {
   if (people === "not-found") return <NotFound />;
   if (people === "signed-out" || people === "forbidden") {
     return (
-      <PageShell title="People">
+      <>
         <p>Only family members can see this page.</p>
         <p>
-          <a href={`/f/${slug}`}>Back to updates</a>
+          <a href={home} onClick={followLink}>
+            Back to updates
+          </a>
         </p>
-      </PageShell>
+      </>
     );
   }
-  if (!me) return null;
   return (
-    <FamilyShell
-      slug={slug}
-      me={me}
-      page="people"
-      column
-      onNameChanged={() => {
-        loadMe();
-        load();
-      }}
-    >
+    <>
       <PageTitle>People</PageTitle>
       {message &&
         (message.error ? (
@@ -234,7 +222,7 @@ export function People({ slug }: { slug: string }) {
           </CardContent>
         </Card>
       </Section>
-    </FamilyShell>
+    </>
   );
 }
 

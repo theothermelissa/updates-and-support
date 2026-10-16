@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
 import { applyFetched, newUpdatesLabel } from "../liveFeed.js";
+import { followLink } from "../navigate.js";
 import type { Note } from "../notes.js";
 import type { Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
@@ -395,7 +396,7 @@ function UpdateItem(props: {
             />
           ))}
           {noteCount > NOTES_SHOWN && (
-            <a className="text-sm font-medium" href={`/f/${props.slug}/wall#update=${update.id}`}>
+            <a className="text-sm font-medium" href={`/f/${props.slug}/wall#update=${update.id}`} onClick={followLink}>
               See all {noteCount} notes
             </a>
           )}

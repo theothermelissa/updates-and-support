@@ -13,15 +13,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { api, type Me } from "../api.js";
+import { followLink } from "../navigate.js";
 
 export type FamilyPage = "updates" | "help" | "notes" | "people";
 
 // The frame of every page signed in to a family: the family's name and the navigation bar,
 // above one centered container. column keeps the content to the feed's width on a wide
-// screen, for pages that read top to bottom. onNameChanged runs after "Edit name" saves,
-// so the page can reload what shows the name.
+// screen, for pages that read top to bottom. onNameChanged runs after "Edit name" saves.
+// home is the address of Updates. Its links move between pages without a page load.
 export function FamilyShell(props: {
   slug: string;
+  home: string;
   me: Me;
   page: FamilyPage;
   onNameChanged: () => void;
@@ -32,7 +34,7 @@ export function FamilyShell(props: {
   const [editingName, setEditingName] = useState(false);
   const link = (target: FamilyPage, href: string, label: string) => (
     <Button variant={page === target ? "secondary" : "ghost"} size="sm" asChild>
-      <a href={href} aria-current={page === target ? "page" : undefined}>
+      <a href={href} aria-current={page === target ? "page" : undefined} onClick={followLink}>
         {label}
       </a>
     </Button>
@@ -56,9 +58,13 @@ export function FamilyShell(props: {
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8 lg:max-w-6xl">
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{me.family.displayName}</h1>
+        <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">
+          <a href={props.home} data-slot="family-name" onClick={followLink}>
+            {me.family.displayName}
+          </a>
+        </h1>
         <nav className="-mr-2 flex items-center gap-1 text-sm">
-          {link("updates", `/f/${slug}`, "Updates")}
+          {link("updates", props.home, "Updates")}
           {(me.person.role === "family" || me.family.hasHelpRequests) && link("help", `/f/${slug}/help`, "How to help")}
           {link("notes", `/f/${slug}/wall`, "Notes")}
           <DropdownMenu>
@@ -79,7 +85,11 @@ export function FamilyShell(props: {
               )}
               {me.person.role === "family" && (
                 <DropdownMenuItem asChild>
-                  <a href={`/f/${slug}/people`} aria-current={page === "people" ? "page" : undefined}>
+                  <a
+                    href={`/f/${slug}/people`}
+                    aria-current={page === "people" ? "page" : undefined}
+                    onClick={followLink}
+                  >
                     People
                   </a>
                 </DropdownMenuItem>
