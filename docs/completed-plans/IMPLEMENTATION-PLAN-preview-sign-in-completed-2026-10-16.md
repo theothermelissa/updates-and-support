@@ -25,3 +25,8 @@ None automated. This adds no access rule to the app, and the sign-in itself uses
 
 - Only the test family member can sign in this way. Supporters still use the question, which sends no email.
 - The created links count toward that person's limit of 5 sign-in links an hour, so emailed links can be refused right after heavy use of the script.
+
+## Testing notes
+
+- On this PR's preview, `npm run preview` printed the branch address, and the gate check passed through it. `npm run preview:sign-in` printed a link. Opening it in the browser pane and pressing Sign in showed the family view, and no email was sent.
+- The branch address comes from the `-git-` entry in `vercel inspect`'s aliases. Vercel shortens long branch names with a hash, so it can't be built from the branch name.

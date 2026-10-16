@@ -164,6 +164,14 @@ Ask for confirmation in the page itself, for example with inline "Yes / Cancel" 
 
 **How to apply:** set anything privacy-critical in code (as `familyContext` does for `Cache-Control`) and check the rest on production with `curl -I` after merging. Restart `npm start` after adding an API file. Don't carry anything a page needs in the query string through a preview link.
 
+### Check the branch before committing
+
+Run `git status -sb` right before every commit, and work in a `git worktree` when another session may share this folder.
+
+**Why:** another session switched this folder to `main` and pulled between Claude's `git switch -c` and its commit, so the commit landed on local `main`. The push of the feature branch then sent nothing.
+
+**How to apply:** if a commit lands on the wrong branch, point the right branch at it with `git branch -f <branch> <sha>`. Then ask Melissa to reset the wrong branch, since auto mode blocks `git reset` on `main`.
+
 ### Merging `main` can delete the branch's plan
 
 When `main` archived its own `IMPLEMENTATION-PLAN.md` while a branch had a different one, merging `main` into the branch staged a deletion of the branch's plan without a conflict.
