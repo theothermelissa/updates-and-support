@@ -175,7 +175,7 @@ function UpdateItem(props: {
           <Button variant="outline" className="mt-3 h-11 rounded-full px-4" onClick={() => setWriting(true)}>
             Leave a note
           </Button>
-          <NoteDialog open={writing} onOpenChange={setWriting} name={props.name} onLeave={props.onLeaveNote} />
+          <NoteDialog open={writing} onOpenChange={setWriting} slug={props.slug} name={props.name} onLeave={props.onLeaveNote} />
         </CardContent>
         {props.canEdit && (
           <CardFooter className="flex flex-wrap items-center gap-2 border-t py-3">

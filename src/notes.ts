@@ -17,7 +17,10 @@ export const MAX_NOTE = 1_000;
 export type Note = {
   id: string;
   updateId: string;
+  // Empty for a video note.
   body: string;
+  // A video note's signed links to its video and still.
+  video: { src: string; poster: string } | null;
   color: NoteColor;
   authorName: string;
   authorIsFamily: boolean;
