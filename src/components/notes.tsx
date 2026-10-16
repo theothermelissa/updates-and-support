@@ -6,6 +6,7 @@ import { Confirm, ErrorMessage, Field, LinkedText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { COLORS, MAX_NOTE, PALETTE, randomColor, type Note, type NoteColor } from "../notes.js";
 import { checkVideo, uploadVideo } from "../videos.js";
 import { VideoRecorder } from "@/components/recorder";
@@ -59,7 +60,7 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
 // video of another shape has no empty bars. Enlarged so the blur's soft edges fall outside
 // the box. A video source shows its frame at the given time, for a video not yet uploaded.
 function BlurredBackdrop({ src, video }: { src: string; video?: boolean }) {
-  const className = "pointer-events-none absolute inset-0 size-full scale-125 object-cover blur-[32px] brightness-90";
+  const className = "pointer-events-none absolute inset-0 size-full scale-125 object-cover blur-[26px] brightness-90";
   return video ? (
     <video src={src} muted playsInline preload="auto" aria-hidden className={className} />
   ) : (
@@ -227,30 +228,30 @@ function NoteForm(props: {
         <DialogTitle>Leave a note</DialogTitle>
         <DialogDescription>Everyone who reads these updates will see it, signed with your name.</DialogDescription>
       </DialogHeader>
+      <Tabs value={mode} onValueChange={(v) => setMode(v as "write" | "video")}>
+        <TabsList className="w-full">
+          <TabsTrigger value="write" disabled={busy}>
+            Written note
+          </TabsTrigger>
+          <TabsTrigger value="video" disabled={busy}>
+            Video note
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       {mode === "write" ? (
-        <>
-          <textarea
-            className="min-h-36 w-full rounded-xl border p-4 text-base font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            style={{ backgroundColor: colors.fill, color: colors.text, borderColor: `${colors.text}33` }}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            maxLength={MAX_NOTE}
-            aria-label="Your note"
-            placeholder="Write your note…"
-            autoFocus
-            required
-          />
-          <Button type="button" variant="outline" onClick={() => setMode("video")}>
-            Record a video
-          </Button>
-        </>
+        <textarea
+          className="min-h-36 w-full rounded-xl border p-4 text-base font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          style={{ backgroundColor: colors.fill, color: colors.text, borderColor: `${colors.text}33` }}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          maxLength={MAX_NOTE}
+          aria-label="Your note"
+          placeholder="Write your note…"
+          autoFocus
+          required
+        />
       ) : (
-        <>
-          <VideoSide video={video} color={color} disabled={busy} onVideo={setVideo} onError={setError} />
-          <Button type="button" variant="outline" onClick={() => setMode("write")} disabled={busy}>
-            Write a note instead
-          </Button>
-        </>
+        <VideoSide video={video} color={color} disabled={busy} onVideo={setVideo} onError={setError} />
       )}
       <RadioGroupPrimitive.Root
         className="flex flex-wrap gap-2"
@@ -384,7 +385,7 @@ function VideoSide(props: {
             onRecorded={(recorded) => props.onVideo({ file: recorded, recorded: true })}
             onUnavailable={setCameraProblem}
           />
-          {upload("Upload a video", "ghost")}
+          {upload("Upload a video instead", "ghost")}
         </>
       )}
     </div>

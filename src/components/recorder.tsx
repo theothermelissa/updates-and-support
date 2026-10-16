@@ -15,10 +15,11 @@ const CONSTRAINTS: MediaStreamConstraints = {
   audio: true,
 };
 
-// The live camera, mirrored like a selfie, with a 3-2-1 countdown, then up to a minute of
-// recording with the time left and Stop. Hands the recording over as a file and turns the
-// camera off; unmounting turns it off too and discards anything recording. If the camera
-// can't start, reports why instead.
+// A "Start recording" button that turns on the camera, which asks for permission the first
+// time, then the live camera, mirrored like a selfie, with a 3-2-1 countdown, then up to a
+// minute of recording with the time left and Stop. Hands the recording over as a file and
+// turns the camera off; unmounting turns it off too and discards anything recording. If the
+// camera can't start, reports why instead.
 export function VideoRecorder(props: {
   color: NoteColor;
   onRecorded: (file: File) => void;
@@ -27,7 +28,7 @@ export function VideoRecorder(props: {
   const live = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
-  const [phase, setPhase] = useState<"starting" | "ready" | "countdown" | "recording">("starting");
+  const [phase, setPhase] = useState<"idle" | "starting" | "ready" | "countdown" | "recording">("idle");
   const [count, setCount] = useState(3);
   const [elapsed, setElapsed] = useState(0);
   const colors = PALETTE[props.color];
@@ -36,24 +37,15 @@ export function VideoRecorder(props: {
   const callbacks = useRef(props);
   callbacks.current = props;
 
+  const mounted = useRef(true);
+
+  // A browser that can't record says so at once, before anyone presses the button.
   useEffect(() => {
-    let mounted = true;
+    mounted.current = true;
     const type = typeof MediaRecorder === "undefined" ? null : recordingType((t) => MediaRecorder.isTypeSupported(t));
-    if (!navigator.mediaDevices?.getUserMedia || !type) {
-      callbacks.current.onUnavailable(cameraProblem(undefined));
-      return;
-    }
-    navigator.mediaDevices.getUserMedia(CONSTRAINTS).then(
-      (s) => {
-        if (!mounted) return stopTracks(s);
-        stream.current = s;
-        if (live.current) live.current.srcObject = s;
-        setPhase("ready");
-      },
-      (err) => mounted && callbacks.current.onUnavailable(cameraProblem(err)),
-    );
+    if (!navigator.mediaDevices?.getUserMedia || !type) callbacks.current.onUnavailable(cameraProblem(undefined));
     return () => {
-      mounted = false;
+      mounted.current = false;
       // Discards a recording in progress: the dialog closed or switched away.
       if (recorder.current) {
         recorder.current.onstop = null;
@@ -89,6 +81,21 @@ export function VideoRecorder(props: {
     };
   }, [phase]);
 
+  // Turns the camera on, then goes straight into the countdown.
+  function open() {
+    setPhase("starting");
+    navigator.mediaDevices.getUserMedia(CONSTRAINTS).then(
+      (s) => {
+        if (!mounted.current) return stopTracks(s);
+        stream.current = s;
+        if (live.current) live.current.srcObject = s;
+        setCount(3);
+        setPhase("countdown");
+      },
+      (err) => mounted.current && callbacks.current.onUnavailable(cameraProblem(err)),
+    );
+  }
+
   function start() {
     const type = recordingType((t) => MediaRecorder.isTypeSupported(t))!;
     const chunks: Blob[] = [];
@@ -123,6 +130,13 @@ export function VideoRecorder(props: {
           className="size-full -scale-x-100 object-contain"
           aria-label="Your camera"
         />
+        {phase === "idle" && (
+          <span className="absolute inset-0 flex items-center justify-center p-4">
+            <Button type="button" onClick={open}>
+              Start recording
+            </Button>
+          </span>
+        )}
         {phase === "starting" && (
           <p className="absolute inset-0 flex items-center justify-center p-4 text-sm" style={{ color: colors.text }}>
             Starting your camera…
