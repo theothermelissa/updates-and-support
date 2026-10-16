@@ -30,12 +30,14 @@ type HelpRequest = RequestFields & { id: string; full: boolean; offered: number;
 
 export function Help({ slug, me, reloadMe }: FamilyPageProps) {
   const [requests, setRequests] = useState<HelpRequest[] | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   async function load() {
-    const list = await api<{ requests: HelpRequest[] }>(slug, "help");
+    const list = await api<{ message: string | null; requests: HelpRequest[] }>(slug, "help");
     if (list.status === 401) return location.replace(`/f/${slug}`);
     if (list.status !== 200) return setError("Couldn't load ways to help. Please refresh the page.");
+    setMessage(list.data.message ?? null);
     setRequests(list.data.requests);
   }
 
@@ -66,6 +68,11 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
     <>
       <PageTitle>How to Help</PageTitle>
       {error && <ErrorMessage>{error}</ErrorMessage>}
+      <HelpMessage
+        message={message}
+        family={family}
+        onSave={(text) => change("help-message", "PUT", { message: text }).then((r) => r.ok)}
+      />
       {family && <h3 className="text-lg font-semibold tracking-tight">What Would Help</h3>}
       {family && (
         <RequestForm
@@ -92,6 +99,68 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
         ))}
       </div>
     </>
+  );
+}
+
+// The family's message at the top of the page, in a shaded box. Family members write, change,
+// or remove it here; saving an empty box removes it, so the box isn't required.
+function HelpMessage(props: { message: string | null; family: boolean; onSave: (message: string) => Promise<boolean> }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  function edit() {
+    setText(props.message ?? "");
+    setEditing(true);
+  }
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    const ok = await props.onSave(text);
+    setBusy(false);
+    if (ok) setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <form onSubmit={save} className="space-y-3">
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={2000}
+          rows={4}
+          autoFocus
+          aria-label="Message for supporters"
+          placeholder="For example: Thank you! Please don't send flowers or gift baskets, and please hold off on visits for now."
+        />
+        <div className="flex gap-2">
+          <Button disabled={busy}>Save</Button>
+          <Button type="button" variant="outline" onClick={() => setEditing(false)}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    );
+  }
+  if (props.message === null) {
+    return props.family ? (
+      <div>
+        <Button type="button" variant="outline" onClick={edit}>
+          Add a message for supporters
+        </Button>
+      </div>
+    ) : null;
+  }
+  return (
+    <div className="flex items-start gap-2 rounded-xl bg-muted p-4">
+      <LinkedText text={props.message} className="min-w-0 flex-1" />
+      {props.family && (
+        <Button type="button" variant="ghost" size="sm" className="-mt-1 -mr-2" onClick={edit}>
+          Edit
+        </Button>
+      )}
+    </div>
   );
 }
 

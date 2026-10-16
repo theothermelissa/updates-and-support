@@ -17,6 +17,8 @@ model Family {
   displayName     String
   question        String
   acceptedAnswers String[]
+  // The message at the top of How to help, trimmed; null when there is none.
+  helpMessage     String?
   createdAt       DateTime @default(now())
 
   people       Person[]

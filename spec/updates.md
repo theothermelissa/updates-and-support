@@ -153,7 +153,7 @@ A removed person's notes are neither shown nor counted, and a removed person can
 
 ## How to help
 
-The page at `/f/<slug>/help`, headed "How to Help" under the navigation bar, lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
+The page at `/f/<slug>/help`, headed "How to Help" under the navigation bar, starts with the family's message, when there is one (see "The family's message"), and lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
 
 A request has:
 
@@ -164,7 +164,7 @@ A request has:
 - whether an offer needs a phone number: the form's **Require phone** checkbox, unchecked by default, for when the family needs to call or text whoever helps.
 - an optional **date**, and an optional **time** that can be given only with a date. Both are kept exactly as typed, with no time zone, because the need happens where the family is. They show above the body in smaller, lighter text, such as "Sat, Oct 17" or "Sat, Oct 17 · 5:30 PM."
 
-Family members add, edit, and delete requests. Only they see the form for adding one, at the top of the page under the heading "What Would Help," with the requests below it under "All Requests." The form starts with an unlabeled box for the description, then the date and time, then "Who Can Help," with "Everyone can help with this," "How many people are needed?", Require name, Require email, and Require phone. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Editing can change anything, including the checkboxes, date, and time; offers already made stay as they are. Deleting asks for confirmation on the page and removes every offer on that request. A family can have at most 100.
+Family members add, edit, and delete requests. Only they see the form for adding one, below the family's message under the heading "What Would Help," with the requests below it under "All Requests." The form starts with an unlabeled box for the description, then the date and time, then "Who Can Help," with "Everyone can help with this," "How many people are needed?", Require name, Require email, and Require phone. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Editing can change anything, including the checkboxes, date, and time; offers already made stay as they are. Deleting asks for confirmation on the page and removes every offer on that request. A family can have at most 100.
 
 Requests are shown in this order:
 
@@ -173,6 +173,16 @@ Requests are shown in this order:
 3. Past requests, most recently past first.
 
 A request is past, by the clock of the device showing it, from the start of the next day when it has only a date, and from its time when it has both. A past request's text is struck through, like a covered one but without the check, and **✋ I can help with this** is hidden from anyone who hasn't offered on it. Since "past" depends on the viewer's clock, the server doesn't refuse offers on a past request.
+
+### The family's message
+
+Above everything else on the page, the family can keep one message for everyone who opens it, such as what they'd rather people not send or do: "Thank you! Please don't send flowers or gift baskets, and please hold off on visits for now." It's plain text of up to 2,000 characters, with line breaks kept and web addresses as links, in a shaded box with no heading of its own. With no message, there's no box.
+
+Any family member can write, change, or remove it. They see an **Edit** button at the top right of the box or, when there's no message, an **Add a message for supporters** button in its place. Either one turns that spot into a text box with **Save** and **Cancel**. Saving an empty box removes the message. If two family members edit at once, the last save wins.
+
+Everyone signed in to the family reads the message, the same as the requests. It never appears on the gate or in emails, and writing or changing it sends no emails or notifications. Others see a change when they next load the page.
+
+Supporters see "How to help" in the navigation bar once the family has a message or at least one request (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
 ### Offering to help
 
