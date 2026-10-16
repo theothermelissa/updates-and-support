@@ -88,6 +88,16 @@ export function verificationEmail(to: string, familyName: string, link: string):
   };
 }
 
+// Says only that someone offered to help, never what the request says: emails are forwarded
+// and shown in lock-screen previews.
+export function helpOfferEmail(to: string, familyName: string, link: string): Email {
+  return {
+    to,
+    subject: `Someone offered to help ${familyName}`,
+    text: `Someone offered to help with a request for ${familyName}. See it here:\n\n${link}\n`,
+  };
+}
+
 // Says only that there's a new update and how many photos it has, never what it says:
 // emails are forwarded and shown in lock-screen previews.
 export function notificationEmail(

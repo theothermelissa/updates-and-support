@@ -24,4 +24,7 @@ export type PersonView = {
 };
 // photos: what "Add photo" does in the editor. "real" uploads to Cloudinary; "placeholder"
 // draws a grey box; "off" hides the button.
-export type Me = { family: { displayName: string; photos: "real" | "placeholder" | "off" }; person: PersonView };
+export type Me = {
+  family: { displayName: string; photos: "real" | "placeholder" | "off"; hasHelpRequests: boolean };
+  person: PersonView;
+};
