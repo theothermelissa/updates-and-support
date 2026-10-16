@@ -22,8 +22,9 @@ function sdk(): Sdk {
 export interface VideoStore {
   // Signed fields for the browser's direct upload of one video, to `url`.
   uploadParams(publicId: string): { url: string; fields: Record<string, string> };
-  // An uploaded video's length, or null unless it exists as an authenticated video.
-  describe(publicId: string): Promise<{ duration: number } | null>;
+  // An uploaded video's length and size, or null unless it exists as an authenticated video.
+  // `bytes` is null when the host didn't say how big it is.
+  describe(publicId: string): Promise<{ duration: number; bytes: number | null } | null>;
   // Deletes videos and their conversions, including cached copies. Already gone counts as done.
   destroy(publicIds: string[]): Promise<void>;
   // Signed links to a video's converted mp4 and its still. Never the original upload, which
@@ -34,6 +35,10 @@ export interface VideoStore {
 // The conversions every browser plays. Uploads ask for them eagerly, and links name exactly
 // the same strings, so playing a video uses the conversion rather than starting a new one.
 const VIDEO = "c_limit,h_1280,w_1280,q_auto,vc_h264";
+
+// The same ceiling the browser enforces before an upload. An update's video has no time
+// limit, so this is what keeps one recording from filling the shared host.
+export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const POSTER = "c_limit,h_960,w_960,so_0";
 const EAGER = `${VIDEO}/mp4|${POSTER}/jpg`;
 
@@ -81,7 +86,8 @@ export const cloudinaryStore: VideoStore = {
     try {
       // The length comes only with media_metadata.
       const resource = await sdk().api.resource(publicId, { ...KIND, media_metadata: true });
-      return typeof resource.duration === "number" ? { duration: resource.duration } : null;
+      if (typeof resource.duration !== "number") return null;
+      return { duration: resource.duration, bytes: typeof resource.bytes === "number" ? resource.bytes : null };
     } catch (err) {
       if (httpCode(err) === 404) return null;
       throw err;

@@ -99,8 +99,12 @@ model Update {
   authorId  String
   // The update's plain text, kept in step with content (see server/richText.ts).
   body      String
-  // The formatted document, checked by validDoc. Null for updates posted before formatting.
+  // The formatted document, checked by validDoc. Null for updates posted before formatting,
+  // and for a video update, which has a videoId and no document.
   content   Json?
+  // A video update's Cloudinary public ID, from an upload ticket its author was given.
+  // Null for a text update. Unique, so one upload is on at most one update.
+  videoId   String?   @unique
   createdAt DateTime  @default(now())
   editedAt  DateTime?
 
@@ -196,8 +200,8 @@ model NoteReaction {
 }
 
 // An upload ticket: a Cloudinary public ID the server signed an upload for, and whom for.
-// Only that person can attach it to a note, and tickets count toward an hourly limit
-// whether or not they're used.
+// Only that person can attach it to a note or an update, and tickets count toward an hourly
+// limit whether or not they're used.
 model VideoUpload {
   publicId  String   @id
   personId  String

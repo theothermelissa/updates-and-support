@@ -88,17 +88,19 @@ export function verificationEmail(to: string, familyName: string, link: string):
   };
 }
 
-// Says only that there's a new update and how many photos it has, never what it says:
-// emails are forwarded and shown in lock-screen previews.
+// Says only that there's a new update, how many photos it has, or that it is a video.
+// Never what it says: emails are forwarded and shown in lock-screen previews.
 export function notificationEmail(
   to: string,
   familyName: string,
   photos: number,
   links: { site: string; unsubscribePage: string; oneClickUnsubscribe: string },
+  video = false,
 ): Email {
+  const about = video ? " (video)" : photos === 0 ? "" : photos === 1 ? " (1 photo)" : ` (${photos} photos)`;
   return {
     to,
-    subject: `${familyName} has a new update${photos === 0 ? "" : photos === 1 ? " (1 photo)" : ` (${photos} photos)`}`,
+    subject: `${familyName} has a new update${about}`,
     text: `${familyName} has a new update. Read it here:\n\n${links.site}\n\nTo stop these emails, turn them off here:\n${links.unsubscribePage}`,
     headers: {
       "List-Unsubscribe": `<${links.oneClickUnsubscribe}>`,

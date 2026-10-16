@@ -5,9 +5,9 @@ import { getDb } from "../../server/db.js";
 import type { Person } from "../../server/generated/prisma/client.js";
 import { createNote, deleteNote, issueVideoUpload, listNotes } from "../../server/notes.js";
 import { setRemoved } from "../../server/people.js";
-import { createUpdate, deleteUpdate, listUpdates } from "../../server/updates.js";
+import { createUpdate, deleteUpdate, editUpdate, listUpdates } from "../../server/updates.js";
 import { createTestDb } from "./db.js";
-import { fakeVideoStore, joinWithEmail, makeFamily, queuedOrDone, resetDb } from "./fixtures.js";
+import { fakeMailer, fakeVideoStore, joinWithEmail, makeFamily, queuedOrDone, resetDb } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -270,6 +270,161 @@ describe("deleting a video note", () => {
     if (outcome === "attached") expect(videos.videos.has(racing)).toBe(false);
     else expect(outcome).toMatchObject({ status: 404 });
     expect(await db.note.count()).toBe(0);
+  });
+});
+
+const MAX_BYTES = 100 * 1024 * 1024;
+
+function postVideo(videos: Videos, person: Person, video: string, extra: Record<string, unknown> = {}) {
+  return createUpdate(db, person, { video, ...extra }, undefined, undefined, videos.store);
+}
+
+describe("video updates", () => {
+  it("posts a video of any length, and only this family sees its links", async () => {
+    const { ana, sam, olu, videos } = await setUp();
+    const publicId = await upload(videos, ana, 600);
+    const update = await postVideo(videos, ana, publicId);
+    expect(update.body).toBe("[Video]");
+    expect(update.video).toEqual(videos.store.urls(publicId));
+    expect(await db.update.findUniqueOrThrow({ where: { id: update.id } })).toMatchObject({
+      videoId: publicId,
+      body: "[Video]",
+      content: null,
+    });
+
+    const sams = JSON.stringify(await listUpdates(db, sam, videos.store));
+    expect(sams).toContain(`videos.example.test/${publicId}.mp4`);
+    const olus = JSON.stringify(await listUpdates(db, olu, videos.store));
+    expect(olus).not.toContain(publicId);
+    expect(olus).not.toContain("videos.example.test");
+  });
+
+  it("refuses a supporter, without asking the host", async () => {
+    const { sam, videos } = await setUp();
+    const publicId = await upload(videos, sam);
+    const calls = hostCalls(videos).length;
+    await expect(postVideo(videos, sam, publicId)).rejects.toMatchObject({ status: 403 });
+    expect(hostCalls(videos)).toHaveLength(calls);
+    expect(await db.update.count({ where: { videoId: publicId } })).toBe(0);
+  });
+
+  it("refuses another person's ticket, in this family or another, without asking the host", async () => {
+    const { ana, chidi, videos } = await setUp();
+    const anas = await upload(videos, ana);
+    const calls = hostCalls(videos).length;
+    await expect(postVideo(videos, chidi, anas)).rejects.toMatchObject({ status: 400 });
+    expect(hostCalls(videos)).toHaveLength(calls);
+    expect(await db.update.count({ where: { videoId: anas } })).toBe(0);
+  });
+
+  it("refuses a removed family member", async () => {
+    const { ana, videos } = await setUp();
+    const publicId = await upload(videos, ana);
+    await db.person.update({ where: { id: ana.id }, data: { removedAt: new Date() } });
+    await expect(postVideo(videos, ana, publicId)).rejects.toMatchObject({ status: 403 });
+    expect(await db.update.count({ where: { videoId: publicId } })).toBe(0);
+  });
+
+  it("attaches a ticket once, and not to both a note and an update", async () => {
+    const { ana, update, videos } = await setUp();
+    const onNote = await upload(videos, ana);
+    await attach(videos, ana, update.id, onNote);
+    await expect(postVideo(videos, ana, onNote)).rejects.toMatchObject({ status: 400 });
+
+    const onUpdate = await upload(videos, ana);
+    await postVideo(videos, ana, onUpdate);
+    await expect(postVideo(videos, ana, onUpdate)).rejects.toMatchObject({ status: 400 });
+    await expect(attach(videos, ana, update.id, onUpdate)).rejects.toMatchObject({ status: 400 });
+    expect(videos.videos.has(onUpdate)).toBe(true);
+    expect(await db.note.count({ where: { videoId: onUpdate } })).toBe(0);
+  });
+
+  it("refuses a video that isn't there or is over 100 MB, and accepts one of any length at 100 MB", async () => {
+    const { ana, videos } = await setUp();
+    const missing = (await issueVideoUpload(db, ana, videos.store)).publicId;
+    await expect(postVideo(videos, ana, missing)).rejects.toMatchObject({ status: 400 });
+
+    const huge = await upload(videos, ana, 30);
+    videos.setBytes(huge, MAX_BYTES + 1);
+    await expect(postVideo(videos, ana, huge)).rejects.toMatchObject({ status: 400 });
+    expect(videos.calls.some((c) => c.method === "destroy")).toBe(false);
+    expect(videos.videos.has(huge)).toBe(true);
+
+    const full = await upload(videos, ana, 3_600);
+    videos.setBytes(full, MAX_BYTES);
+    await postVideo(videos, ana, full);
+    expect(await db.update.count({ where: { videoId: full } })).toBe(1);
+  });
+
+  it("refuses text and a video together", async () => {
+    const { ana, videos } = await setUp();
+    const publicId = await upload(videos, ana);
+    await expect(postVideo(videos, ana, publicId, { body: "Hello" })).rejects.toMatchObject({ status: 400 });
+    expect(await db.update.count({ where: { videoId: publicId } })).toBe(0);
+  });
+
+  it("refuses to edit a video update", async () => {
+    const { ana, videos } = await setUp();
+    const publicId = await upload(videos, ana);
+    const update = await postVideo(videos, ana, publicId);
+    await expect(editUpdate(db, ana, update.id, { body: "Changed" }, undefined, videos.store)).rejects.toMatchObject({
+      status: 400,
+    });
+    expect(await db.update.findUniqueOrThrow({ where: { id: update.id } })).toMatchObject({
+      videoId: publicId,
+      body: "[Video]",
+      editedAt: null,
+    });
+  });
+
+  it("destroys the video before removing the update, and keeps the update if that fails", async () => {
+    const { ana, videos } = await setUp();
+    const publicId = await upload(videos, ana);
+    const update = await postVideo(videos, ana, publicId);
+    videos.failDestroy(true);
+    await expect(deleteUpdate(db, ana, update.id, videos.store)).rejects.toMatchObject({ status: 502 });
+    expect(await db.update.count({ where: { id: update.id } })).toBe(1);
+    expect(videos.videos.has(publicId)).toBe(true);
+
+    videos.failDestroy(false);
+    await deleteUpdate(db, ana, update.id, videos.store);
+    expect(videos.videos.has(publicId)).toBe(false);
+    expect(await db.update.count({ where: { id: update.id } })).toBe(0);
+  });
+
+  it("says the email is a video, and never names the video", async () => {
+    const { ana, sam, videos } = await setUp();
+    await db.person.update({ where: { id: sam.id }, data: { emailVerifiedAt: new Date() } });
+    const publicId = await upload(videos, ana);
+    const mail = fakeMailer();
+    await createUpdate(db, ana, { video: publicId }, mail.sendMany, undefined, videos.store);
+    expect(mail.sent.map((e) => e.subject)).toEqual(["The Rivera Family has a new update (video)"]);
+    for (const part of [mail.sent[0]!.subject, mail.sent[0]!.text]) {
+      expect(part).not.toContain(publicId);
+      expect(part).not.toContain("videos.example");
+    }
+  });
+
+  it("keeps the update when the emails fail", async () => {
+    const { ana, videos } = await setUp();
+    const publicId = await upload(videos, ana);
+    const failing = async () => {
+      throw new Error("Resend is down");
+    };
+    await createUpdate(db, ana, { video: publicId }, failing, undefined, videos.store);
+    expect(await db.update.count({ where: { videoId: publicId } })).toBe(1);
+  });
+
+  it("still shows the feed when the host can't make links, and refuses a new video", async () => {
+    const { ana, videos } = await setUp();
+    const posted = await upload(videos, ana);
+    const update = await postVideo(videos, ana, posted);
+    const next = await upload(videos, ana);
+    videos.misconfigure(true);
+    const feed = await listUpdates(db, ana, videos.store);
+    expect(feed.find((u) => u.id === update.id)!.video).toEqual({ unavailable: true });
+    await expect(postVideo(videos, ana, next)).rejects.toMatchObject({ status: 503 });
+    expect(await db.update.count({ where: { videoId: next } })).toBe(0);
   });
 });
 

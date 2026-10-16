@@ -89,6 +89,7 @@ export function tokenFrom(email: Email): string {
 // destroy wait until `release` is called, so a test can act while a deletion is underway.
 export function fakeVideoStore() {
   const videos = new Map<string, number>();
+  const sizes = new Map<string, number>();
   const calls: { method: keyof VideoStore; publicIds: string[] }[] = [];
   let failDestroy = false;
   // Every call that needs the host's configuration fails, as with a malformed CLOUDINARY_URL.
@@ -105,7 +106,7 @@ export function fakeVideoStore() {
       calls.push({ method: "describe", publicIds: [publicId] });
       if (misconfigured) throw new Error("Video host misconfigured");
       const duration = videos.get(publicId);
-      return duration === undefined ? null : { duration };
+      return duration === undefined ? null : { duration, bytes: sizes.get(publicId) ?? 1_000_000 };
     },
     async destroy(publicIds) {
       calls.push({ method: "destroy", publicIds });
@@ -122,6 +123,7 @@ export function fakeVideoStore() {
     store,
     videos,
     calls,
+    setBytes: (publicId: string, bytes: number) => sizes.set(publicId, bytes),
     failDestroy: (fail: boolean) => (failDestroy = fail),
     misconfigure: (on: boolean) => (misconfigured = on),
     holdDestroy() {
