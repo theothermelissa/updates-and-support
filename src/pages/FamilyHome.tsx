@@ -108,6 +108,7 @@ export function FamilyHome({ slug }: { slug: string }) {
         photos={me.family.photos}
         name={me.person.name}
         onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
+        onSignedOut={() => setMe("signed-out")}
       />
     </PageShell>
   );
