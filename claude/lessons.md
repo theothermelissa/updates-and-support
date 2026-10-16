@@ -112,6 +112,17 @@ Some routine commands refuse to run or error out from an agent, which can look l
 - Write the migration SQL by hand in a new `prisma/migrations/<timestamp>_<name>/` folder, then confirm `prisma migrate diff` shows no drift from the schema.
 - Edit a PR body with `gh api -X PATCH repos/theothermelissa/updates-and-support/pulls/<n> -F body=@file`.
 
+### Testing locally on Melissa's Mac
+
+The local database holds several families, so `scripts/seed-preview.ts` refuses to run against it. It also falls behind `main`'s migrations.
+
+**Why:** on the live feed, the local feed returned 500 errors because the photos migration had never been applied there, and the seed script stopped itself.
+
+**How to apply:**
+- Run `npm run db:deploy` first.
+- Make a fictional family by piping answers into `npm run family:create`.
+- To act as a family member without a sign-in email, write a scratchpad `.mts` script that calls the `server/` functions with absolute imports, and run it with `npx tsx --env-file=.env`.
+
 ### Cloud sessions differ from Melissa's Mac
 
 A cloud session can run the tests and its pushes build Vercel previews, but it can't read Vercel's logs or seed the preview, and its local setup starts from nothing.

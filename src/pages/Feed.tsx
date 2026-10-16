@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
 import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { ReactionControls } from "@/components/reactions";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
+import { applyFetched, newUpdatesLabel } from "../liveFeed.js";
 import type { Note } from "../notes.js";
 import type { Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
@@ -31,39 +32,88 @@ type Update = {
 const UPDATE_WIDTH = "lg:w-[42rem]";
 // Notes shown beside an update; the rest are a link away, on the wall.
 const NOTES_SHOWN = 6;
+// How often an open, visible feed checks for changes.
+const CHECK_EVERY = 30_000;
 
 // canEdit: the viewer is a family member. name: theirs, or null until they give one with a
-// note; onNamed passes it back once a note sets it.
+// note; onNamed passes it back once a note sets it. onSignedOut: a check found the reader's
+// session ended, for example because they were removed.
 export function Feed(props: {
   slug: string;
   canEdit: boolean;
   photos: PhotoMode;
   name: string | null;
   onNamed: (name: string) => void;
+  onSignedOut: () => void;
 }) {
   const { slug, canEdit } = props;
   const [updates, setUpdates] = useState<Update[] | null>(null);
+  const [waiting, setWaiting] = useState(0);
   const [error, setError] = useState("");
+  // The updates the reader has been shown; newer ones wait behind the "new updates" button.
+  const shownIds = useRef(new Set<string>());
+  // Set when the next response should show everything. It outlives a request that a newer one
+  // overtakes, so a check can't hide the reader's own post.
+  const showAll = useRef(true);
+  // Only the newest request's response is applied, so a slow one can't undo a fresher one.
+  const latest = useRef(0);
 
-  async function load() {
+  // Fetches the feed. everything: show new updates too, as on first load, after the reader's
+  // own post, or from the button. A failed check shows nothing and waits for the next one.
+  async function load(everything = false) {
+    if (everything) showAll.current = true;
+    const request = ++latest.current;
     const { status, data } = await api<{ updates: Update[] }>(slug, "updates");
-    if (status === 200) setUpdates(data.updates);
-    else setError("Couldn't load updates. Please refresh the page.");
+    if (request !== latest.current) return;
+    if (status === 401) return props.onSignedOut();
+    if (status !== 200) {
+      if (shownIds.current.size === 0 && showAll.current) setError("Couldn't load updates. Please refresh the page.");
+      return;
+    }
+    if (showAll.current) {
+      showAll.current = false;
+      shownIds.current = new Set(data.updates.map((u) => u.id));
+    }
+    const { visible, waiting } = applyFetched(shownIds.current, data.updates);
+    setUpdates(visible);
+    setWaiting(waiting);
   }
 
+  // Checks every so often while the page is visible, and at once when the reader comes back.
   useEffect(() => {
-    load();
+    load(true);
+    let timer: number | undefined;
+    const follow = () => {
+      window.clearInterval(timer);
+      if (document.visibilityState !== "visible") return;
+      timer = window.setInterval(load, CHECK_EVERY);
+    };
+    const comeBack = () => {
+      if (document.visibilityState === "visible") load();
+      follow();
+    };
+    follow();
+    document.addEventListener("visibilitychange", comeBack);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", comeBack);
+    };
   }, [slug]);
 
-  // Runs a change, then reloads the feed. Returns whether it worked.
-  async function change(path: string, method: string, body?: unknown): Promise<boolean> {
+  function showNew() {
+    load(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // Runs a change, then reloads the feed. Returns whether it worked. everything: as for load.
+  async function change(path: string, method: string, body?: unknown, everything = false): Promise<boolean> {
     setError("");
     const { status, data } = await api<{ error?: string }>(slug, path, { method, body });
     if (status >= 300) {
       setError(data?.error ?? "Something went wrong. Please try again.");
       return false;
     }
-    await load();
+    await load(everything);
     return true;
   }
 
@@ -83,10 +133,18 @@ export function Feed(props: {
     <section className="space-y-6">
       {canEdit && (
         <div className={UPDATE_WIDTH}>
-          <PostForm slug={slug} photos={props.photos} onPost={(content, notify) => change("updates", "POST", { content, notify })} />
+          <PostForm slug={slug} photos={props.photos} onPost={(content, notify) => change("updates", "POST", { content, notify }, true)} />
         </div>
       )}
       {error && <ErrorMessage>{error}</ErrorMessage>}
+      {waiting > 0 && (
+        // Fixed, so it shows wherever the reader is and never moves the page.
+        <div className="fixed inset-x-0 top-3 z-20 flex justify-center px-4">
+          <Button className="rounded-full shadow-md" onClick={showNew}>
+            {newUpdatesLabel(waiting)}
+          </Button>
+        </div>
+      )}
       {updates?.length === 0 && <p className="text-muted-foreground">No updates yet.</p>}
       {updates?.map((update) => (
         <UpdateItem
