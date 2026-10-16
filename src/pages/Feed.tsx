@@ -35,8 +35,8 @@ const NOTES_SHOWN = 6;
 // How often an open, visible feed checks for changes.
 const CHECK_EVERY = 30_000;
 
-// canEdit: the viewer is a family member. name: theirs, or null until they give one with a
-// note; onNamed passes it back once a note sets it. onSignedOut: a check found the reader's
+// canEdit: the viewer is a family member. name: theirs, or null until they give one.
+// onNamed passes a name back once a note saves one. onSignedOut: a check found the reader's
 // session ended, for example because they were removed.
 export function Feed(props: {
   slug: string;
@@ -80,6 +80,7 @@ export function Feed(props: {
   }
 
   // Checks every so often while the page is visible, and at once when the reader comes back.
+  // A changed name reloads too, so notes, reactions, and updates already on screen show it.
   useEffect(() => {
     load(true);
     let timer: number | undefined;
@@ -98,7 +99,7 @@ export function Feed(props: {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", comeBack);
     };
-  }, [slug]);
+  }, [slug, props.name]);
 
   function showNew() {
     load(true);
@@ -124,7 +125,7 @@ export function Feed(props: {
       body: { updateId, ...draft },
     });
     if (status >= 300) return data?.error ?? "Something went wrong. Please try again.";
-    if (data.name && props.name === null) props.onNamed(data.name);
+    if (data.name) props.onNamed(data.name);
     await load();
     return null;
   }

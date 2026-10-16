@@ -126,9 +126,10 @@ async function fromHost<T>(call: () => T | Promise<T>): Promise<T> {
 }
 
 // Leaves a note on an update in the person's own family: written, with a body, or a video,
-// with the public ID of an upload ticket the person was given. A person without a name must
-// give one, and it goes on their record; a person with a name signs with it and can't change
-// it here. Returns the note and the name it's signed with, so the client can show the new name.
+// with the public ID of an upload ticket the person was given. A name in the body is saved
+// on their record, replacing the one they had. Omitting it keeps the stored name. Someone
+// with no name must send one. The note and the name are saved together, so a note that isn't
+// saved leaves the name as it was. Returns the note and the name it's signed with.
 export async function createNote(
   db: Db,
   person: Person,
@@ -164,8 +165,8 @@ export async function createNote(
         throw new RequestError(429, "You've left a lot of notes. Please try again later.");
       }
 
-      const name = author.name ?? validName(input.name);
-      if (!author.name) await tx.person.update({ where: { id: person.id }, data: { name } });
+      const name = input.name === undefined && author.name ? author.name : validName(input.name);
+      if (name !== author.name) await tx.person.update({ where: { id: person.id }, data: { name } });
 
       const note = await tx.note.create({
         data: { updateId, authorId: person.id, body, videoId, color: color as NoteColor },
