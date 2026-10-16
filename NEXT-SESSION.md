@@ -2,52 +2,55 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
-- **2026-10-16** — Warn before leaving a page with an unposted update or note.
-  Moving between pages is now instant, which makes it easier to click away from a half-written update and lose it. Leaving with a draft should ask first (on the page, not with `confirm()`).
-
-- **2026-10-16** — Restore scroll position on Back, and show a light loading state under the nav bar.
-  Cut from the persistent navigation bar for speed: Back lands at the top of the feed rather than where the reader was, and the content area is briefly empty while a page fetches.
+## Privacy and security
 
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
-  A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
-
-- **2026-10-15** — Clean up leftover Cloudinary photos.
-  A photo uploaded but never saved, a destroy that failed after the update was already deleted, or an update deleted while photos were off, stays in Cloudinary with nothing pointing to it. The signed upload fields can also be posted to Cloudinary's raw or video endpoint. A sweep could destroy authenticated images under `families/` that have no `Photo` row. Photos and video notes stay separate on purpose: videos are destroyed before the row is removed and the request fails if Cloudinary fails; photos are destroyed after the database commit and the request still succeeds.
-- **2026-10-16** — Sweep video uploads that never became notes.
-  A video uploaded but never attached (refused for length or size, or a failed or abandoned note or update) stays in Cloudinary unseen. A script could destroy ticketed public IDs with no note and no update after a day. Cut from video notes part 1 for speed.
+  A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call; forks, clones, and GitHub's cached views may keep copies regardless.
+- **2026-10-14** — Close two session holes in sign-in.
+  (1) Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Fix: on first verification by the email's owner, delete the record's sessions except the verifying browser's. A family member's Verify on the People page deliberately signs no one out. (2) A magic-link sign-in can race promotion or removal and keep a session that `deleteMany` missed; `signInWithLink` should reuse the verify link's `FOR UPDATE` lock. Both are small, touch the same sign-in code, and need integration tests, so they ship together.
 - **2026-10-16** — Give this app its own Cloudinary environment and check its credit use.
   The app shares Melissa's free-plan environment with her other, inactive projects, so its key can reach their assets, and storage, bandwidth, and conversions share one credit pool. Check usage after launch week, and move to a separate environment if another project becomes active.
-- **2026-10-16** — Let a family member delete all of one author's notes at once.
-  A nameless reader who signs notes isn't on the People page, so the only remedies for a flood are deleting notes one by one (capped at 20 an hour per person) or changing the answer. Raised in the notes plan's access review.
-- **2026-10-16** — Let authors edit their notes.
-  Cut from the notes slice for speed; today they delete and leave another. Also in the spec's Later list.
-- **2026-10-16** — Backfill `Update.content`, then drop `body` and `{ body }` requests.
-  Updates from before formatting have no content and are converted from `body` each time the feed loads, and `body` is kept in step so older code still works during a deploy or rollback. Once formatting has been live a while, backfill `content` with `docFromText`, make it required, and remove the `body` fallbacks; the wall's excerpts would then need `textOf`.
-- **2026-10-15** — End a supporter's other sessions when their email is first verified.
-  Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser. A family member's Verify on the People page deliberately signs no one out, so this applies only when the email's owner confirms.
+
+## Launch-week watching
+
+- **2026-10-12** — Revisit the gate's per-network limit on shared networks.
+  Once a network reaches 30 wrong answers in an hour, every answer from it is refused, correct ones included. So one guesser on hospital or school Wi-Fi can lock out real supporters there for an hour. If that gets reported, consider letting a correct answer through for a browser with no wrong answers of its own.
+
+## Features and fixes
+
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
   A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
-- **2026-10-14** — Lock the person row when signing in by magic link.
-  A sign-in can race promotion or removal and keep a session that `deleteMany` missed. The verify-link sign-in for added supporters gets a `FOR UPDATE` lock; `signInWithLink` should reuse it.
+- **2026-10-16** — Warn before leaving a page with an unposted update or note.
+  Moving between pages is instant, which makes it easy to click away from a half-written update and lose it. Leaving with a draft should ask first (on the page, not with `confirm()`).
+- **2026-10-16** — Let a family member delete all of one author's notes at once.
+  A nameless reader who signs notes isn't on the People page, so the only remedies for a flood are deleting notes one by one (capped at 20 an hour per person) or changing the answer.
+- **2026-10-16** — Show and edit supporters' phone numbers on the People page.
+  The People page lists only supporters with an email, so a phone number given without one shows only beside that supporter's offers. And only the supporter can set their number, though a family member may hear it in person. Both change the same People page table, so they ship together.
 - **2026-10-14** — Show People page messages next to the form that caused them.
-  "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. Toasts (shadcn's `sonner`), planned for upcoming features, are the natural fix.
-- **2026-10-12** — Watch email deliverability through launch week.
-  Test emails from the new `mail.orbul.com` sender land in Gmail spam even with SPF, DKIM, and DMARC passing; that's new-domain reputation. Check whether real sign-in and notification emails reach inboxes, whether Gmail starts showing its own "Unsubscribe" button (it hadn't for the first notifications, though the header is signed), tighten DMARC from `p=none` once mail flows reliably, and consider an HTML version of emails if plain text keeps getting filtered.
-- **2026-10-12** — Revisit the gate's per-network limit on shared networks.
-  Once a network reaches 30 wrong answers in an hour, every answer from it is refused, correct ones included. So one guesser on hospital or school Wi-Fi can lock out real supporters there for an hour. Watch for reports after the gate ships; if it happens, consider letting a correct answer through for a browser with no wrong answers of its own.
-- **2026-10-12** — Run a manual Reddit search on CaringBridge and alternatives.
-  The CaringBridge research agent couldn't reach Reddit, so the user-sentiment findings in `docs/research/caringbridge.md` come from app stores, review sites, and forums. Worth 20 minutes before the post-MVP features are specced.
-- **2026-10-16** — Show supporters who gave only a phone number on the People page.
-  The People page lists only supporters with an email, so a phone number given without one shows only beside that supporter's offers. Cut from supporter phone numbers for speed.
-- **2026-10-16** — Let a family member add or edit a supporter's phone number.
-  Today only the supporter can set it. Useful when a supporter tells the family their number in person. Cut from supporter phone numbers for speed.
+  "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. Toasts (shadcn's `sonner`) are the natural fix.
+- **2026-10-16** — Restore scroll position on Back, and show a light loading state under the nav bar.
+  Back lands at the top of the feed rather than where the reader was, and the content area is briefly empty while a page fetches.
+- **2026-10-16** — Let authors edit their notes.
+  Today they delete and leave another. Also in the spec's Later list.
 - **2026-10-12** — Give `/` a simple page.
   The site root shows "Not found" because the spec only defines family addresses. A one-line page naming the app would reassure a stray visitor, without listing or linking any family.
-- **2026-10-12** — Switch database URLs to `sslmode=verify-full`.
-  `pg` warns that `sslmode=require` will mean weaker checking in its next major version. Today it already behaves as `verify-full`; saying so explicitly in the Vercel and local connection strings silences the warning and keeps the behavior after upgrades.
-- **2026-10-13** — Give schema-changing PRs their own preview database if the shared one keeps colliding.
-  All previews share the schema-only `preview` branch, which breaks when two open PRs change the schema or a PR's migration is abandoned; the fix today is recreating `preview` by hand (README → Deployment). If that happens often, script a schema-only Neon branch per PR with a branch-scoped Vercel variable and cleanup on merge.
+- **2026-10-15** — Add dark mode.
+  The shadcn theme in `src/index.css` already defines dark colors; turning them on (following the system setting) mostly means checking every page in both modes.
+
+## Cleanup and maintenance
+
+- **2026-10-15** — Sweep orphaned Cloudinary uploads.
+  Photos: one uploaded but never saved, a destroy that failed after the update was already deleted, or an update deleted while photos were off, stays in Cloudinary with nothing pointing to it; the signed upload fields can also be posted to the raw or video endpoint. Videos: one uploaded but never attached (refused for length or size, or a failed or abandoned note or update) stays unseen. One script can destroy authenticated images under `families/` with no `Photo` row, and ticketed video public IDs with no note and no update after a day. Photos and video notes delete differently on purpose: videos are destroyed before the row is removed and the request fails if Cloudinary fails; photos are destroyed after the database commit and the request still succeeds.
 - **2026-10-15** — Prune anonymous supporter records with no live sessions.
   Each correct answer creates a record, so they pile up, one per device per answer. They're never listed, but their reactions stay counted (unnamed) after the reader is signed out, for example by an answer change; pruning a record cascades to its reactions on updates and on notes.
-- **2026-10-15** — Add dark mode.
-  The shadcn theme in `src/index.css` already defines dark colors; turning them on (following the system setting) mostly means checking every page in both modes. Cut from the Geist restyle for speed.
+- **2026-10-12** — Switch database URLs to `sslmode=verify-full`.
+  `pg` warns that `sslmode=require` will mean weaker checking in its next major version. Today it already behaves as `verify-full`; saying so explicitly in the Vercel and local connection strings silences the warning and keeps the behavior after upgrades.
+- **2026-10-16** — Backfill `Update.content`, then drop `body` and `{ body }` requests.
+  Updates from before formatting have no content and are converted from `body` each time the feed loads, and `body` is kept in step so older code still works during a deploy or rollback. Once formatting has been live a while, backfill `content` with `docFromText`, make it required, and remove the `body` fallbacks; the wall's excerpts would then need `textOf`.
+- **2026-10-13** — Give schema-changing PRs their own preview database if the shared one keeps colliding.
+  All previews share the schema-only `preview` branch, which breaks when two open PRs change the schema or a PR's migration is abandoned; the fix today is recreating `preview` by hand (README → Deployment). If that happens often, script a schema-only Neon branch per PR with a branch-scoped Vercel variable and cleanup on merge.
+
+## Research
+
+- **2026-10-12** — Run a manual Reddit search on CaringBridge and alternatives.
+  The CaringBridge research agent couldn't reach Reddit, so the user-sentiment findings in `docs/research/caringbridge.md` come from app stores, review sites, and forums. Worth 20 minutes before the post-MVP features are specced.
