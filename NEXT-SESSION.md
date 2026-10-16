@@ -5,8 +5,6 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
   A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
 
-- **2026-10-16** — Build the in-page video recorder (video notes, part 2).
-  `spec/updates.md` → "Video notes" describes it: a live camera view, a 3-2-1 countdown, a 60-second timer with Stop, then automatic playback with "Post" and "Re-record." Part 1 shipped storage, access, and "Upload a video"; the recorder feeds the same review and upload path in `src/components/notes.tsx`. Recorded files can report no length in the browser (MediaRecorder), and the server's check covers that.
 - **2026-10-16** — Resume photos: build slice 3, real photos with Cloudinary.
   Slices 1 and 2 (formatting, placeholder photos) shipped; the plan is parked at `docs/parked-plans/IMPLEMENTATION-PLAN-photos.md` while the video recorder is built. Move it back to `IMPLEMENTATION-PLAN.md` to resume, and settle the shared-module entry below first.
 - **2026-10-16** — Share one Cloudinary module between photos and video notes.
