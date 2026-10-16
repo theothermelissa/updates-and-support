@@ -28,7 +28,7 @@ Two settings name real families, so they live in the hosting's settings rather t
   - A page at an old address moves to the same page at the new one, keeping a link's token.
   - The server treats requests to an old address as the new one, so one-click unsubscribe links in old emails still work.
 
-Each email belongs to at most one person in a family: someone is either a family member or a supporter there, never both. A supporter who has only answered the question has no name or email (see "Joining").
+Each email belongs to at most one person in a family: someone is either a family member or a supporter there, never both. A supporter who has only answered the question has no name or email (see "Joining"); one who leaves a note has a name but may have no email.
 
 A visit to `/f/<slug>` for a slug that does not exist, and isn't redirected, shows the same generic "not found" page as any other unknown address.
 
@@ -42,7 +42,7 @@ A correct answer signs the visitor in on that device at once and shows the feed.
 
 ### Getting notification emails
 
-Giving an email is optional, and reading never waits on it. A signed-in supporter without an email sees a prompt at the top of the feed: "Get an email when there's a new update," with an "Add your email" button. The button opens a form that asks for their name and email and says the family will see both; "Cancel" closes it again. The prompt stays until they give an email.
+Giving an email is optional, and reading never waits on it. A signed-in supporter without an email sees a prompt at the top of the feed: "Get an email when there's a new update," with an "Add your email" button. The button opens a form that asks for their name and email and says the family will see both (a supporter who gave a name with a note is asked only for the email, and keeps that name); "Cancel" closes it again. The prompt stays until they give an email.
 
 What happens depends on whom the email already belongs to in this family:
 
@@ -143,9 +143,9 @@ Magic links are how supporters with an email sign in as themselves on a new devi
 
 Family members have a **People** page, at `/f/<slug>/people` and linked from the feed. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately.
 
-Supporters without an email aren't listed, since there is nothing to show. Instead the page shows how many devices are signed in without a verified email. Each device counts separately, so one person reading on a phone and a laptop counts twice, and listed supporters who haven't verified yet count too.
+Supporters without an email aren't listed, even when they've given a name with a note. Instead the page shows how many devices are signed in without a verified email. Each device counts separately, so one person reading on a phone and a laptop counts twice, and listed supporters who haven't verified yet count too.
 
-Supporters never see this page, the list, the count, or each other's details; the server refuses them to anyone but a family member of that family. The one thing supporters see of each other is the name on a reaction (see [updates.md](updates.md#reactions)).
+Supporters never see this page, the list, the count, or each other's details; the server refuses them to anyone but a family member of that family. The one thing supporters see of each other is the name on a reaction or a note (see [updates.md](updates.md#reactions) and [updates.md](updates.md#notes)).
 
 A family member can **remove** a supporter after confirming. Removal:
 
@@ -199,3 +199,5 @@ Anyone who knows the answer sees the names of everyone who has reacted to an upd
 Giving an email reveals whether it already belongs to the family: a new email goes on the supporter's record, while a known one gets a sign-in link. Someone who knows the answer could use that to learn whether a particular person follows this family. Each check leaves a trace, since a new email appears in the supporter list and a known one receives an email. Hiding it would mean holding every new email until it's verified, which isn't worth the complexity for most families.
 
 A supporter added by a family member is only as safe as the email typed in. If the address is mistyped and belongs to a real person, that person can sign in by email and read the updates. They appear in the supporter list under the name the family gave, so the family can spot and remove them. Likewise, whoever receives a forwarded welcome email and knows the answer signs in as that supporter rather than under their own name.
+
+Anyone who knows the answer can leave a note signed with any name, including one that isn't theirs, such as "Mom." The family can delete any note. A note's author who never gave an email isn't in the supporter list and can't be removed one by one; if it keeps happening, the fix is to change the answer, which signs out everyone without a verified email.

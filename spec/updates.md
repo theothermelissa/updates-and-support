@@ -1,6 +1,6 @@
 # Updates
 
-How a family posts updates, how everyone reads and reacts to them, and how supporters learn a new one is up. Who may see an update is defined in [access.md](access.md): anyone signed in to the family, as a family member or a supporter.
+How a family posts updates, how everyone reads them, reacts to them, and leaves notes on them, and how supporters learn a new one is up. Who may see an update is defined in [access.md](access.md): anyone signed in to the family, as a family member or a supporter.
 
 ## An update
 
@@ -14,7 +14,9 @@ An update has:
 
 The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, body, and an "edited" mark if it was edited.
 
-Family members also see a "Post an update" button and, on each update, "Edit" and "Delete."
+Under each update are its reactions and its notes (see "Reactions" and "Notes"). Family members also see a "Post an update" button and, on each update, "Edit" and "Delete."
+
+The feed links to the family's wall (see "The wall").
 
 ## Posting
 
@@ -26,7 +28,7 @@ A family member can edit any update in their family, including one written by an
 
 ## Deleting
 
-A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions.
+A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions and notes. When the update has notes, the confirmation says they'll be deleted too.
 
 ## Reactions
 
@@ -44,6 +46,39 @@ Under each update, side by side:
 A removed person's reactions are neither shown nor counted, and a removed person can't react, since they can't sign in. Restoring a supporter brings their reactions back.
 
 Reacting never asks for confirmation, and reactions send no emails or notifications. Others' new reactions appear when the page is reloaded.
+
+## Notes
+
+Everyone signed in to the family, family members and supporters alike, can leave notes of support on an update, and everyone signed in to the family reads every note. Sharing them is the point: the family and its support network get through this together.
+
+A note has:
+
+- a **body** of plain text, 1 to 1,000 characters. Line breaks are kept, and web addresses become links.
+- a **color** from a fixed palette of six. The note's card is filled with the color, and its text uses a darker shade of the same hue that meets WCAG AA contrast.
+- its **author**, shown by name as a signature, such as "— Ana Rivera." A family member's note is also marked "Family," so a supporter can't pass as a family member by signing with their name.
+- when it was **left**
+
+### Leaving a note
+
+Each update has a "Leave a note" button. It opens a dialog with a text box, a row of the palette's colors with one chosen at random, and a "Leave note" button. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
+
+A note needs a name. A supporter who hasn't given one also sees a "Your name" field in the dialog. The name goes on their record, so their later notes and reactions show it too. Giving an email later keeps this name: the feed's email form then asks only for the email. The dialog never asks for an email. Anyone who already has a name signs with it.
+
+A person can leave any number of notes on an update, up to 20 notes an hour across the family, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
+
+### Notes under an update
+
+Under each update, next to the reactions, a "Notes" button shows how many notes the update has, such as "3 notes," and opens or closes them. They show oldest first, as colored cards: one column on a phone and two on a computer.
+
+### The wall
+
+The wall, at `/f/<slug>/wall` and linked from the feed's header, shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Everyone signed in to the family can open it; anyone else sees the gate.
+
+### Deleting a note
+
+The note's author, and any family member, can delete a note, after an inline confirmation. Deletion is permanent. Notes can't be edited; to change one, delete it and leave another.
+
+A removed person's notes are neither shown nor counted, and a removed person can't leave a note, since they can't sign in. Restoring a supporter brings their notes back.
 
 ## Notifications
 
