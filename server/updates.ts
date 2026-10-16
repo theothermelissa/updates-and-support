@@ -7,7 +7,7 @@ import { destroyVideos, noteSelect, noteView, visibleNotes, type NoteView } from
 import { notifySupporters } from "./notifications.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
-import { reactionsView, type ReactionsView } from "./reactions.js";
+import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
 import { contentFrom, photoCount, shownContent } from "./richText.js";
 import { cloudinaryStore, type VideoStore } from "./videos.js";
 
@@ -34,11 +34,11 @@ export async function listUpdates(db: Db, person: Person, store: VideoStore = cl
     include: {
       author: { select: { name: true } },
       reactions: {
-        where: { person: { familyId: person.familyId, removedAt: null } },
+        where: visibleReactors(person.familyId),
         orderBy: { createdAt: "asc" },
         select: { kind: true, personId: true, person: { select: { name: true } } },
       },
-      notes: { where: visibleNotes(person.familyId), orderBy: { createdAt: "desc" }, select: noteSelect },
+      notes: { where: visibleNotes(person.familyId), orderBy: { createdAt: "desc" }, select: noteSelect(person.familyId) },
     },
   });
   return updates.map((u) => ({

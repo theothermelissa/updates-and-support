@@ -1,3 +1,5 @@
+import type { Reactions } from "./reactions.js";
+
 // The note palette. The server stores only the key; each key's fill and text color live here,
 // and every pair meets WCAG AA contrast (see notes.test.ts).
 export const PALETTE = {
@@ -27,6 +29,7 @@ export type Note = {
   authorIsFamily: boolean;
   createdAt: string;
   mine: boolean;
+  reactions: Reactions;
 };
 
 export function randomColor(random = Math.random): NoteColor {

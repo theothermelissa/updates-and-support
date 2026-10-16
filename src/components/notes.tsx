@@ -6,13 +6,19 @@ import { Confirm, ErrorMessage, Field, LinkedText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ReactionControls } from "@/components/reactions";
 import { COLORS, MAX_NOTE, PALETTE, randomColor, type Note, type NoteColor } from "../notes.js";
 import { checkVideo, uploadVideo } from "../videos.js";
 import { VideoRecorder } from "@/components/recorder";
 
 // A note as a card in its color, signed by its author, with Delete for those allowed. A video
 // note's card is the video's still, edge to edge inside a thin frame in the note's color.
-export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () => Promise<boolean> }) {
+export function NoteCard(props: {
+  note: Note;
+  canDelete: boolean;
+  onDelete: () => Promise<boolean>;
+  onReact: (kind: string | null) => Promise<boolean>;
+}) {
   const { note } = props;
   const [confirming, setConfirming] = useState(false);
   const colors = PALETTE[note.color];
@@ -35,13 +41,16 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
             </span>
           )}
         </p>
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
-          <time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
-          {props.canDelete && !confirming && (
-            <button className="underline underline-offset-2" onClick={() => setConfirming(true)}>
-              Delete
-            </button>
-          )}
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <ReactionControls reactions={note.reactions} onReact={props.onReact} placement="inline" />
+          <div className="flex h-11 flex-wrap items-center gap-2 text-xs opacity-80">
+            <time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
+            {props.canDelete && !confirming && (
+              <button className="underline underline-offset-2" onClick={() => setConfirming(true)}>
+                Delete
+              </button>
+            )}
+          </div>
         </div>
         {confirming && (
           <div className="text-foreground">

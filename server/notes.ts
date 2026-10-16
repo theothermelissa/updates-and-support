@@ -2,6 +2,7 @@ import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import { validName } from "./families.js";
 import { NoteColor, type Person, type Prisma } from "./generated/prisma/client.js";
+import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
 import { cloudinaryStore, newPublicId, type VideoStore } from "./videos.js";
 
 const COLORS = Object.values(NoteColor);
@@ -29,7 +30,7 @@ export type NoteView = {
   authorIsFamily: boolean;
   createdAt: Date;
   mine: boolean;
-};
+} & ReactionsView;
 
 // The notes anyone signed in to a family may see: on its updates, by its people, and not by
 // someone removed. Filtered by the author's family too, rather than trusting how notes were
@@ -38,19 +39,27 @@ export function visibleNotes(familyId: string): Prisma.NoteWhereInput {
   return { update: { familyId }, author: { familyId, removedAt: null } };
 }
 
-// What to load for a note's view.
-export const noteSelect = {
-  id: true,
-  updateId: true,
-  body: true,
-  videoId: true,
-  color: true,
-  createdAt: true,
-  authorId: true,
-  author: { select: { name: true, role: true } },
-} satisfies Prisma.NoteSelect;
+// What to load for a note's view, including reactions from this family's people who haven't
+// been removed. The feed and the wall both use it, so they can't drift apart.
+export function noteSelect(familyId: string) {
+  return {
+    id: true,
+    updateId: true,
+    body: true,
+    videoId: true,
+    color: true,
+    createdAt: true,
+    authorId: true,
+    author: { select: { name: true, role: true } },
+    reactions: {
+      where: visibleReactors(familyId),
+      orderBy: { createdAt: "asc" as const },
+      select: { kind: true, personId: true, person: { select: { name: true } } },
+    },
+  } satisfies Prisma.NoteSelect;
+}
 
-type LoadedNote = Prisma.NoteGetPayload<{ select: typeof noteSelect }>;
+type LoadedNote = Prisma.NoteGetPayload<{ select: ReturnType<typeof noteSelect> }>;
 
 export function noteView(note: LoadedNote, viewerId: string, store: VideoStore): NoteView {
   return {
@@ -64,6 +73,7 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
     authorIsFamily: note.author.role === "family",
     createdAt: note.createdAt,
     mine: note.authorId === viewerId,
+    ...reactionsView(note.reactions, viewerId),
   };
 }
 
@@ -159,7 +169,7 @@ export async function createNote(
 
       const note = await tx.note.create({
         data: { updateId, authorId: person.id, body, videoId, color: color as NoteColor },
-        select: noteSelect,
+        select: noteSelect(person.familyId),
       });
       return { note: noteView(note, person.id, store), name };
     });
@@ -191,7 +201,7 @@ export async function listNotes(db: Db, person: Person, store: VideoStore = clou
   const notes = await db.note.findMany({
     where: visibleNotes(person.familyId),
     orderBy: { createdAt: "desc" },
-    select: noteSelect,
+    select: noteSelect(person.familyId),
   });
   return notes.map((n) => noteView(n, person.id, store));
 }
