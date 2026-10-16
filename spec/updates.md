@@ -8,7 +8,7 @@ An update has:
 
 - its **content**: formatted text with optional photos, in the order the family member wrote them. The formatting is deliberately small:
   - paragraphs and line breaks
-  - **bold** and *italic*
+  - **bold**, *italic*, and ~~strikethrough~~
   - links, to web addresses (`http:` or `https:`) and email addresses (`mailto:`)
   - bulleted and numbered lists, which can be nested
   - photos, each with an optional **caption** of plain text up to 300 characters (see "Photos")
@@ -29,9 +29,9 @@ Each update has a footer of actions in one row: **React** and **Leave a note** f
 
 ## Writing an update
 
-Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
+Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
 
-Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
+Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, strikethrough, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
 
 ## Posting
 

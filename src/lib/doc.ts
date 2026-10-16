@@ -1,7 +1,7 @@
 // The shape of an update's formatted content: a Tiptap document limited to what the app
 // allows. server/richText.ts checks every document against it before storing.
 
-export type Mark = { type: "bold" } | { type: "italic" } | { type: "link"; attrs: { href: string } };
+export type Mark = { type: "bold" } | { type: "italic" } | { type: "strike" } | { type: "link"; attrs: { href: string } };
 export type Text = { type: "text"; text: string; marks?: Mark[] };
 export type HardBreak = { type: "hardBreak" };
 export type Paragraph = { type: "paragraph"; content?: (Text | HardBreak)[] };
