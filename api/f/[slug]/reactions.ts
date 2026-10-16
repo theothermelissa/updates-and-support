@@ -3,8 +3,8 @@ import { getDb } from "../../../server/db.js";
 import { familyContext, jsonBody, methodNotAllowed, sendRequestError, unauthorized } from "../../../server/http.js";
 import { setReaction } from "../../../server/reactions.js";
 
-// POST { updateId, kind }: anyone signed in to the family sets their reaction to an update,
-// replacing any other, or clears it with kind: null.
+// POST { updateId, kind } or { noteId, kind }: anyone signed in to the family sets their one
+// reaction to an update or a note, replacing any other, or clears it with kind: null.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return methodNotAllowed(res);
   const ctx = await familyContext(getDb(), req, res);

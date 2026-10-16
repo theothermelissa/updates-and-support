@@ -2,9 +2,9 @@
 // only for screen readers; the page never shows it.
 export const REACTIONS = [
   { kind: "heart", emoji: "❤️", name: "Heart" },
-  { kind: "pray", emoji: "🙏", name: "Folded hands" },
   { kind: "hug", emoji: "🤗", name: "Hug" },
   { kind: "strong", emoji: "💪", name: "Flexed arm" },
+  { kind: "clap", emoji: "👏", name: "Clapping hands" },
   { kind: "party", emoji: "🎉", name: "Party popper" },
   { kind: "laugh", emoji: "😂", name: "Laughing" },
 ] as const;

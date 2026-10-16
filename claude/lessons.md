@@ -176,3 +176,15 @@ With a custom viewport size set, the pane's screenshots can show a stale frame f
 **Why:** while checking the wall's filter, screenshots showed the unfiltered page while the DOM had already updated. That nearly passed as a bug.
 
 **How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it.
+
+### Testing video notes in the browser pane
+
+The pane blocks the camera, so only the refused-camera path of the recorder can be tested there. Uploads can be: copy a test video into `public/` temporarily, then in `javascript_tool` fetch it, wrap it in a `File`, set it on the hidden `input[type=file]` with a `DataTransfer`, and dispatch `change`. Delete the file from `public/` afterward. This machine has no ffmpeg; a short Swift script using `AVAssetWriter` makes labeled test videos of any shape.
+
+**Why:** checking how odd-shaped videos display needed a 9:16 file and a way to pick it without a file dialog.
+
+**How to apply:** leave the live camera, countdown, and Re-record to Melissa's own browser, and say so.
+
+### Don't run prettier
+
+The repo has no prettier config, and default prettier reformats whole files to 80 columns. Match the surrounding style by hand.

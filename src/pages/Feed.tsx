@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
 import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
+import { ReactionControls } from "@/components/reactions";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
 import { applyFetched, newUpdatesLabel } from "../liveFeed.js";
 import type { Note } from "../notes.js";
-import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
+import type { Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
 
 // Supporters never load the editor; family members load it when they first write or edit.
@@ -158,6 +159,7 @@ export function Feed(props: {
           name={props.name}
           onLeaveNote={(draft) => leaveNote(update.id, draft)}
           onDeleteNote={(id) => change(`notes/${id}`, "DELETE")}
+          onReactToNote={(id, kind) => change("reactions", "POST", { noteId: id, kind })}
         />
       ))}
     </section>
@@ -223,6 +225,7 @@ function UpdateItem(props: {
   name: string | null;
   onLeaveNote: (draft: NoteDraft) => Promise<string | null>;
   onDeleteNote: (id: string) => Promise<boolean>;
+  onReactToNote: (id: string, kind: string | null) => Promise<boolean>;
 }) {
   const { update } = props;
   const [writing, setWriting] = useState(false);
@@ -283,11 +286,11 @@ function UpdateItem(props: {
             </Confirm>
           ) : (
             <>
-              <Reactions update={update} onReact={props.onReact}>
+              <ReactionControls reactions={update.reactions} onReact={props.onReact}>
                 <Button variant="outline" className="h-11 rounded-full px-4" onClick={() => setWriting(true)}>
                   Leave a note
                 </Button>
-              </Reactions>
+              </ReactionControls>
               {props.canEdit && (
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                   <Button variant="outline" onClick={startEditing}>
@@ -311,6 +314,7 @@ function UpdateItem(props: {
               note={note}
               canDelete={props.canEdit || note.mine}
               onDelete={() => props.onDeleteNote(note.id)}
+              onReact={(kind) => props.onReactToNote(note.id, kind)}
             />
           ))}
           {noteCount > NOTES_SHOWN && (
@@ -330,144 +334,5 @@ function EditorSlot({ children }: { children: React.ReactNode }) {
     <Suspense fallback={<div className="h-[12.5rem] rounded-lg border border-input" aria-busy="true" />}>
       {children}
     </Suspense>
-  );
-}
-
-const HOVER_DELAY = 300;
-
-// A React button that opens a tray of the six emoji, and a summary ("❤️🙏😂")
-// that shows who reacted. With a mouse, hovering opens either one; on a phone, tapping does.
-function Reactions({
-  update,
-  onReact,
-  children,
-}: {
-  update: Update;
-  onReact: (kind: string | null) => Promise<boolean>;
-  children: ReactNode;
-}) {
-  const r = update.reactions;
-  const [tray, setTray] = useState(false);
-  const [names, setNames] = useState<"closed" | "hover" | "pinned">("closed");
-  const [pending, setPending] = useState(false);
-  const area = useRef<HTMLSpanElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
-  const timer = useRef<number | undefined>(undefined);
-
-  // The button and tray share one hover area, and the delay lets the pointer cross to the tray.
-  // Touch has no hover, so it's ignored here and a tap opens the tray instead.
-  function hoverTray(e: PointerEvent, open: boolean) {
-    if (e.pointerType !== "mouse") return;
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setTray(open), HOVER_DELAY);
-  }
-
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-  useEffect(() => {
-    if (!tray) return;
-    const outside = (e: globalThis.PointerEvent) => {
-      if (!area.current?.contains(e.target as Node)) setTray(false);
-    };
-    const escape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setTray(false);
-      button.current?.focus();
-    };
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [tray]);
-
-  async function pick(kind: string) {
-    window.clearTimeout(timer.current);
-    setTray(false);
-    setPending(true);
-    await onReact(kind === r.mine ? null : kind);
-    setPending(false);
-  }
-
-  const mine = REACTIONS.find((x) => x.kind === r.mine);
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="relative"
-          ref={area}
-          onPointerEnter={(e) => hoverTray(e, true)}
-          onPointerLeave={(e) => hoverTray(e, false)}
-        >
-          <Button
-            ref={button}
-            variant="outline"
-            className={cn("h-11 min-w-11 rounded-full px-4", mine && "border-foreground bg-muted text-2xl")}
-            aria-label={mine ? `Your reaction: ${mine.name}. Change it` : "React"}
-            aria-expanded={tray}
-            disabled={pending}
-            onClick={() => {
-              window.clearTimeout(timer.current);
-              setTray(true);
-            }}
-          >
-            {mine ? mine.emoji : "React"}
-          </Button>
-          {tray && (
-            <span
-              className="absolute bottom-full left-0 z-10 mb-1 flex gap-0.5 rounded-full border bg-popover p-1 shadow-md"
-              role="group"
-              aria-label="Pick a reaction"
-            >
-              {REACTIONS.map((x) => (
-                <button
-                  key={x.kind}
-                  className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
-                  aria-label={x.name}
-                  aria-pressed={x.kind === r.mine}
-                  onClick={() => pick(x.kind)}
-                >
-                  {x.emoji}
-                </button>
-              ))}
-            </span>
-          )}
-        </span>
-        {r.count > 0 && (
-          <span
-            className="relative"
-            onPointerEnter={(e) => e.pointerType === "mouse" && setNames((n) => (n === "pinned" ? n : "hover"))}
-            onPointerLeave={() => setNames((n) => (n === "hover" ? "closed" : n))}
-          >
-            <button
-              className="rounded-sm py-2 text-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              aria-label={summaryLabel(r)}
-              aria-expanded={names === "pinned"}
-              onClick={() => setNames((n) => (n === "pinned" ? "closed" : "pinned"))}
-            >
-              {summary(r)}
-            </button>
-            {names === "hover" && (
-              <NameList
-                r={r}
-                className="absolute top-full left-0 z-10 rounded-md bg-foreground px-3 py-1.5 text-sm whitespace-nowrap text-background"
-              />
-            )}
-          </span>
-        )}
-        {children}
-      </div>
-      {names === "pinned" && <NameList r={r} className="text-sm text-muted-foreground" />}
-    </div>
-  );
-}
-
-function NameList({ r, className }: { r: ReactionsData; className: string }) {
-  return (
-    <ul className={className}>
-      {whoReacted(r).map((line, i) => (
-        <li key={i}>{line}</li>
-      ))}
-    </ul>
   );
 }

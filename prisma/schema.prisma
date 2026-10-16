@@ -55,9 +55,10 @@ model Person {
   magicLinks   MagicLink[]
   sessions     Session[]
   updates      Update[]
-  reactions    Reaction[]
-  notes        Note[]
-  videoUploads VideoUpload[]
+  reactions     Reaction[]
+  noteReactions NoteReaction[]
+  notes         Note[]
+  videoUploads  VideoUpload[]
 
   @@unique([familyId, email])
 }
@@ -124,12 +125,13 @@ model Photo {
   @@index([updateId])
 }
 
-// The fixed set of reactions; the UI gives each its emoji and label.
+// The fixed set of reactions, in tray order; the UI gives each its emoji and label.
+// Ties between equally used emoji follow this order.
 enum ReactionKind {
   heart
-  pray
   hug
   strong
+  clap
   party
   laugh
 }
@@ -171,11 +173,26 @@ model Note {
   color     NoteColor
   createdAt DateTime  @default(now())
 
-  update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
-  author Person @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  update    Update         @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  author    Person         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions NoteReaction[]
 
   @@index([updateId, createdAt])
   @@index([authorId, createdAt])
+}
+
+// A person's one reaction to a note; picking another replaces it.
+model NoteReaction {
+  id        String       @id @default(cuid())
+  noteId    String
+  personId  String
+  kind      ReactionKind
+  createdAt DateTime     @default(now())
+
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, personId])
 }
 
 // An upload ticket: a Cloudinary public ID the server signed an upload for, and whom for.
