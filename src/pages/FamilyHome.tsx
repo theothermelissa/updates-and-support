@@ -55,7 +55,9 @@ export function FamilyHome({ slug }: { slug: string }) {
       }
     >
       {me.person.name && <p className="text-sm text-muted-foreground">Signed in as {me.person.name}.</p>}
-      {me.person.role === "supporter" && !me.person.email && <EmailPrompt slug={slug} reload={load} />}
+      {me.person.role === "supporter" && !me.person.email && (
+        <EmailPrompt slug={slug} reload={load} hasName={me.person.name !== null} />
+      )}
       {me.person.role === "supporter" && me.person.email && (
         <div className="space-y-2">
           <Label>
@@ -73,13 +75,19 @@ export function FamilyHome({ slug }: { slug: string }) {
           )}
         </div>
       )}
-      <Feed slug={slug} canEdit={me.person.role === "family"} />
+      <Feed
+        slug={slug}
+        canEdit={me.person.role === "family"}
+        needsName={me.person.name === null}
+        onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
+      />
     </PageShell>
   );
 }
 
-// For a supporter who hasn't given an email. Optional, and never in the way of reading.
-function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
+// For a supporter who hasn't given an email. Optional, and never in the way of reading. Someone
+// who already gave a name with a note keeps it, so they're asked only for an email.
+function EmailPrompt({ slug, reload, hasName }: { slug: string; reload: () => void; hasName: boolean }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -93,7 +101,7 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
     setError("");
     const { status, data } = await api<{ result?: "verify" | "sign-in-link"; error?: string }>(slug, "email", {
       method: "POST",
-      body: { name, email },
+      body: hasName ? { email } : { name, email },
     });
     setBusy(false);
     // A new email, or signed out in the meantime: reloading shows what's next.
@@ -132,11 +140,13 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Your name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
-          </Field>
+          {!hasName && (
+            <Field label="Your name">
+              <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
+            </Field>
+          )}
           <Field label="Your email">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus={hasName} />
           </Field>
           <div className="flex gap-2">
             <Button disabled={busy}>Keep me updated</Button>

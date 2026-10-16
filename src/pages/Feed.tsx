@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
-import { Confirm, ErrorMessage } from "@/components/page";
+import { Confirm, ErrorMessage, LinkedText } from "@/components/page";
+import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
-import { linkify } from "../linkify.js";
+import type { Note } from "../notes.js";
 import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
 
 type Update = {
@@ -17,9 +18,13 @@ type Update = {
   createdAt: string;
   editedAt: string | null;
   reactions: ReactionsData;
+  notes: Note[];
 };
 
-export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
+// canEdit: the viewer is a family member. needsName: they haven't given a name, so leaving a
+// note asks for one; onNamed passes the name back once a note sets it.
+export function Feed(props: { slug: string; canEdit: boolean; needsName: boolean; onNamed: (name: string) => void }) {
+  const { slug, canEdit } = props;
   const [updates, setUpdates] = useState<Update[] | null>(null);
   const [error, setError] = useState("");
 
@@ -45,6 +50,18 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
     return true;
   }
 
+  // Returns an error for the dialog to show, or null once the note is saved.
+  async function leaveNote(updateId: string, draft: NoteDraft): Promise<string | null> {
+    const { status, data } = await api<{ name?: string; error?: string }>(slug, "notes", {
+      method: "POST",
+      body: { updateId, ...draft },
+    });
+    if (status >= 300) return data?.error ?? "Something went wrong. Please try again.";
+    if (data.name && props.needsName) props.onNamed(data.name);
+    await load();
+    return null;
+  }
+
   return (
     <section className="space-y-6">
       {canEdit && <PostForm onPost={(body, notify) => change("updates", "POST", { body, notify })} />}
@@ -58,6 +75,9 @@ export function Feed({ slug, canEdit }: { slug: string; canEdit: boolean }) {
           onEdit={(body) => change(`updates/${update.id}`, "PATCH", { body })}
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
+          needsName={props.needsName}
+          onLeaveNote={(draft) => leaveNote(update.id, draft)}
+          onDeleteNote={(id) => change(`notes/${id}`, "DELETE")}
         />
       ))}
     </section>
@@ -104,8 +124,14 @@ function UpdateItem(props: {
   onEdit: (body: string) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
+  needsName: boolean;
+  onLeaveNote: (draft: NoteDraft) => Promise<string | null>;
+  onDeleteNote: (id: string) => Promise<boolean>;
 }) {
   const { update } = props;
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const noteCount = update.notes.length;
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -130,21 +156,43 @@ function UpdateItem(props: {
         </CardHeader>
         <CardContent className="text-base">
           {draft === null ? (
-            <p className="break-words whitespace-pre-wrap">
-              {linkify(update.body).map((segment, i) =>
-                "href" in segment ? (
-                  <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer">
-                    {segment.href}
-                  </a>
-                ) : (
-                  segment.text
-                ),
-              )}
-            </p>
+            <LinkedText text={update.body} />
           ) : (
             <Textarea className="min-h-32" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Update" />
           )}
           <Reactions update={update} onReact={props.onReact} />
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button variant="outline" className="h-11 rounded-full px-4" onClick={() => setWriting(true)}>
+              Leave a note
+            </Button>
+            {noteCount > 0 && (
+              <Button variant="ghost" className="h-11 px-3" aria-expanded={notesOpen} onClick={() => setNotesOpen((o) => !o)}>
+                {noteCount === 1 ? "1 note" : `${noteCount} notes`}
+              </Button>
+            )}
+          </div>
+          {notesOpen && noteCount > 0 && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {update.notes.map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  canDelete={props.canEdit || note.mine}
+                  onDelete={() => props.onDeleteNote(note.id)}
+                />
+              ))}
+            </div>
+          )}
+          <NoteDialog
+            open={writing}
+            onOpenChange={setWriting}
+            needsName={props.needsName}
+            onLeave={async (draft) => {
+              const failed = await props.onLeaveNote(draft);
+              if (!failed) setNotesOpen(true);
+              return failed;
+            }}
+          />
         </CardContent>
         {props.canEdit && (
           <CardFooter className="flex flex-wrap items-center gap-2 border-t py-3">
@@ -159,7 +207,8 @@ function UpdateItem(props: {
               </>
             ) : confirmingDelete ? (
               <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirmingDelete(false)}>
-                Delete this update? This can't be undone.
+                Delete this update{noteCount > 0 && ` and its ${noteCount === 1 ? "note" : `${noteCount} notes`}`}? This
+                can't be undone.
               </Confirm>
             ) : (
               <>

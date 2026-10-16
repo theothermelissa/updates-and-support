@@ -110,7 +110,7 @@ Schema, migration, `server/notes.ts`, notes in `listUpdates`, the API handlers, 
 
 **Verify:** `npm run typecheck` and `npm test` pass; each access test fails when its rule is removed.
 
-### 2. Notes on the feed
+### 2. Notes on the feed ✅
 
 Palette, `NoteCard`, `NoteDialog`, the feed's "Leave a note" and notes toggle, the update-delete count, the email prompt's prefilled name.
 
@@ -130,6 +130,9 @@ Typecheck, test, PR, CI, `npm run preview:seed` and `npm run preview`, and hand 
 
 - The database had a check constraint, `Person_name_with_email`, requiring name and email to be both set or both empty. The notes migration replaces it with `Person_email_has_name` (an email still requires a name), since a note's author may have a name and no email.
 - `addEmail` keeps a stored name. If a note set the name between `addEmail` reading the row and writing it, the write matches nothing and returns 409 "Please try again." rather than overwriting the note's name.
+- The color swatches use Radix's radio group primitive directly (from the `radix-ui` package already installed), so only shadcn's `dialog` was added. The feed's link rendering moved into a shared `LinkedText` in `src/components/page.tsx`, used by updates and notes.
+- The note dialog decides whether to ask for a name when it opens. Deciding it live made the name field vanish mid-submit, as soon as the saved name reached the page.
+- Verified in the browser pane at 375px and desktop width: a nameless reader is asked for a name once, then not again; "Signed in as" appears; the email form asks only for an email; deleting one's own note confirms inline; a family member sees Delete on every note, the "Family" marker on their own, and "Delete this update and its note?"; a name sent with a family member's note is ignored. No sideways scroll at 375px.
 - `src/linkify.test.ts` already covers `javascript:` and `data:` text, so the unit tests need no new linkify case.
 - Each access rule in `server/notes.ts` and `addEmail`'s name rule was removed in turn; every removal failed at least one test.
 

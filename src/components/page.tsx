@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { linkify } from "../linkify.js";
 
 // The frame every page shares: a centered column with the page's title and, optionally,
 // links or buttons beside it.
@@ -47,5 +48,22 @@ export function Confirm(props: { children: ReactNode; yes: string; onYes: () => 
         Cancel
       </Button>
     </div>
+  );
+}
+
+// Plain text with its line breaks kept and its web addresses as links.
+export function LinkedText({ text, className }: { text: string; className?: string }) {
+  return (
+    <p className={`break-words whitespace-pre-wrap ${className ?? ""}`}>
+      {linkify(text).map((segment, i) =>
+        "href" in segment ? (
+          <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer">
+            {segment.href}
+          </a>
+        ) : (
+          segment.text
+        ),
+      )}
+    </p>
   );
 }
