@@ -112,7 +112,10 @@ export async function addEmail(
   input: { name?: unknown; email?: unknown },
 ): Promise<AddEmailResult> {
   if (person.role !== "supporter" || person.email !== null) throw alreadyHasEmail();
-  const { name, email } = validNameAndEmail(input.name, input.email);
+  // A supporter who signed a note keeps that name, so their notes aren't re-signed; the
+  // form then asks only for an email. The stored row decides, not the session's copy.
+  const stored = await db.person.findUniqueOrThrow({ where: { id: person.id } });
+  const { name, email } = validNameAndEmail(stored.name ?? input.name, input.email);
 
   const known = await db.person.findUnique({ where: { familyId_email: { familyId: family.id, email } } });
   if (known?.removedAt) {
@@ -123,8 +126,9 @@ export async function addEmail(
   const verification = newVerificationLink();
   try {
     await db.person.update({
-      // Only while they still have no email, so two submissions can't both set one.
-      where: { id: person.id, email: null },
+      // Only while they still have no email, so two submissions can't both set one, and only
+      // with the name they had when this began, so a note signed a moment ago keeps its name.
+      where: { id: person.id, email: null, name: stored.name },
       // Giving an email is asking for notifications.
       data: { name, email, notificationsOn: true, magicLinks: { create: verification.data } },
     });
@@ -132,8 +136,12 @@ export async function addEmail(
     const code = (err as { code?: string }).code;
     // Someone in the family took this email a moment ago; treat it as a known email.
     if (code === "P2002") return sendLinkInstead(db, send, family, email);
-    // This supporter's email was set a moment ago.
-    if (code === "P2025") throw alreadyHasEmail();
+    // This supporter's email was set a moment ago, or they signed a note with a name and this
+    // form still showed the name field.
+    if (code === "P2025") {
+      const now = await db.person.findUniqueOrThrow({ where: { id: person.id } });
+      throw now.email ? alreadyHasEmail() : new RequestError(409, "Please try again.");
+    }
     throw err;
   }
 

@@ -2,7 +2,7 @@
 // so the rules stay in one place and handlers stay thin.
 export class RequestError extends Error {
   constructor(
-    public status: 400 | 403 | 404 | 409,
+    public status: 400 | 403 | 404 | 409 | 429,
     message: string,
   ) {
     super(message);

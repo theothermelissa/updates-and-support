@@ -34,8 +34,9 @@ model Person {
   id               String    @id @default(cuid())
   familyId         String
   role             Role
-  // Both empty for a supporter who has only answered the question; both set once they
-  // give an email. Family members always have both.
+  // Both empty for a supporter who has only answered the question. A supporter gets a
+  // name when they leave a note or give an email, and an email only by giving one.
+  // Family members always have both.
   name             String?
   email            String? // lowercased and trimmed
   // Set when the person confirms their email, signs in by magic link, or a family member verifies it.
@@ -55,6 +56,7 @@ model Person {
   sessions   Session[]
   updates    Update[]
   reactions  Reaction[]
+  notes      Note[]
 
   @@unique([familyId, email])
 }
@@ -100,6 +102,7 @@ model Update {
   family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
   author    Person     @relation(fields: [authorId], references: [id])
   reactions Reaction[]
+  notes     Note[]
 
   @@index([familyId, createdAt])
 }
@@ -126,6 +129,33 @@ model Reaction {
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([updateId, personId])
+}
+
+// The palette of note colors; the UI gives each its fill and text color.
+enum NoteColor {
+  sky
+  teal
+  sage
+  oak
+  rose
+  lavender
+}
+
+// A note of support on an update. Anyone signed in to the family may leave any number. Its
+// family is its update's family.
+model Note {
+  id        String    @id @default(cuid())
+  updateId  String
+  authorId  String
+  body      String
+  color     NoteColor
+  createdAt DateTime  @default(now())
+
+  update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  author Person @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([updateId, createdAt])
+  @@index([authorId, createdAt])
 }
 
 // A wrong answer at a family's gate, counted against per-browser and per-network limits.

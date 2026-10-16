@@ -2,6 +2,7 @@ import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
+import { noteSelect, noteView, visibleNotes, type NoteView } from "./notes.js";
 import { notifySupporters } from "./notifications.js";
 import { requireFamilyMember } from "./people.js";
 import { reactionsView, type ReactionsView } from "./reactions.js";
@@ -16,9 +17,10 @@ export type UpdateView = {
   editedAt: Date | null;
 };
 
-export type FeedUpdate = UpdateView & ReactionsView;
+export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[] };
 
-// Everyone signed in to the family reads every update, newest first, with its reactions.
+// Everyone signed in to the family reads every update, newest first, with its reactions and
+// its notes, oldest first.
 // Reactions are filtered by family on their own, rather than trusting how they were written,
 // and a removed person's reactions are hidden until they're restored.
 export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]> {
@@ -32,9 +34,14 @@ export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]>
         orderBy: { createdAt: "asc" },
         select: { kind: true, personId: true, person: { select: { name: true } } },
       },
+      notes: { where: visibleNotes(person.familyId), orderBy: { createdAt: "asc" }, select: noteSelect },
     },
   });
-  return updates.map((u) => ({ ...view(u), ...reactionsView(u.reactions, person.id) }));
+  return updates.map((u) => ({
+    ...view(u),
+    ...reactionsView(u.reactions, person.id),
+    notes: u.notes.map((n) => noteView(n, person.id)),
+  }));
 }
 
 // With a sender, also emails supporters that there's a new update. The update is saved
@@ -77,7 +84,7 @@ export async function editUpdate(db: Db, person: Person, id: string, body: unkno
   return view(update);
 }
 
-// Deletion is permanent: the row is removed, not hidden.
+// Deletion is permanent: the row is removed, not hidden, with its reactions and notes.
 export async function deleteUpdate(db: Db, person: Person, id: string): Promise<void> {
   requireFamilyMember(person);
   const { count } = await db.update.deleteMany({ where: { id, familyId: person.familyId } });
