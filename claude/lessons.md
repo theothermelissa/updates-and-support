@@ -149,3 +149,19 @@ Ask for confirmation in the page itself, for example with inline "Yes / Cancel" 
 **Why:** headers like `X-Robots-Tag` and `Cache-Control: no-store` are privacy rules, and local dev silently shows them missing or wrong. A new route 404ing locally looked like a code bug. Sign-in links with `?token=` failed on previews until the token moved after `#`.
 
 **How to apply:** set anything privacy-critical in code (as `familyContext` does for `Cache-Control`) and check the rest on production with `curl -I` after merging. Restart `npm start` after adding an API file. Don't carry anything a page needs in the query string through a preview link.
+
+### Merging `main` can delete the branch's plan
+
+When `main` archived its own `IMPLEMENTATION-PLAN.md` while a branch had a different one, merging `main` into the branch staged a deletion of the branch's plan without a conflict.
+
+**Why:** both sides started from the same file, and git applied `main`'s delete. The notes plan vanished mid-merge and had to be restored.
+
+**How to apply:** after merging `main`, check `git status` for `D  IMPLEMENTATION-PLAN.md` and restore it with `git checkout HEAD -- IMPLEMENTATION-PLAN.md` before committing.
+
+### Trust the DOM over browser-pane screenshots under emulated sizes
+
+With a custom viewport size set, the pane's screenshots can show a stale frame for several captures, or none at all when the tab isn't fronted.
+
+**Why:** while checking the wall's filter, screenshots showed the unfiltered page while the DOM had already updated. That nearly passed as a bug.
+
+**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share.

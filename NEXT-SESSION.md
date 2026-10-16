@@ -5,6 +5,12 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
   A rename PR committed a real person's name, the family's surname, and their address to this public repo. They're gone from the files now, but one commit message on `main` still has the name, and the earlier file versions remain in history. Removing them means rewriting `main` and force-pushing, which is Melissa's call.
 
+- **2026-10-16** — Build a profile page where people change their own name.
+  Notes and the email form show a stored name read-only, by Melissa's decision: names change on a profile, which doesn't exist yet. A changed name re-signs that person's earlier notes and reactions. Came up while building notes.
+- **2026-10-16** — Let a family member delete all of one author's notes at once.
+  A nameless reader who signs notes isn't on the People page, so the only remedies for a flood are deleting notes one by one (capped at 20 an hour per person) or changing the answer. Raised in the notes plan's access review.
+- **2026-10-16** — Let authors edit their notes.
+  Cut from the notes slice for speed; today they delete and leave another. Also in the spec's Later list.
 - **2026-10-15** — End a supporter's other sessions when their email is first verified.
   Someone who knows the answer can give the email of a real person not yet on the list; if that person confirms it, the device that gave it becomes a verified supporter that survives answer changes (Stated limits in `spec/access.md`). Melissa accepted this to ship reading before email. The fix: on first verification, delete the record's sessions except the verifying browser's; the cost is one more answer for someone who confirms in a different browser. A family member's Verify on the People page deliberately signs no one out, so this applies only when the email's owner confirms.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.

@@ -49,36 +49,44 @@ export function FamilyHome({ slug }: { slug: string }) {
   if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
   return (
     <PageShell
+      wide
       title={me.family.displayName}
       actions={
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Menu" className="text-muted-foreground">
-              <MenuIcon className="size-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {me.person.name && (
-              <>
-                <DropdownMenuLabel className="font-normal text-muted-foreground">
-                  Signed in as <span className="font-medium text-foreground">{me.person.name}</span>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            {me.person.role === "family" && (
-              <DropdownMenuItem asChild>
-                <a href={`/f/${slug}/people`}>People</a>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={signOut}>Sign out</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <>
+          <Button variant="ghost" size="sm" asChild>
+            <a href={`/f/${slug}/wall`}>Notes</a>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Menu" className="text-muted-foreground">
+                <MenuIcon className="size-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {me.person.name && (
+                <>
+                  <DropdownMenuLabel className="font-normal text-muted-foreground">
+                    Signed in as <span className="font-medium text-foreground">{me.person.name}</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {me.person.role === "family" && (
+                <DropdownMenuItem asChild>
+                  <a href={`/f/${slug}/people`}>People</a>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={signOut}>Sign out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
       }
     >
-      {me.person.role === "supporter" && !me.person.email && <EmailPrompt slug={slug} reload={load} />}
+      {me.person.role === "supporter" && !me.person.email && (
+        <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
+      )}
       {me.person.role === "supporter" && me.person.email && (
-        <div className="space-y-2">
+        <div className="space-y-2 lg:w-[42rem]">
           <Label>
             <Checkbox
               checked={me.person.notificationsOn}
@@ -94,13 +102,20 @@ export function FamilyHome({ slug }: { slug: string }) {
           )}
         </div>
       )}
-      <Feed slug={slug} canEdit={me.person.role === "family"} />
+      <Feed
+        slug={slug}
+        canEdit={me.person.role === "family"}
+        name={me.person.name}
+        onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
+      />
     </PageShell>
   );
 }
 
-// For a supporter who hasn't given an email. Optional, and never in the way of reading.
-function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
+// For a supporter who hasn't given an email. Optional, and never in the way of reading. Someone
+// who already gave a name with a note sees it read-only; names change on their profile.
+function EmailPrompt(props: { slug: string; reload: () => void; storedName: string | null }) {
+  const { slug, reload, storedName } = props;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -114,7 +129,7 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
     setError("");
     const { status, data } = await api<{ result?: "verify" | "sign-in-link"; error?: string }>(slug, "email", {
       method: "POST",
-      body: { name, email },
+      body: storedName ? { email } : { name, email },
     });
     setBusy(false);
     // A new email, or signed out in the meantime: reloading shows what's next.
@@ -154,10 +169,14 @@ function EmailPrompt({ slug, reload }: { slug: string; reload: () => void }) {
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Your name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
+            {storedName ? (
+              <Input value={storedName} readOnly className="bg-muted text-muted-foreground" />
+            ) : (
+              <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
+            )}
           </Field>
           <Field label="Your email">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus={storedName !== null} />
           </Field>
           <div className="flex gap-2">
             <Button disabled={busy}>Keep me updated</Button>

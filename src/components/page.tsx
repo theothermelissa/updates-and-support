@@ -2,12 +2,13 @@ import type { ReactNode } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { linkify } from "../linkify.js";
 
 // The frame every page shares: a centered column with the page's title and, optionally,
-// links or buttons beside it.
-export function PageShell(props: { title: ReactNode; actions?: ReactNode; children?: ReactNode }) {
+// links or buttons beside it. A wide page widens on large screens, for content set side by side.
+export function PageShell(props: { title: ReactNode; actions?: ReactNode; wide?: boolean; children?: ReactNode }) {
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+    <main className={`mx-auto max-w-2xl space-y-6 px-4 py-8 ${props.wide ? "lg:max-w-6xl" : ""}`}>
       <header className="flex items-start justify-between gap-4">
         <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{props.title}</h1>
         {/* As tall as the title's first line, so the actions stay level with it when the title wraps. */}
@@ -48,5 +49,22 @@ export function Confirm(props: { children: ReactNode; yes: string; onYes: () => 
         Cancel
       </Button>
     </div>
+  );
+}
+
+// Plain text with its line breaks kept and its web addresses as links.
+export function LinkedText({ text, className }: { text: string; className?: string }) {
+  return (
+    <p className={`break-words whitespace-pre-wrap ${className ?? ""}`}>
+      {linkify(text).map((segment, i) =>
+        "href" in segment ? (
+          <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer">
+            {segment.href}
+          </a>
+        ) : (
+          segment.text
+        ),
+      )}
+    </p>
   );
 }

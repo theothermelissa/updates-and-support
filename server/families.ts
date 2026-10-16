@@ -13,13 +13,19 @@ export function isValidEmail(email: string): boolean {
   return email.length <= 254 && /^[^\s@]+@([^\s@.]+\.)+[^\s@.]{2,}$/.test(email);
 }
 
-// A person's name and email from a form, cleaned up, or a 400 saying what's wrong.
-export function validNameAndEmail(name: unknown, email: unknown) {
-  const cleanName = typeof name === "string" ? name.trim() : "";
-  const cleanEmail = typeof email === "string" ? normalizeEmail(email) : "";
-  if (cleanName.length < 1 || cleanName.length > 100) {
+// A person's name from a form, cleaned up, or a 400 saying what's wrong.
+export function validName(name: unknown): string {
+  const clean = typeof name === "string" ? name.trim() : "";
+  if (clean.length < 1 || clean.length > 100) {
     throw new RequestError(400, "Please enter a name (up to 100 characters).");
   }
+  return clean;
+}
+
+// A person's name and email from a form, cleaned up, or a 400 saying what's wrong.
+export function validNameAndEmail(name: unknown, email: unknown) {
+  const cleanName = validName(name);
+  const cleanEmail = typeof email === "string" ? normalizeEmail(email) : "";
   if (!isValidEmail(cleanEmail)) {
     throw new RequestError(400, "Please enter a valid email address.");
   }
