@@ -102,25 +102,41 @@ describe("who can see a request", () => {
     expect(await hasHelpRequests(db, olu.person.familyId)).toBe(false);
   });
 
-  it("sends names to a supporter, and the email and offer id only to a family member", async () => {
-    const { ana, sam } = await setUp();
-    const request = await add(ana, "Maple Street errand", 2);
+  it("shows a supporter only their own offer and the count, and everyone's to a family member", async () => {
+    const { ana, luis, sam, family } = await setUp();
+    const request = await add(ana, "Maple Street errand", 3);
     await offerHelp(db, undefined, sam, request.id, { helping: true });
+    await offerHelp(db, undefined, luis, request.id, { helping: true });
+    const tess = await answerCorrectly(db, family);
     const [forSam] = await listHelp(db, sam);
+    const [forTess] = await listHelp(db, tess.person);
     const [forAna] = await listHelp(db, ana);
 
     expect(names(forSam!)).toEqual([["Sam", true]]);
+    expect(forSam!.offered).toBe(2);
     expect(forSam!.offers[0]!.email).toBeNull();
     expect(forSam!.offers[0]!.id).toBeNull();
+    expect(forTess!.offers).toEqual([]);
+    expect(forTess!.offered).toBe(2);
+    expect(names(forAna!)).toEqual([
+      ["Sam", false],
+      ["Luis Rivera", false],
+    ]);
+    expect(forAna!.offered).toBe(2);
     expect(forAna!.offers[0]!.email).toBe("sam@example.com");
     expect(forAna!.offers[0]!.id).toEqual(expect.any(String));
 
-    for (const json of [JSON.stringify(forSam), JSON.stringify(forAna)]) {
+    for (const json of [JSON.stringify(forSam), JSON.stringify(forTess), JSON.stringify(forAna)]) {
       expect(json).not.toContain(sam.id);
+      expect(json).not.toContain(luis.id);
       expect(json).not.toContain(ana.id);
     }
-    expect(JSON.stringify(forSam)).not.toContain("sam@example.com");
-    expect(JSON.stringify(forSam)).not.toContain(forAna!.offers[0]!.id!);
+    for (const json of [JSON.stringify(forSam), JSON.stringify(forTess)]) {
+      expect(json).not.toContain("Luis");
+      expect(json).not.toContain("@example.com");
+      for (const offer of forAna!.offers) expect(json).not.toContain(offer.id!);
+    }
+    expect(JSON.stringify(forTess)).not.toContain("Sam");
   });
 
   it("hides an offer from another family's person, and one whose author was removed", async () => {
@@ -172,12 +188,12 @@ describe("offering", () => {
     await offerHelp(db, undefined, sam, request.id, { helping: true });
     await offerHelp(db, undefined, luis, request.id, { helping: true });
 
-    const [forSam] = await listHelp(db, sam);
-    expect(names(forSam!)).toEqual([
-      ["Sam", true],
-      ["Luis Rivera", false],
+    const [forLuis] = await listHelp(db, luis);
+    expect(names(forLuis!)).toEqual([
+      ["Luis Rivera", true],
+      ["Sam", false],
     ]);
-    expect(forSam!.full).toBe(true);
+    expect((await listHelp(db, sam))[0]!.full).toBe(true);
 
     await expect(offerHelp(db, undefined, ana, request.id, { helping: true })).rejects.toMatchObject({ status: 409 });
     expect(await db.helpOffer.count()).toBe(2);

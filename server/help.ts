@@ -9,8 +9,9 @@ const MAX_BODY = 2_000;
 const MAX_SLOTS = 99;
 const MAX_REQUESTS = 100;
 
-// What a viewer sees of an offer. Supporters get names only. Family members also get the
-// email, when there is one, and the offer's id so they can remove it. Never a person's id.
+// What a viewer sees of an offer. A supporter gets only their own offer. Family members get
+// every offer, with the email when there is one and the offer's id so they can remove it.
+// Never a person's id.
 export type HelpOfferView = {
   id: string | null;
   name: string;
@@ -24,6 +25,8 @@ export type HelpRequestView = {
   // Null means as many people as want to may offer.
   slots: number | null;
   full: boolean;
+  // How many active offers there are, including any the viewer can't see.
+  offered: number;
   offers: HelpOfferView[];
 };
 
@@ -50,12 +53,15 @@ function view(request: LoadedRequest, viewer: Person): HelpRequestView {
     return a.createdAt.getTime() - b.createdAt.getTime();
   });
   const family = viewer.role === "family";
+  // Supporters don't see who else offered, so offering doesn't invite comparison.
+  const visible = family ? offers : offers.filter((offer) => offer.personId === viewer.id);
   return {
     id: request.id,
     body: request.body,
     slots: request.slots,
     full: request.slots !== null && offers.length >= request.slots,
-    offers: offers.map((offer) => ({
+    offered: offers.length,
+    offers: visible.map((offer) => ({
       id: family ? offer.id : null,
       name: offer.person.name ?? "",
       mine: offer.personId === viewer.id,

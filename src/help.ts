@@ -1,15 +1,7 @@
-// The sentences under a request. Names are already in display order, with "You" first
-// when the viewer has offered.
-
-export function capacityLabel(slots: number | null): string {
-  if (slots === null) return "Many people can help with this";
-  return `${slots} ${slots === 1 ? "person" : "people"} can help with this`;
-}
-
-export function helpSummary(names: string[]): string {
-  if (names.length === 0) return "";
-  if (names.length === 1) return `${names[0]} ${names[0] === "You" ? "are" : "is"} helping`;
-  if (names.length === 2) return `${names[0]} and ${names[1]} are helping`;
-  const others = names.length - 2;
-  return `${names[0]}, ${names[1]}, and ${others} ${others === 1 ? "other" : "others"} are helping`;
+// The count beside a request, given how many people have offered.
+export function capacityLabel(slots: number | null, offered: number): string {
+  if (slots === null) return "everyone";
+  const people = `${slots} ${slots === 1 ? "person" : "people"}`;
+  if (offered === 0 || offered >= slots) return people;
+  return `${people}, need ${slots - offered} more`;
 }

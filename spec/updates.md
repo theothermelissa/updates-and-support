@@ -144,29 +144,33 @@ The page at `/f/<slug>/help`, titled "How to help," lists what the family needs.
 A request has:
 
 - a **body** of plain text, 1 to 2,000 characters. Line breaks are kept, and web addresses become links.
-- how many people can take it: **1**, a **number up to 99**, or **many**. The page says "1 person can help with this," "4 people can help with this," or "Many people can help with this."
+- how many people can take it: **1**, a **number up to 99**, or **many** (the form's "Everyone can help with this" checkbox). Right after the body's last word, in smaller, lighter text, the page shows the count in parentheses, kept together on one line (see "Who has offered").
 
-Family members add, edit, and delete requests. Deleting asks for confirmation on the page and removes every offer on that request. Requests are shown oldest first. A family can have at most 100.
+Family members add, edit, and delete requests. Only they see the form for adding one, at the top of the page above the requests. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Deleting asks for confirmation on the page and removes every offer on that request. Requests are shown oldest first. A family can have at most 100.
 
 ### Offering to help
 
-Anyone signed in can press **I can help with this**. An offer needs a name, the same way a note does: the page shows "Your name" when the person doesn't have one, and that name goes on their record. A person who already has a name offers under it and can't change it here. The page never asks for an email. Pressing the button again, which then reads **I'm helping with this**, withdraws the offer.
+Anyone signed in can press **✋ I can help with this**. An offer needs a name, the same way a note does: when the person doesn't have one, pressing the button shows "Your name" on that request with a Cancel button, and pressing it again with a name makes the offer and puts that name on their record. A person who already has a name offers under it and can't change it here. The page never asks for an email. Once someone has offered, the button goes away and "👍 You are helping" takes its place, whether or not the request is covered.
+
+To withdraw, the person presses the **×** just after "You are helping." On a computer it appears when resting on that line or reaching it with the keyboard; on a touch screen it is always shown. It opens a dialog, "Need to bow out? No problem — thanks for letting us know," with **Cancel** and **Confirm**. Confirming withdraws the offer.
 
 One offer per person per request. When a numbered request already has that many offers, another person is told someone else just took it, and nothing is stored for them. If two people take the last place at the same moment, one offer is kept. Withdrawing, or a family member removing an offer, opens the place again. Lowering the number does not remove offers already made. The request is covered once at least that many active offers exist. A "many" request never fills.
 
 ### Who has offered
 
-Under the request, once anyone has offered, one sentence names them:
+The count beside the request says how many people it needs and how it stands:
 
-- one person: "Ana Rivera is helping," or "You are helping" when the viewer is that person
-- two: "Ana Rivera and Sam are helping"
-- more: "Ana Rivera, Sam, and 2 others are helping," with "1 other" when a single name is left out
+- "(1 person)," "(4 people)," or "(everyone)" before anyone offers, and "(everyone)" always for a "many" request
+- "(4 people, need 3 more)" once a numbered request has some offers but isn't covered
+- "(4 people)" again once it is covered
 
-The viewer is first, as "You." On a computer, resting on the sentence shows everyone who offered. Tapping it shows that list under the sentence, and tapping again hides it. A "many" request always shows the list, and so does a family member's view of any request, with **Remove** on each name. Removing asks for confirmation.
+A covered request's text is struck through, with a green check in front of it. The count isn't struck through.
 
-When a numbered request is covered, a green check appears beside the sentence. **I can help with this** is hidden from anyone who hasn't offered. Someone who has can still withdraw.
+**✋ I can help with this** is hidden from anyone who hasn't offered on a covered request.
 
-Everyone signed in sees those names, and never an email or another person's id. Family members also see a person's email beside their name when they have one. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
+Only family members see who offered. Under each request, they see the list of everyone who offered, with **Remove** on each name. Removing asks for confirmation. Supporters see the count and their own "You are helping," never anyone else's name, so offering doesn't invite comparison between supporters, while the family can still coordinate with and thank each person.
+
+The server sends a supporter only the number of offers and whether one of them is theirs: never another person's name, email, or id. Family members see each name, with the person's email beside it when they have one. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
 
 A removed person's offers are hidden and don't fill a place, and a removed person can't offer. Restoring a supporter brings their offers back, which can leave a numbered request with more offers than its number.
 

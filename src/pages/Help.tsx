@@ -1,16 +1,19 @@
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, EllipsisVerticalIcon, XIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage, Field, LinkedText, PageShell } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api, type Me } from "../api.js";
-import { capacityLabel, helpSummary } from "../help.js";
+import { capacityLabel } from "../help.js";
 
 type Offer = { id: string | null; name: string; mine: boolean; email: string | null };
-type HelpRequest = { id: string; body: string; slots: number | null; full: boolean; offers: Offer[] };
+// A supporter's offers hold only their own; offered counts everyone's.
+type HelpRequest = { id: string; body: string; slots: number | null; full: boolean; offered: number; offers: Offer[] };
 
 export function Help({ slug }: { slug: string }) {
   const [me, setMe] = useState<Me | null>(null);
@@ -61,6 +64,12 @@ export function Help({ slug }: { slug: string }) {
     >
       <p className="text-sm text-muted-foreground">{me.family.displayName}</p>
       {error && <ErrorMessage>{error}</ErrorMessage>}
+      {family && (
+        <RequestForm
+          submitLabel="Add request"
+          onSubmit={(body, slots) => change("help", "POST", { body, slots }).then((r) => r.ok)}
+        />
+      )}
       {requests.length === 0 && !family && <p>There aren't any requests right now.</p>}
       <div className="space-y-4">
         {requests.map((request) => (
@@ -78,12 +87,6 @@ export function Help({ slug }: { slug: string }) {
           />
         ))}
       </div>
-      {family && (
-        <RequestForm
-          submitLabel="Add request"
-          onSubmit={(body, slots) => change("help", "POST", { body, slots }).then((r) => r.ok)}
-        />
-      )}
     </PageShell>
   );
 }
@@ -102,21 +105,24 @@ function RequestCard(props: {
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [name, setName] = useState("");
-  const [names, setNames] = useState<"closed" | "hover" | "pinned">("closed");
+  const [askingName, setAskingName] = useState(false);
+  const [bowingOut, setBowingOut] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const mine = request.offers.some((offer) => offer.mine);
-  const shown = request.offers.map((offer) => (offer.mine ? "You" : offer.name));
-  const summary = helpSummary(shown);
-  const listAlways = request.slots === null || props.family;
-  const showButton = !request.full || mine;
+  const showButton = !request.full && !mine;
 
   async function offer(e: FormEvent) {
     e.preventDefault();
-    if (!mine && props.needsName && name.trim() === "") return;
+    // Someone without a name is asked for one only once they press the button.
+    if (props.needsName && !askingName) return setAskingName(true);
+    if (props.needsName && name.trim() === "") return;
     setPending(true);
-    const ok = await props.onOffer(!mine, props.needsName && !mine ? name : undefined);
+    const ok = await props.onOffer(true, props.needsName ? name : undefined);
     setPending(false);
-    if (ok) setName("");
+    if (ok) {
+      setName("");
+      setAskingName(false);
+    }
   }
 
   return (
@@ -133,83 +139,106 @@ function RequestCard(props: {
           onCancel={() => setEditing(false)}
         />
       ) : (
-        <>
-          <LinkedText text={request.body} />
-          <p className="text-sm text-muted-foreground">{capacityLabel(request.slots)}</p>
-        </>
-      )}
-      {summary && (
-        <div className="space-y-2">
-          <p className="flex items-start gap-2">
-            {request.full && <CheckIcon className="mt-0.5 size-5 shrink-0 text-green-800" role="img" aria-label="Covered" />}
-            {listAlways ? (
-              <span>{summary}</span>
-            ) : (
-              <span
-                className="relative"
-                onPointerEnter={(e) => e.pointerType === "mouse" && setNames((n) => (n === "pinned" ? n : "hover"))}
-                onPointerLeave={() => setNames((n) => (n === "hover" ? "closed" : n))}
-              >
-                <button
-                  type="button"
-                  className="rounded-sm text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                  aria-label={`${summary}. Show who can help`}
-                  aria-expanded={names === "pinned"}
-                  onClick={() => setNames((n) => (n === "pinned" ? "closed" : "pinned"))}
-                >
-                  {summary}
-                </button>
-                {names === "hover" && (
-                  <ul className="absolute top-full left-0 z-10 mt-1 w-max max-w-xs rounded-md bg-foreground px-3 py-1.5 text-sm text-background">
-                    {shown.map((line, i) => (
-                      <li key={i}>{line}</li>
-                    ))}
-                  </ul>
-                )}
-              </span>
-            )}
-          </p>
-          {listAlways && <OfferList offers={request.offers} family={props.family} removing={removing} setRemoving={setRemoving} onRemove={props.onRemove} />}
-          {!listAlways && names === "pinned" && (
-            <OfferList offers={request.offers} family={false} removing={null} setRemoving={setRemoving} onRemove={props.onRemove} />
+        <div className="flex items-start gap-2">
+          {request.full && <CheckIcon className="mt-0.5 size-5 shrink-0 text-green-800" role="img" aria-label="Covered" />}
+          {/* The count is inline-block, so the line through a covered request skips it. */}
+          <LinkedText text={request.body} className={`min-w-0 flex-1 ${request.full ? "line-through" : ""}`}>
+            {/* inline-block, so the parentheses wrap with what's inside them. A margin rather
+                than a space, so a covered request's line through stops at its text. */}
+            <span className="ml-1 inline-block text-sm text-muted-foreground">
+              ({capacityLabel(request.slots, request.offered)})
+            </span>
+          </LinkedText>
+          {props.family && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label="Request options" className="-mt-1 -mr-2 text-muted-foreground">
+                  <EllipsisVerticalIcon />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setEditing(true)}>Edit</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setConfirming(true)}>Delete</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       )}
+      {mine && (
+        <p className="group flex w-fit items-center gap-2">
+          <span aria-hidden="true">👍</span> You are helping
+          {/* Always shown on touch screens, which can't hover. */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Stop helping with this"
+            className="text-muted-foreground group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0"
+            onClick={() => setBowingOut(true)}
+          >
+            <XIcon />
+          </Button>
+        </p>
+      )}
+      {props.family && request.offers.length > 0 && (
+        <OfferList offers={request.offers} removing={removing} setRemoving={setRemoving} onRemove={props.onRemove} />
+      )}
       {showButton && !editing && (
         <form onSubmit={offer} className="space-y-3">
-          {props.needsName && !mine && (
+          {props.needsName && askingName && (
             <Field label="Your name">
-              <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+              <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
             </Field>
           )}
-          <Button type="submit" variant="outline" disabled={pending} aria-pressed={mine} className={mine ? "border-foreground bg-muted" : ""}>
-            {mine ? "I'm helping with this" : "I can help with this"}
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" variant="outline" disabled={pending}>
+              <span aria-hidden="true">✋</span>I can help with this
+            </Button>
+            {props.needsName && askingName && (
+              <Button type="button" variant="ghost" onClick={() => setAskingName(false)}>
+                Cancel
+              </Button>
+            )}
+          </div>
         </form>
       )}
-      {props.family && !editing && (
-        confirming ? (
-          <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirming(false)}>
-            Delete this request? People who offered to help will no longer be listed.
-          </Confirm>
-        ) : (
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
-              Edit
+      <Dialog open={bowingOut} onOpenChange={setBowingOut}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Need to bow out?</DialogTitle>
+            <DialogDescription>No problem — thanks for letting us know.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setBowingOut(false)}>
+              Cancel
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => setConfirming(true)}>
-              Delete
+            <Button
+              type="button"
+              disabled={pending}
+              onClick={async () => {
+                setPending(true);
+                const ok = await props.onOffer(false);
+                setPending(false);
+                if (ok) setBowingOut(false);
+              }}
+            >
+              Confirm
             </Button>
-          </div>
-        )
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {confirming && !editing && (
+        <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirming(false)}>
+          Delete this request? People who offered to help will no longer be listed.
+        </Confirm>
       )}
     </article>
   );
 }
 
+// The family's list of who offered, with emails and Remove.
 function OfferList(props: {
   offers: Offer[];
-  family: boolean;
   removing: string | null;
   setRemoving: (id: string | null) => void;
   onRemove: (offerId: string) => Promise<boolean>;
@@ -220,14 +249,14 @@ function OfferList(props: {
         <li key={offer.id ?? i} className="space-y-2">
           <p>
             {offer.mine ? "You" : offer.name}
-            {props.family && offer.email && <span className="text-muted-foreground"> · {offer.email}</span>}
-            {props.family && offer.id && props.removing !== offer.id && (
+            {offer.email && <span className="text-muted-foreground"> · {offer.email}</span>}
+            {offer.id && props.removing !== offer.id && (
               <button type="button" className="ml-3 underline underline-offset-2" onClick={() => props.setRemoving(offer.id)}>
                 Remove
               </button>
             )}
           </p>
-          {props.family && offer.id && props.removing === offer.id && (
+          {offer.id && props.removing === offer.id && (
             <Confirm yes="Yes, remove" onYes={() => props.onRemove(offer.id!)} onCancel={() => props.setRemoving(null)}>
               Remove {offer.mine ? "your" : `${offer.name}'s`} offer?
             </Confirm>
@@ -269,7 +298,7 @@ function RequestForm(props: {
       </Field>
       <Label>
         <Checkbox checked={many} onCheckedChange={(checked) => setMany(checked === true)} />
-        Many people can help with this
+        Everyone can help with this
       </Label>
       {!many && (
         <Field label="How many people can help">
