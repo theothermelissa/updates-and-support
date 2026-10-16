@@ -83,9 +83,7 @@ export function FamilyHome({ slug }: { slug: string }) {
       }
     >
       {me.person.role === "supporter" && !me.person.email && (
-        <div className="lg:w-[42rem]">
-          <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
-        </div>
+        <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
       )}
       {me.person.role === "supporter" && me.person.email && (
         <div className="space-y-2 lg:w-[42rem]">
