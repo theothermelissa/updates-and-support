@@ -1,17 +1,9 @@
-import { MenuIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { ErrorMessage, Field, PageShell } from "@/components/page";
+import { FamilyShell } from "@/components/familyShell";
+import { ErrorMessage, Field } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
@@ -39,54 +31,11 @@ export function FamilyHome({ slug }: { slug: string }) {
     if (status === 200 && typeof me === "object") setMe({ ...me, person: data.person });
   }
 
-  async function signOut() {
-    await api(slug, "auth/sign-out", { method: "POST" });
-    setMe("signed-out");
-  }
-
   if (me === "loading") return null;
   if (me === "not-found") return <NotFound />;
   if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
   return (
-    <PageShell
-      wide
-      title={me.family.displayName}
-      actions={
-        <>
-          {(me.person.role === "family" || me.family.hasHelpRequests) && (
-            <Button variant="ghost" size="sm" asChild>
-              <a href={`/f/${slug}/help`}>How to help</a>
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" asChild>
-            <a href={`/f/${slug}/wall`}>Notes</a>
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Menu" className="text-muted-foreground">
-                <MenuIcon className="size-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {me.person.name && (
-                <>
-                  <DropdownMenuLabel className="font-normal text-muted-foreground">
-                    Signed in as <span className="font-medium text-foreground">{me.person.name}</span>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              {me.person.role === "family" && (
-                <DropdownMenuItem asChild>
-                  <a href={`/f/${slug}/people`}>People</a>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onSelect={signOut}>Sign out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </>
-      }
-    >
+    <FamilyShell slug={slug} me={me} page="updates">
       {me.person.role === "supporter" && !me.person.email && (
         <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
       )}
@@ -115,7 +64,7 @@ export function FamilyHome({ slug }: { slug: string }) {
         onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
         onSignedOut={() => setMe("signed-out")}
       />
-    </PageShell>
+    </FamilyShell>
   );
 }
 

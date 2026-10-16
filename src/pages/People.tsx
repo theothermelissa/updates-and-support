@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { FamilyShell, PageTitle } from "@/components/familyShell";
 import { Confirm, ErrorMessage, Field, PageShell } from "@/components/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "../api.js";
+import { api, type Me } from "../api.js";
 import { NotFound } from "./NotFound.js";
 
 type Supporter = {
@@ -43,6 +44,11 @@ export function People({ slug }: { slug: string }) {
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState("");
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
+
+  useEffect(() => {
+    api<Me>(slug, "me").then(({ status, data }) => status === 200 && setMe(data));
+  }, [slug]);
 
   function load() {
     api<People>(slug, "people").then(({ status, data }) => {
@@ -143,15 +149,10 @@ export function People({ slug }: { slug: string }) {
       </PageShell>
     );
   }
+  if (!me) return null;
   return (
-    <PageShell
-      title="People"
-      actions={
-        <Button variant="outline" size="sm" asChild>
-          <a href={`/f/${slug}`}>Back to updates</a>
-        </Button>
-      }
-    >
+    <FamilyShell slug={slug} me={me} page="people" column>
+      <PageTitle>People</PageTitle>
       {message &&
         (message.error ? (
           <ErrorMessage>{message.text}</ErrorMessage>
@@ -222,14 +223,14 @@ export function People({ slug }: { slug: string }) {
           </CardContent>
         </Card>
       </Section>
-    </PageShell>
+    </FamilyShell>
   );
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-4 pt-4">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
       {children}
     </section>
   );

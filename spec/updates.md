@@ -21,7 +21,7 @@ There are no headings, colors, fonts, tables, code, quotes, or images from other
 
 The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Content appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
-A menu button sits at the top right, opposite the family's name. It opens a menu showing who is signed in (when they've given a name), a link to the People page for family members, and "Sign out." Beside it, a "Notes" link leads to the family's wall (see "The wall"). Immediately to its left, a "How to help" link leads to the family's requests (see "How to help"). Family members always see that link. Supporters see it once the family has at least one request.
+The feed, like every page signed in to a family, sits under the family's navigation bar (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
 Each update has a footer of actions in one row: **React** and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
@@ -125,7 +125,7 @@ An update's notes are always shown, newest first, as colored cards: beside the u
 
 ### The wall
 
-The wall, at `/f/<slug>/wall` and linked from "Notes" beside the feed's menu, shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
+The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is headed "Notes of support." It shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
 
 ### Reacting to a note
 
@@ -139,7 +139,7 @@ A removed person's notes are neither shown nor counted, and a removed person can
 
 ## How to help
 
-The page at `/f/<slug>/help`, titled "How to help," lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
+The page at `/f/<slug>/help`, headed "How to Help" under the navigation bar, lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
 
 A request has:
 

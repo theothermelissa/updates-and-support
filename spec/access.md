@@ -141,7 +141,7 @@ Magic links are how supporters with an email sign in as themselves on a new devi
 
 ## Managing supporters
 
-Family members have a **People** page, at `/f/<slug>/people` and linked from the feed. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately.
+Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately.
 
 Supporters without an email aren't listed, even when they've given a name with a note. Instead the page shows how many devices are signed in without a verified email. Each device counts separately, so one person reading on a phone and a laptop counts twice, and listed supporters who haven't verified yet count too.
 

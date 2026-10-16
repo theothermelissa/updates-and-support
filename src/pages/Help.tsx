@@ -1,5 +1,6 @@
 import { CheckIcon, EllipsisVerticalIcon, XIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { FamilyShell, PageTitle } from "@/components/familyShell";
 import { Confirm, ErrorMessage, Field, LinkedText, PageShell } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,24 +65,17 @@ export function Help({ slug }: { slug: string }) {
   const family = me.person.role === "family";
 
   return (
-    <PageShell
-      title="How to help"
-      actions={
-        <Button variant="outline" size="sm" asChild>
-          <a href={`/f/${slug}`}>Back to updates</a>
-        </Button>
-      }
-    >
-      <p className="text-sm text-muted-foreground">{me.family.displayName}</p>
+    <FamilyShell slug={slug} me={me} page="help" column>
+      <PageTitle>How to Help</PageTitle>
       {error && <ErrorMessage>{error}</ErrorMessage>}
-      {family && <h2 className="text-lg font-semibold tracking-tight">Add a Request</h2>}
+      {family && <h3 className="text-lg font-semibold tracking-tight">Add a Request</h3>}
       {family && (
         <RequestForm
           submitLabel="Add request"
           onSubmit={(fields) => change("help", "POST", fields).then((r) => r.ok)}
         />
       )}
-      {family && <h2 className="pt-4 text-lg font-semibold tracking-tight">All Requests</h2>}
+      {family && <h3 className="pt-4 text-lg font-semibold tracking-tight">All Requests</h3>}
       {requests.length === 0 && !family && <p>There aren't any requests right now.</p>}
       <div className="space-y-4">
         {sortRequests(requests, new Date()).map((request) => (
@@ -98,7 +92,7 @@ export function Help({ slug }: { slug: string }) {
           />
         ))}
       </div>
-    </PageShell>
+    </FamilyShell>
   );
 }
 
@@ -340,7 +334,7 @@ function RequestForm(props: {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <h3 className="font-semibold">What Would Help</h3>
+      <h4 className="font-semibold">What Would Help</h4>
       <Field label="Description">
         <Textarea value={body} onChange={(e) => setBody(e.target.value)} required maxLength={2000} rows={4} />
       </Field>
@@ -360,7 +354,7 @@ function RequestForm(props: {
           <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} disabled={!date} className="w-36" />
         </Field>
       </div>
-      <h3 className="pt-2 font-semibold">Who Can Help</h3>
+      <h4 className="pt-2 font-semibold">Who Can Help</h4>
       <Label>
         <Checkbox checked={many} onCheckedChange={(checked) => setMany(checked === true)} />
         Everyone can help with this

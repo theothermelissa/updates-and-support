@@ -60,6 +60,7 @@ The app follows the visual language of Vercel's Geist design system: the Geist S
 
 - **Light mode only.**
 - **Phone first.** Every page works at 360px wide without the page scrolling sideways. A wide table may scroll sideways within its own box.
+- **One frame for a family's pages.** Every page signed in to a family (the feed, How to help, the wall, and People) shares the same centered container and, at its top, the family's navigation bar: the family's name on the left and, on the right, "Updates," "How to help," "Notes," and a menu button. The current page's link is highlighted. Family members always see "How to help"; supporters see it once the family has at least one request. The menu shows who is signed in (when they've given a name), a link to the People page for family members, and "Sign out." On a phone the links wrap below the name. Each page other than the feed starts with its own heading under the bar.
 - **Confirmations happen on the page.** A destructive action, such as deleting an update or removing a person, asks for confirmation with an inline "Yes / Cancel" step, never a browser dialog, because some in-app email browsers silently suppress dialogs.
 
 ## Area specs
