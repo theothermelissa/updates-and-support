@@ -70,30 +70,37 @@ function PhotoCard({ node, updateAttributes, deleteNode }: ReactNodeViewProps) {
 
   return (
     <NodeViewWrapper as="figure" className="space-y-2 whitespace-normal">
-      {placeholder || !src ? (
-        <div className="aspect-[4/3] w-full rounded-lg bg-muted" role="img" aria-label="Placeholder photo" />
-      ) : (
-        <EditorPhoto src={src} uploading={uploading} />
-      )}
+      <div className="group relative">
+        {placeholder || !src ? (
+          <div className="aspect-[4/3] w-full rounded-lg bg-muted" role="img" aria-label="Placeholder photo" />
+        ) : (
+          <EditorPhoto src={src} uploading={uploading} />
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="editor-photo-remove absolute top-2 right-2 size-11 transition-opacity duration-100 ease-out"
+          onClick={remove}
+          aria-label="Remove photo"
+        >
+          <XIcon />
+        </Button>
+      </div>
       {uploading && <p className="text-sm text-muted-foreground">Uploading…</p>}
       {error && (
         <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Input
-          className="h-11 min-w-0 flex-1 basis-56"
-          value={caption}
-          onChange={(e) => updateAttributes({ caption: e.target.value })}
-          placeholder="Caption (optional)"
-          aria-label="Photo caption"
-          maxLength={MAX_CAPTION}
-        />
-        <Button type="button" variant="outline" size="icon" className="size-11" onClick={remove} aria-label="Remove photo">
-          <XIcon />
-        </Button>
-      </div>
+      <Input
+        className="h-11"
+        value={caption}
+        onChange={(e) => updateAttributes({ caption: e.target.value })}
+        placeholder="Caption (optional)"
+        aria-label="Photo caption"
+        maxLength={MAX_CAPTION}
+      />
     </NodeViewWrapper>
   );
 }
