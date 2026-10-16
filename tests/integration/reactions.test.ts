@@ -162,6 +162,21 @@ async function noteReactionsFor(person: Person, noteId: string) {
 }
 
 describe("reactions on notes", () => {
+  it("refuses a note that fails only one of the two family checks", async () => {
+    const { ana, sam, olu, update } = await setUp();
+    const onRiveraByOlu = await db.note.create({
+      data: { updateId: update.id, authorId: olu.person.id, body: "Stray", color: "sky" },
+    });
+    const okaforUpdate = await db.update.findFirstOrThrow({ where: { familyId: olu.person.familyId } });
+    const onOkaforBySam = await db.note.create({
+      data: { updateId: okaforUpdate.id, authorId: sam.id, body: "Stray", color: "sky" },
+    });
+
+    await expect(reactToNote(ana, onRiveraByOlu.id)).rejects.toMatchObject({ status: 404 });
+    await expect(reactToNote(ana, onOkaforBySam.id)).rejects.toMatchObject({ status: 404 });
+    expect(await db.noteReaction.count()).toBe(0);
+  });
+
   it("treats another family's note, or a removed author's note, as not found", async () => {
     const { ana, sam, olu, update } = await setUp();
     const note = await leaveNote(sam, update.id);

@@ -1,6 +1,7 @@
 import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import { ReactionKind, type Person } from "./generated/prisma/client.js";
+import { visibleNotes } from "./notes.js";
 
 const KINDS = Object.values(ReactionKind);
 
@@ -65,15 +66,9 @@ export async function setReaction(
     return;
   }
 
-  // The same conditions as visibleNotes: this family's note, by someone who hasn't been
-  // removed. Repeated here because notes.ts imports this file. A note that isn't shown,
-  // including another family's, behaves like one that doesn't exist.
+  // A note that isn't shown, including another family's, behaves like one that doesn't exist.
   const note = await db.note.findFirst({
-    where: {
-      id: noteId as string,
-      update: { familyId: person.familyId },
-      author: { familyId: person.familyId, removedAt: null },
-    },
+    where: { id: noteId as string, ...visibleNotes(person.familyId) },
   });
   if (!note) throw new RequestError(404, "Note not found");
   const key = { noteId: noteId as string, personId: person.id };

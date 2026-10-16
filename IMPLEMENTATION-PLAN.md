@@ -10,7 +10,7 @@ One session, one PR. The six reactions are ❤️ 🤗 💪 👏 🎉 😂, on u
 
 **Postgres can't drop an enum value.** The migration deletes every `pray` row, then replaces the type. During the deploy minute the previous server can fail a 🙏 reaction; that reaction is no longer offered.
 
-**The same rules as update reactions.** `setReaction` takes exactly one of `updateId` or `noteId`, plus `kind` (or `null` to clear). Both or neither is a 400 and stores nothing. A removed person is a 403, from the same plain read as updates; a removal that lands after the read is hidden when the note is loaded. Another family's note, a missing note, and a note whose author is removed are a 404: the write uses the same conditions as `visibleNotes` (the note's update and author are in this family, and the author is not removed). `reactions.ts` repeats those conditions rather than importing `notes.ts`, because `notes.ts` imports the shared view from `reactions.ts`.
+**The same rules as update reactions.** `setReaction` takes exactly one of `updateId` or `noteId`, plus `kind` (or `null` to clear). Both or neither is a 400 and stores nothing. A removed person is a 403, from the same plain read as updates; a removal that lands after the read is hidden when the note is loaded. Another family's note, a missing note, and a note whose author is removed are a 404: the write looks the note up with `visibleNotes`, so the note's update and its author both have to be in this family, and the author not removed. Either family check on its own is tested by inserting a note that fails only that one.
 
 **Reading doesn't trust the write.** The feed and the wall load each note's reactions with the same person filter updates already use: this family, and not removed. `reactionsView` shapes both, so a response has names and counts, never another person's id or email. A nameless reader's reaction is only counted until they give a name.
 
@@ -47,7 +47,7 @@ UI layout is checked on the preview: react, replace, and remove on an update and
 
 ## Progress
 
-Typecheck passes, and all 251 tests pass. The migration applied to the test database, and a fresh database with every migration applied matches the schema. Each new access check was removed in turn and its test failed: the note's family on write, the removed-author check, the person filter on read, and the session check on the endpoint.
+Typecheck passes, and all 251 tests pass. The migration applied to the test database, and a fresh database with every migration applied matches the schema. Each new access check was removed in turn and its test failed: the note's update family on write, the note's author family on write (each one alone), the removed-author check, the person filter on read, and the session check on the endpoint. The write looks the note up with `visibleNotes`, so those two family checks can't be copied apart from the read.
 
 The shared write is a small function both tables call. A single Prisma delegate type wouldn't accept both tables.
 
