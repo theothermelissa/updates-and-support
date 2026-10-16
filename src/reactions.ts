@@ -20,9 +20,14 @@ export function emoji(kind: string): string {
   return REACTIONS.find((r) => r.kind === kind)?.emoji ?? "";
 }
 
-// "7 reactions: ❤️🙏😂", with the three most-used emoji.
+// "❤️🙏😂", the three most-used emoji.
 export function summary(r: Reactions): string {
-  return `${r.count} ${r.count === 1 ? "reaction" : "reactions"}: ${r.kinds.slice(0, 3).map(emoji).join("")}`;
+  return r.kinds.slice(0, 3).map(emoji).join("");
+}
+
+// The summary's accessible name, since its visible text has no count.
+export function summaryLabel(r: Reactions): string {
+  return `${r.count} ${r.count === 1 ? "reaction" : "reactions"}. Show who reacted`;
 }
 
 // One line per person who reacted: the viewer first as "You", then named people, then

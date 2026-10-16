@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
 import { api } from "../api.js";
 import { linkify } from "../linkify.js";
-import { REACTIONS, summary, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
+import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
 
 type Update = {
   id: string;
@@ -152,7 +152,7 @@ function UpdateItem(props: {
 
 const HOVER_DELAY = 300;
 
-// A React button that opens a tray of the six emoji, and a summary ("7 reactions: ❤️🙏😂")
+// A React button that opens a tray of the six emoji, and a summary ("❤️🙏😂")
 // that shows who reacted. With a mouse, hovering opens either one; on a phone, tapping does.
 function Reactions({ update, onReact }: { update: Update; onReact: (kind: string | null) => Promise<boolean> }) {
   const r = update.reactions;
@@ -234,6 +234,7 @@ function Reactions({ update, onReact }: { update: Update; onReact: (kind: string
           >
             <button
               className="plain"
+              aria-label={summaryLabel(r)}
               aria-expanded={names === "pinned"}
               onClick={() => setNames((n) => (n === "pinned" ? "closed" : "pinned"))}
             >

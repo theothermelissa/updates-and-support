@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { summary, whoReacted, type Reactions } from "./reactions.js";
+import { summary, summaryLabel, whoReacted, type Reactions } from "./reactions.js";
 
 const reactions = (r: Partial<Reactions>): Reactions => ({ count: 0, kinds: [], mine: null, named: [], ...r });
 
 describe("summary", () => {
-  it("gives the total and up to three emoji, most-used first", () => {
-    expect(summary(reactions({ count: 1, kinds: ["heart"] }))).toBe("1 reaction: ❤️");
-    expect(summary(reactions({ count: 2, kinds: ["heart", "strong"] }))).toBe("2 reactions: ❤️💪");
-    expect(summary(reactions({ count: 7, kinds: ["heart", "pray", "laugh", "hug"] }))).toBe("7 reactions: ❤️🙏😂");
+  it("gives up to three emoji, most-used first", () => {
+    expect(summary(reactions({ count: 2, kinds: ["heart", "strong"] }))).toBe("❤️💪");
+    expect(summary(reactions({ count: 7, kinds: ["heart", "pray", "laugh", "hug"] }))).toBe("❤️🙏😂");
+  });
+
+  it("puts the total in the accessible name", () => {
+    expect(summaryLabel(reactions({ count: 1, kinds: ["heart"] }))).toBe("1 reaction. Show who reacted");
+    expect(summaryLabel(reactions({ count: 7, kinds: ["heart"] }))).toBe("7 reactions. Show who reacted");
   });
 });
 
