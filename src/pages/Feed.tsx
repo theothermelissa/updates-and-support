@@ -97,16 +97,13 @@ function UpdateItem(props: {
   const { update } = props;
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function save() {
     if (draft === null) return;
     setSaving(true);
     if (await props.onEdit(draft)) setDraft(null);
     setSaving(false);
-  }
-
-  function remove() {
-    if (confirm("Delete this update? This can't be undone.")) props.onDelete();
   }
 
   return (
@@ -133,10 +130,26 @@ function UpdateItem(props: {
       )}
       {props.canEdit &&
         (draft === null ? (
-          <p>
-            <button onClick={() => setDraft(update.body)}>Edit</button>{" "}
-            <button onClick={remove}>Delete</button>
-          </p>
+          <>
+            <p>
+              <button onClick={() => setDraft(update.body)}>Edit</button>{" "}
+              <button onClick={() => setConfirmingDelete(true)}>Delete</button>
+            </p>
+            {confirmingDelete && (
+              <p>
+                Delete this update? This can't be undone.{" "}
+                <button
+                  onClick={() => {
+                    setConfirmingDelete(false);
+                    props.onDelete();
+                  }}
+                >
+                  Yes, delete
+                </button>{" "}
+                <button onClick={() => setConfirmingDelete(false)}>Cancel</button>
+              </p>
+            )}
+          </>
         ) : (
           <p>
             <button onClick={save} disabled={saving || !draft.trim()}>
