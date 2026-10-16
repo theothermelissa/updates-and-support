@@ -40,7 +40,7 @@ describe("the Cloudinary store", () => {
   it("looks up only authenticated videos, treating a missing one as none", async () => {
     const lookup = vi.spyOn(cloudinary.api, "resource").mockResolvedValueOnce({ duration: 12.5 });
     expect(await cloudinaryStore.describe("folder/a")).toEqual({ duration: 12.5 });
-    expect(lookup).toHaveBeenCalledWith("folder/a", { resource_type: "video", type: "authenticated" });
+    expect(lookup).toHaveBeenCalledWith("folder/a", { resource_type: "video", type: "authenticated", media_metadata: true });
     lookup.mockRejectedValueOnce({ error: { http_code: 404 } });
     expect(await cloudinaryStore.describe("folder/missing")).toBeNull();
   });

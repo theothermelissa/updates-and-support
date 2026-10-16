@@ -63,7 +63,8 @@ export const cloudinaryStore: VideoStore = {
   async describe(publicId) {
     config();
     try {
-      const resource = await cloudinary.api.resource(publicId, KIND);
+      // The length comes only with media_metadata.
+      const resource = await cloudinary.api.resource(publicId, { ...KIND, media_metadata: true });
       return typeof resource.duration === "number" ? { duration: resource.duration } : null;
     } catch (err) {
       if (httpCode(err) === 404) return null;
