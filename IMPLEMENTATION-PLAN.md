@@ -61,3 +61,11 @@ Browser check: as a family member (localhost) and a supporter (127.0.0.1), add r
 - No server-side refusal of offers on past requests (by design; it depends on the viewer's clock).
 - No way to edit the email given with an offer; withdraw and offer again.
 - Native date and time pickers, not a custom design.
+
+## Discoveries
+
+- Every access test was run with its rule removed (the `name: { not: null }` filters, the `requireName` check, the email requirement, the family-only email guard, the "only when asked" email condition, and required flags) and failed each time.
+- A refused offer can't half-save a name: everything in `offerHelp` is one transaction, so a later refusal rolls the name back whatever the check order.
+- A person who offers without a name and later gives one (on a request that requires it) shows under that name on the earlier offer too, the same as reactions. The spec says so.
+- A page loaded before deploy that edits a request now gets "This page is out of date. Please refresh it and try again."
+- The browser pane can't type into native date and time pickers; `form_input` sets them.
