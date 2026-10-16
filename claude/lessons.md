@@ -42,7 +42,7 @@ When a PR's preview has built, run `npm run preview:seed` and `npm run preview` 
 
 **Why:** setting up each preview by hand (copying a connection string, running the family script, finding the URL) was tedious and error-prone, and she asked for it to be automated.
 
-**How to apply:** the scripts are described in README → Deployment. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
+**How to apply:** the scripts are described in README → Deployment. Every push gets its own preview address, so after pushing a fix, send the new link from `npm run preview`; an earlier link still shows the old build. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
 
 ### The community question keeps casual observers out, nothing more
 
@@ -158,10 +158,10 @@ When `main` archived its own `IMPLEMENTATION-PLAN.md` while a branch had a diffe
 
 **How to apply:** after merging `main`, check `git status` for `D  IMPLEMENTATION-PLAN.md` and restore it with `git checkout HEAD -- IMPLEMENTATION-PLAN.md` before committing.
 
-### Trust the DOM over browser-pane screenshots under emulated sizes
+### Browser-pane quirks that look like app bugs
 
 With a custom viewport size set, the pane's screenshots can show a stale frame for several captures, or none at all when the tab isn't fronted.
 
 **Why:** while checking the wall's filter, screenshots showed the unfiltered page while the DOM had already updated. That nearly passed as a bug.
 
-**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share.
+**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it.

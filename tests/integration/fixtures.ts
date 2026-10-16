@@ -3,6 +3,7 @@ import type { Email, SendEmail, SendEmails } from "../../server/email.js";
 import { createFamily } from "../../server/families.js";
 import { addEmail, answerGate, type Client } from "../../server/gate.js";
 import type { Family } from "../../server/generated/prisma/client.js";
+import type { VideoStore } from "../../server/videos.js";
 
 export async function resetDb(db: Db) {
   await db.$executeRawUnsafe(
@@ -49,9 +50,9 @@ export async function joinWithEmail(db: Db, family: Family, name: string, send?:
 }
 
 // Waits until a transaction is queued on an advisory lock, such as a family's gate lock, or
-// the given work has finished without queuing. Tests use it to start work while holding a
+// the given work has finished without queuing. Pass "transactionid" to wait on a row lock instead. Tests use it to start work while holding a
 // lock themselves, so a race plays out the same way every time.
-export async function queuedOrDone(db: Db, work: Promise<unknown>) {
+export async function queuedOrDone(db: Db, work: Promise<unknown>, locktype = "advisory") {
   let done = false;
   work.then(
     () => (done = true),
@@ -59,7 +60,7 @@ export async function queuedOrDone(db: Db, work: Promise<unknown>) {
   );
   for (let i = 0; i < 400 && !done; i++) {
     const [row] = await db.$queryRaw<{ waiting: number }[]>`
-      SELECT count(*)::int AS waiting FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`;
+      SELECT count(*)::int AS waiting FROM pg_locks WHERE locktype = ${locktype} AND NOT granted`;
     if (row!.waiting > 0) return;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
@@ -81,4 +82,45 @@ export function tokenFrom(email: Email): string {
   const match = email.text.match(/token=([A-Za-z0-9_-]+)/);
   if (!match) throw new Error("No token in email");
   return match[1]!;
+}
+
+// A video host that records what it was asked. `videos` holds what's "uploaded" as an
+// authenticated video, by public ID, with its length in seconds. `holdDestroy` makes the next
+// destroy wait until `release` is called, so a test can act while a deletion is underway.
+export function fakeVideoStore() {
+  const videos = new Map<string, number>();
+  const calls: { method: keyof VideoStore; publicIds: string[] }[] = [];
+  let failDestroy = false;
+  let hold: Promise<void> | null = null;
+  let release = () => {};
+  const store: VideoStore = {
+    uploadParams(publicId) {
+      calls.push({ method: "uploadParams", publicIds: [publicId] });
+      return { url: "https://upload.example.test/video/upload", fields: { public_id: publicId } };
+    },
+    async describe(publicId) {
+      calls.push({ method: "describe", publicIds: [publicId] });
+      const duration = videos.get(publicId);
+      return duration === undefined ? null : { duration };
+    },
+    async destroy(publicIds) {
+      calls.push({ method: "destroy", publicIds });
+      if (hold) await hold;
+      if (failDestroy) throw new Error("Video host unavailable");
+      for (const id of publicIds) videos.delete(id);
+    },
+    urls(publicId) {
+      return { src: `https://videos.example.test/${publicId}.mp4`, poster: `https://videos.example.test/${publicId}.jpg` };
+    },
+  };
+  return {
+    store,
+    videos,
+    calls,
+    failDestroy: (fail: boolean) => (failDestroy = fail),
+    holdDestroy() {
+      hold = new Promise((resolve) => (release = resolve));
+      return () => release();
+    },
+  };
 }

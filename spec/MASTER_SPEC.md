@@ -27,7 +27,7 @@ A person who is both a supporter and a family member of different families has a
 - Family members post, edit, and delete updates with simple formatting (bold, italic, links, and lists); everyone signed in to the family reads them in a feed. → [updates.md](updates.md)
 - Photos in updates, with optional captions, up to six per update, once the operator turns photos on; test sites can use grey placeholder photos instead. → [updates.md](updates.md#photos)
 - Everyone signed in to the family can give each update one reaction from a fixed set of six emoji, and sees who reacted. → [updates.md](updates.md#reactions)
-- Everyone signed in to the family can leave colored notes of support on an update, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)
+- Everyone signed in to the family can leave colored notes of support on an update, written or as a video of up to 60 seconds, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)
 - Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
 
 ### Later
@@ -37,7 +37,6 @@ These are planned but not yet specified. Each gets its own area spec when it bec
 - Self-serve family signup, replacing the operator script.
 - Export of a family's updates, so they never lose their journal if the app goes away.
 - For the wall of notes: unread markers, filtering by supporter and time, text search, and editing a note.
-- Video messages from supporters.
 - Ways for supporters to offer meaningful help, coordinate with each other, share contact details, and reach out for their own support.
 - Supporters deleting their own record.
 
@@ -47,10 +46,8 @@ These apply to every page, endpoint, and feature.
 
 - **Health information is sensitive.** Update content is shown only to people signed in to that family, and only the server decides who that is. See [access.md](access.md).
 - **Families are isolated.** Being signed in to one family grants nothing in another, and no page or response reveals one family's data to another family's members or supporters.
-- **No third-party tracking.** No analytics, tracking pixels, ad scripts, or third-party embeds on any page.
-- **Everything is served from the app's own domain.** Fonts, scripts, styles, and images are bundled with the app, so loading a page never contacts another server. The one exception is photos in updates, which Cloudinary stores and serves (see [updates.md](updates.md#photos)); pages send it no referrer.
-- **Content is never inserted as HTML.** Updates are stored as a checked document and drawn by the app's own code, so nothing a family member writes or pastes can run as code on a reader's page.
-- **Content is never inserted as HTML.** Updates are stored as a checked document and drawn by the app's own code, so nothing a family member writes or pastes can run as code on a reader's page.
+- **No third-party tracking.** No analytics, tracking pixels, ad scripts, or third-party embeds on any page. Video notes play in the browser's own video player, never Cloudinary's.
+- **Everything is served from the app's own domain, except photos and video notes.** Fonts, scripts, styles, and images are bundled with the app. The exceptions are photos in updates and video notes, which Cloudinary stores and serves (see [updates.md](updates.md#photos) and [updates.md](updates.md#video-notes)); pages send it no referrer, so Cloudinary never learns which family's page a request came from.
 - **Content is never inserted as HTML.** Updates are stored as a checked document and drawn by the app's own code, so nothing a family member writes or pastes can run as code on a reader's page.
 - **Not indexable.** Every page sends `noindex`, and `robots.txt` disallows all crawling.
 - **Emails carry no update content.** Notification and sign-in emails name the family and contain a link, nothing more, because emails are forwarded and shown in lock-screen previews. The one exception is how many photos a new update has.

@@ -51,12 +51,13 @@ model Person {
   removedAt        DateTime?
   createdAt        DateTime  @default(now())
 
-  family     Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  magicLinks MagicLink[]
-  sessions   Session[]
-  updates    Update[]
-  reactions  Reaction[]
-  notes      Note[]
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  magicLinks   MagicLink[]
+  sessions     Session[]
+  updates      Update[]
+  reactions    Reaction[]
+  notes        Note[]
+  videoUploads VideoUpload[]
 
   @@unique([familyId, email])
 }
@@ -150,7 +151,10 @@ model Note {
   id        String    @id @default(cuid())
   updateId  String
   authorId  String
+  // Empty for a video note. A note has a body or a video, never both (a check constraint).
   body      String
+  // A video note's Cloudinary public ID, from an upload ticket this note's author was given.
+  videoId   String?   @unique
   color     NoteColor
   createdAt DateTime  @default(now())
 
@@ -159,6 +163,19 @@ model Note {
 
   @@index([updateId, createdAt])
   @@index([authorId, createdAt])
+}
+
+// An upload ticket: a Cloudinary public ID the server signed an upload for, and whom for.
+// Only that person can attach it to a note, and tickets count toward an hourly limit
+// whether or not they're used.
+model VideoUpload {
+  publicId  String   @id
+  personId  String
+  createdAt DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId, createdAt])
 }
 
 // A wrong answer at a family's gate, counted against per-browser and per-network limits.

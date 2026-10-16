@@ -3,12 +3,13 @@ import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
-import { noteSelect, noteView, visibleNotes, type NoteView } from "./notes.js";
+import { destroyVideos, noteSelect, noteView, visibleNotes, type NoteView } from "./notes.js";
 import { notifySupporters } from "./notifications.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
 import { reactionsView, type ReactionsView } from "./reactions.js";
 import { contentFrom, photoCount, shownContent } from "./richText.js";
+import { cloudinaryStore, type VideoStore } from "./videos.js";
 
 export type UpdateView = {
   id: string;
@@ -26,7 +27,7 @@ export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[] };
 // its notes, newest first.
 // Reactions are filtered by family on their own, rather than trusting how they were written,
 // and a removed person's reactions are hidden until they're restored.
-export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]> {
+export async function listUpdates(db: Db, person: Person, store: VideoStore = cloudinaryStore): Promise<FeedUpdate[]> {
   const updates = await db.update.findMany({
     where: { familyId: person.familyId },
     orderBy: { createdAt: "desc" },
@@ -43,7 +44,7 @@ export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]>
   return updates.map((u) => ({
     ...view(u),
     ...reactionsView(u.reactions, person.id),
-    notes: u.notes.map((n) => noteView(n, person.id)),
+    notes: u.notes.map((n) => noteView(n, person.id, store)),
   }));
 }
 
@@ -95,11 +96,25 @@ export async function editUpdate(
   return view(update);
 }
 
-// Deletion is permanent: the row is removed, not hidden, with its reactions and notes.
-export async function deleteUpdate(db: Db, person: Person, id: string): Promise<void> {
+// Deletion is permanent: the row is removed, not hidden, with its reactions and notes, and
+// its notes' videos are deleted from the video host first.
+export async function deleteUpdate(db: Db, person: Person, id: string, store: VideoStore = cloudinaryStore): Promise<void> {
   requireFamilyMember(person);
-  const { count } = await db.update.deleteMany({ where: { id, familyId: person.familyId } });
-  if (count === 0) throw new RequestError(404, "Update not found");
+  await db.$transaction(
+    async (tx) => {
+      // Locks the update, so a note can't be attached while its videos are being deleted: a
+      // note's insert waits on this lock and then finds the update gone.
+      const [update] = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
+      if (!update) throw new RequestError(404, "Update not found");
+      // Every note's video, including hidden notes by removed people, which the cascade deletes too.
+      const notes = await tx.note.findMany({ where: { updateId: id, videoId: { not: null } }, select: { videoId: true } });
+      await destroyVideos(store, notes.map((n) => n.videoId!));
+      await tx.update.delete({ where: { id } });
+    },
+    // Waits on the video host while holding the lock.
+    { timeout: 30_000 },
+  );
 }
 
 function view(update: {
