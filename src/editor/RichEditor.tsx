@@ -1,18 +1,24 @@
-import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor, type JSONContent } from "@tiptap/react";
-import { BoldIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon } from "lucide-react";
+import { BoldIcon, ImagePlusIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { allowedHref } from "../lib/links.js";
 import { DOC_CLASSES } from "../richText.js";
 import { cleanDoc, extensions } from "./extensions.js";
+import { MAX_PHOTOS } from "./photo.js";
 
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const EMAIL = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
 
 // The update editor and its toolbar. Loaded only when a family member writes or edits, so
 // supporters never download it. onChange gets the document to send, or null while it's empty.
-export default function RichEditor(props: { initial?: unknown; onChange: (doc: JSONContent | null) => void }) {
+// photos: what "Add photo" does, or "off" for no button.
+export default function RichEditor(props: {
+  initial?: unknown;
+  photos: "placeholder" | "off";
+  onChange: (doc: JSONContent | null) => void;
+}) {
   const editor = useEditor({
     extensions,
     content: (props.initial as JSONContent | undefined) ?? "",
@@ -24,18 +30,27 @@ export default function RichEditor(props: { initial?: unknown; onChange: (doc: J
         "aria-label": "Update",
       },
     },
-    onUpdate: ({ editor }) => props.onChange(editor.state.doc.textContent.trim() ? cleanDoc(editor.getJSON()) : null),
+    onUpdate: ({ editor }) =>
+      props.onChange(editor.state.doc.textContent.trim() || photoCount(editor) > 0 ? cleanDoc(editor.getJSON()) : null),
   });
 
   return (
     <div className="space-y-2">
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} photos={props.photos} />
       <EditorContent editor={editor} />
     </div>
   );
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
+function photoCount(editor: Editor): number {
+  let count = 0;
+  editor.state.doc.forEach((node) => {
+    if (node.type.name === "photo") count++;
+  });
+  return count;
+}
+
+function Toolbar({ editor, photos }: { editor: Editor; photos: "placeholder" | "off" }) {
   const active = useEditorState({
     editor,
     selector: ({ editor }) => ({
@@ -44,8 +59,16 @@ function Toolbar({ editor }: { editor: Editor }) {
       link: editor.isActive("link"),
       bulletList: editor.isActive("bulletList"),
       orderedList: editor.isActive("orderedList"),
+      photos: photoCount(editor),
     }),
   });
+  const picker = useRef<HTMLInputElement>(null);
+
+  // A placeholder uploads nothing: the chosen file is only the cue to add a grey box.
+  function addPhoto() {
+    editor.chain().focus().insertContent({ type: "photo", attrs: { caption: "", placeholder: true } }).run();
+    if (picker.current) picker.current.value = "";
+  }
   const [link, setLink] = useState<string | null>(null);
   const [linkError, setLinkError] = useState("");
 
@@ -115,6 +138,21 @@ function Toolbar({ editor }: { editor: Editor }) {
         >
           <ListOrderedIcon />
         </Tool>
+        {photos !== "off" && (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 px-3 [&_svg:not([class*='size-'])]:size-5"
+              disabled={active.photos >= MAX_PHOTOS}
+              onClick={() => picker.current?.click()}
+            >
+              <ImagePlusIcon />
+              {active.photos >= MAX_PHOTOS ? `${MAX_PHOTOS} photos is the most` : "Add photo"}
+            </Button>
+            <input ref={picker} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.length && addPhoto()} />
+          </>
+        )}
       </div>
       {link !== null && (
         <div className="space-y-1">

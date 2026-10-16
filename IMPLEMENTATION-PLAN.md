@@ -111,7 +111,7 @@ Everything below was checked on 2026-10-15 against cloudinary.com/documentation 
 
 ## Slice 2 — Photos with placeholders
 
-1. **Migration `photos`**: `model Photo` (additive).
+1. **No migration**: placeholders exist only in the document, so the `Photo` table arrives with real photos in slice 3.
 2. **`server/photoSettings.ts`** with `placeholders` (Cloudinary is null until slice 3).
 3. **`validDoc`**: the photo node, captions, six-photo limit, placeholder rule; any `publicId` is refused until slice 3.
 4. **`server/updates.ts`**: photo count to `notifySupporters`; **`server/email.ts`**: the subject suffix.
@@ -123,7 +123,7 @@ Everything below was checked on 2026-10-15 against cloudinary.com/documentation 
 
 ## Slice 3 — Real photos with Cloudinary
 
-1. **`server/cloudinary.ts`**: `parseCloudinaryUrl`, `signParams`, `signPath`, `photoUrl`, `destroyPhotos`.
+1. **Migration `photos`**: `model Photo` (additive). **`server/cloudinary.ts`**: `parseCloudinaryUrl`, `signParams`, `signPath`, `photoUrl`, `destroyPhotos`.
 2. **`photoSettings`**: `cloudinary` from `CLOUDINARY_URL`. **`server/photos.ts`**: `uploadFields`. **`api/f/[slug]/photo-upload.ts`** (POST).
 3. **`validDoc`**: `publicId` photos with the prefix check and the kept-photo rule. **`server/updates.ts`**: `Photo` rows written and replaced with the content; `P2002` becomes a 409; signed `url`s only for photos with a row on that update; deletion after commit in delete and edit.
 4. **Editor**: real uploads with a local preview and "Uploading…"; the 10 MB check; saving waits for uploads. **Renderer**: `<img alt="Photo N of M" loading="lazy">` at full width in a grey 4:3 box until it loads.
@@ -180,3 +180,14 @@ The text-blocks attempt (closed PR #24) applied a `blocks` migration to the shar
 - **The Link field** turns an email address into `mailto:` and anything else without a scheme into `https://`.
 - **Test setup.** jsdom has no `ClipboardEvent`, so the paste test passes a plain `Event` to ProseMirror's `pasteHTML` and `pasteText`, which run the real paste path.
 - **Document types** live in `src/lib/doc.ts`, shared by the server and the browser.
+
+**Slice 2 implemented** on `feature/photo-placeholders` (PR #26). Melissa tested placeholders — grey photos and the X to remove a photo — on the preview on 2026-10-15 and approved shipping it. Slice 3 (real Cloudinary photos) is still unbuilt; this plan stays open.
+
+- **Typecheck and all unit and integration tests pass.** Each new rule was removed in turn and its test failed: the placeholder setting (unit and integration), production's refusal, the six-photo limit, the caption limit, the photo attribute allowlist, and the photo count in subjects.
+- **`photoSettingsFromEnv(env)`** takes the environment as an argument (defaulting to `process.env`), so its tests pass their own values instead of clearing variables.
+- **The plain text of a photo** in `body` is `[Photo]` or `[Photo: caption]`, so the wall's excerpts and older code show something for a photo-only update. `body` is never emailed.
+- **The feed carries no `url` yet**: every photo is a grey box until slice 3. The validator already drops a sent `url`.
+- **The editor's document** is our own three-line `Document` node (`(block | photo)+`), replacing StarterKit's, so a photo can't go inside a list; inserting one in a list item puts it after the list. The photo node has no group, and no HTML parse rule.
+- **The editor always knows the photo node**, even when photos are off, so editing an update that has one never silently drops it; only the "Add photo" button is hidden.
+- **The 10 MB check** waits for real uploads in slice 3; a placeholder reads nothing from the chosen file.
+- **Vitest has no `@/` alias**, so `src/editor/photo.tsx` imports the UI components by relative path.

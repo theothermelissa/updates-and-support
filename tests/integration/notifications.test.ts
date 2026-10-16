@@ -80,6 +80,32 @@ it("names the family and carries the recipient's own unsubscribe links, never th
   }
 });
 
+it("says how many photos an update has, and nothing of its text or captions", async () => {
+  const { ana } = await setUp();
+  const placeholders = { placeholders: true };
+  const photo = (caption: string) => ({ type: "photo", attrs: { caption, placeholder: true } });
+  const text = { type: "paragraph", content: [{ type: "text", text: SECRET }] };
+  const subjects = [];
+  for (const content of [
+    [text, photo("Biopsy room"), photo("")],
+    [photo("Biopsy room")],
+    [text],
+  ]) {
+    const mail = fakeMailer();
+    await createUpdate(db, ana, { content: { type: "doc", content } }, mail.sendMany, placeholders);
+    const [email] = mail.sent;
+    subjects.push(email!.subject);
+    for (const part of [email!.subject, email!.text, JSON.stringify(email!.headers)]) {
+      expect(part).not.toContain("Biopsy");
+    }
+  }
+  expect(subjects).toEqual([
+    "The Rivera Family has a new update (2 photos)",
+    "The Rivera Family has a new update (1 photo)",
+    "The Rivera Family has a new update",
+  ]);
+});
+
 it("links the root family's notification emails to the site's root", async () => {
   const { family, ana } = await setUp();
   process.env.ROOT_FAMILY_SLUG = family.slug;
