@@ -59,6 +59,12 @@ export async function signInWithLink(
   token: string,
 ): Promise<{ sessionToken: string; person: Person } | null> {
   return db.$transaction(async (tx) => {
+    const found = await findUsableLink(tx, slug, token, "sign_in");
+    if (!found) return null;
+    // Removal and promotion update this row, so they take turns with this transaction:
+    // removal's cleanup then sees the session created here, and spendLink re-reads the
+    // person as they stand. Without the lock, removal could miss the session, or deadlock.
+    await tx.$executeRaw`SELECT 1 FROM "Person" WHERE id = ${found.person.id} FOR UPDATE`;
     const person = await spendLink(tx, slug, token, "sign_in");
     if (!person) return null;
 
