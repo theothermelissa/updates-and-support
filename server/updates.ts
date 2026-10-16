@@ -4,6 +4,7 @@ import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
 import { notifySupporters } from "./notifications.js";
 import { requireFamilyMember } from "./people.js";
+import { reactionsView, type ReactionsView } from "./reactions.js";
 
 const MAX_BODY = 20_000;
 
@@ -15,14 +16,25 @@ export type UpdateView = {
   editedAt: Date | null;
 };
 
-// Everyone signed in to the family reads every update, newest first.
-export async function listUpdates(db: Db, person: Person): Promise<UpdateView[]> {
+export type FeedUpdate = UpdateView & ReactionsView;
+
+// Everyone signed in to the family reads every update, newest first, with its reactions.
+// Reactions are filtered by family on their own, rather than trusting how they were written,
+// and a removed person's reactions are hidden until they're restored.
+export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]> {
   const updates = await db.update.findMany({
     where: { familyId: person.familyId },
     orderBy: { createdAt: "desc" },
-    include: { author: { select: { name: true } } },
+    include: {
+      author: { select: { name: true } },
+      reactions: {
+        where: { person: { familyId: person.familyId, removedAt: null } },
+        orderBy: { createdAt: "asc" },
+        select: { kind: true, personId: true, person: { select: { name: true } } },
+      },
+    },
   });
-  return updates.map(view);
+  return updates.map((u) => ({ ...view(u), ...reactionsView(u.reactions, person.id) }));
 }
 
 // With a sender, also emails supporters that there's a new update. The update is saved
