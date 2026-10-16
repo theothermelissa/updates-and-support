@@ -149,6 +149,7 @@ There's no unit test for URL signing (it's the SDK's job). Step 1's manual check
   - signed links play, an unsigned link gets 401, and the public `upload` form of the address gets 404;
   - the converted mp4 is h264 with no location atoms;
   - deleting a note in the UI removes its video from Cloudinary.
+- **Deleted videos linger briefly.** Links to a deleted video keep playing until Cloudinary's CDN clears its cached copies. That took from under a minute to as long as 15 minutes, even with `invalidate: true`. The spec's Stated limits says links stop working "within minutes."
 
 ## Cut for speed
 
