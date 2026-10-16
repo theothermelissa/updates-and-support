@@ -28,7 +28,7 @@ A family member can edit any update in their family, including one written by an
 
 ## Deleting
 
-A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions and notes. When the update has notes, the confirmation says they'll be deleted too.
+A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions and notes, and its notes' videos are deleted from Cloudinary. When the update has notes, the confirmation says they'll be deleted too.
 
 ## Reactions
 
@@ -51,10 +51,11 @@ Reacting never asks for confirmation, and reactions send no emails or notificati
 
 Everyone signed in to the family, family members and supporters alike, can leave notes of support on an update, and everyone signed in to the family reads every note. Sharing them is the point: the family and its support network get through this together.
 
-A note has:
+A note is either a written note or a video note. It has:
 
-- a **body** of plain text, 1 to 1,000 characters. Line breaks are kept, and web addresses become links.
-- a **color** from a fixed palette of six. The note's card is filled with the color, and its text uses a darker shade of the same hue that meets WCAG AA contrast.
+- for a written note, a **body** of plain text, 1 to 1,000 characters. Line breaks are kept, and web addresses become links.
+- for a video note, a **video** of up to 60 seconds, with sound, and no text (see "Video notes").
+- a **color** from a fixed palette of six. A written note's card is filled with the color, and its text uses a darker shade of the same hue that meets WCAG AA contrast. A video note's card is framed in the color (see "Video notes").
 - its **author**, shown by name as a signature, such as "— Ana Rivera." A family member's note is also marked "Family," so a supporter can't pass as a family member by signing with their name.
 - when it was **left**
 
@@ -64,7 +65,23 @@ Each update has a "Leave a note" button. It opens a dialog with a text box, a ro
 
 A note needs a name. The dialog shows "Your name": filled in and read-only for anyone who already has one, and empty for a supporter who hasn't given one. A name entered there goes on their record, so their later notes and reactions show it too, and the feed's email form later shows it the same way, filled in and read-only. The dialog never asks for an email.
 
-A person can leave any number of notes on an update, up to 20 notes an hour across the family, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
+A person can leave any number of notes on an update, up to 20 notes an hour across the family, written and video notes together, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
+
+### Video notes
+
+The note dialog has a "Record a video" button beside the text box. It switches the dialog to the recorder; "Write a note instead" switches back. The name and color work the same in both.
+
+**Recording.** The first time, the browser asks for the camera and microphone. The dialog then shows the live camera view, mirrored like a selfie, and a "Start recording" button. Pressing it shows a 3, 2, 1 countdown over the camera view, then records. While recording, the dialog shows the time left out of 60 seconds and a "Stop" button. Recording stops at "Stop" or when the 60 seconds run out.
+
+**Reviewing.** As soon as recording stops, the dialog plays the video back, unmirrored, as everyone else will see it, with "Post" and "Re-record" buttons. "Re-record" discards the video and returns to the live camera view. Nothing leaves the device until "Post." "Cancel," at any point, closes the dialog and discards the video.
+
+**Posting.** "Post" uploads the video, showing its progress, and the note appears once the upload finishes. If the upload fails, the dialog keeps the video and offers "Try again."
+
+**Uploading instead.** The recorder also offers "Upload a video" for anyone whose browser can't use the camera, such as when they've refused access or are in an email app's built-in browser. It picks a video file from the device, which goes to the same review step. A video longer than 60 seconds is refused with a message saying so. If the camera can't be used, the recorder says why and offers only the upload.
+
+**The card.** A video note's card shows a still from the video in a 16:9 landscape shape, filling the card edge to edge inside a thin frame in the note's color, with a play button over it. A video of another shape, such as one recorded upright on a phone, is shown whole and centered, with the space beside it filled with the note's color. Below the video, a strip in the note's color carries the signature and when it was left, as on a written note. Tapping the card opens the video in a dialog at its own shape, playing with sound and the browser's video controls. Videos never play on their own.
+
+Video notes are stored and delivered by Cloudinary, which also converts them to a format every browser plays (see [access.md](access.md#stated-limits) for how links to them work).
 
 ### Notes beside an update
 
@@ -76,7 +93,7 @@ The wall, at `/f/<slug>/wall` and linked from "Notes" beside the feed's menu, sh
 
 ### Deleting a note
 
-The note's author, and any family member, can delete a note, after an inline confirmation. Deletion is permanent. Notes can't be edited; to change one, delete it and leave another.
+The note's author, and any family member, can delete a note, after an inline confirmation. Deletion is permanent. Deleting a video note also deletes its video from Cloudinary, as does deleting the update it's on. Notes can't be edited; to change one, delete it and leave another.
 
 A removed person's notes are neither shown nor counted, and a removed person can't leave a note, since they can't sign in. Restoring a supporter brings their notes back.
 
