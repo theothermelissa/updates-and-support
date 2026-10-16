@@ -361,7 +361,13 @@ function VideoSide(props: {
             />
           </div>
           {props.video.recorded ? (
-            <Button type="button" variant="outline" onClick={() => props.onVideo(null)} disabled={props.disabled}>
+            <Button
+              type="button"
+              className="hover:opacity-90"
+              style={{ backgroundColor: colors.text, color: "white" }}
+              onClick={() => props.onVideo(null)}
+              disabled={props.disabled}
+            >
               Re-record
             </Button>
           ) : (

@@ -32,6 +32,8 @@ export function VideoRecorder(props: {
   const [count, setCount] = useState(3);
   const [elapsed, setElapsed] = useState(0);
   const colors = PALETTE[props.color];
+  // Buttons in the note's darker color rather than the usual black.
+  const inked = { backgroundColor: colors.text, color: "white" };
 
   // The latest callbacks, so the effects below run once rather than on every render.
   const callbacks = useRef(props);
@@ -132,7 +134,7 @@ export function VideoRecorder(props: {
         />
         {phase === "idle" && (
           <span className="absolute inset-0 flex items-center justify-center p-4">
-            <Button type="button" onClick={open}>
+            <Button type="button" onClick={open} className="hover:opacity-90" style={inked}>
               Start recording
             </Button>
           </span>
@@ -163,6 +165,8 @@ export function VideoRecorder(props: {
       {phase === "ready" && (
         <Button
           type="button"
+          className="hover:opacity-90"
+          style={inked}
           onClick={() => {
             setCount(3);
             setPhase("countdown");
