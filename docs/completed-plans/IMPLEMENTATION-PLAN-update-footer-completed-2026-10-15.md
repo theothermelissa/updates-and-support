@@ -38,3 +38,7 @@ UI layout is verified by hand, not with new automated tests. Existing reaction, 
 
 - No restyling the pills to match Edit / Delete.
 - No new component for the footer; `UpdateItem` already owns these buttons.
+
+## Shipped
+
+Melissa approved the preview on 2026-10-15. Typecheck passed. The hand check covered a family member and a supporter on a wide screen, and the family row at 360px: Edit and Delete wrap to the next line, and the page does not scroll sideways. No server changes, so the existing suite was left as-is.
