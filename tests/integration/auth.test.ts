@@ -5,8 +5,10 @@ import {
   signInWithLink,
   signOut,
 } from "../../server/auth.js";
+import type { Db } from "../../server/db.js";
+import { setRemoved } from "../../server/people.js";
 import { createTestDb } from "./db.js";
-import { fakeMailer, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
+import { fakeMailer, joinWithEmail, makeFamily, queuedOrDone, resetDb, tokenFrom } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -122,5 +124,45 @@ describe("sessions", () => {
     await signOut(db, session);
 
     expect(await getSession(db, family.slug, session)).toBeNull();
+  });
+});
+
+describe("racing removal", () => {
+  it("leaves no session when magic-link sign-in races removal", async () => {
+    const { family, people } = await makeFamily(db, "Rivera");
+    const { person: sam } = await joinWithEmail(db, family, "Sam");
+    // Verified already, so sign-in doesn't update the person row after creating its session.
+    await db.person.update({ where: { id: sam.id }, data: { emailVerifiedAt: new Date() } });
+    await db.session.deleteMany({ where: { personId: sam.id } });
+    const mail = fakeMailer();
+    await requestSignInLink(db, mail.send, family.slug, "sam@example.com");
+
+    // Pauses sign-in just after it creates its session, before it commits.
+    let reached!: () => void;
+    let release!: () => void;
+    const atPause = new Promise<void>((resolve) => (reached = resolve));
+    const released = new Promise<void>((resolve) => (release = resolve));
+    const paused = db.$extends({
+      query: {
+        session: {
+          async create({ args, query }) {
+            const created = await query(args);
+            reached();
+            await released;
+            return created;
+          },
+        },
+      },
+    }) as unknown as Db;
+
+    const signingIn = signInWithLink(paused, family.slug, tokenFrom(mail.sent[0]!));
+    await Promise.race([atPause, signingIn]);
+    const removing = setRemoved(db, people[0]!, sam.id, true);
+    await queuedOrDone(db, removing, "transactionid");
+    release();
+    await Promise.allSettled([signingIn, removing]);
+
+    expect(await db.person.findUniqueOrThrow({ where: { id: sam.id } })).toMatchObject({ removedAt: expect.any(Date) });
+    expect(await db.session.count({ where: { personId: sam.id } })).toBe(0);
   });
 });
