@@ -145,12 +145,28 @@ A request has:
 
 - a **body** of plain text, 1 to 2,000 characters. Line breaks are kept, and web addresses become links.
 - how many people can take it: **1**, a **number up to 99**, or **many** (the form's "Everyone can help with this" checkbox). Right after the body's last word, in smaller, lighter text, the page shows the count in parentheses, kept together on one line (see "Who has offered").
+- whether an offer needs a name: the form's **Require name** checkbox, checked by default. Unchecked suits requests like prayers or "be kind to a stranger," where anyone can offer without saying who they are.
+- whether an offer needs an email: the form's **Require email** checkbox, unchecked by default, for when the family needs a way to reach whoever helps.
+- an optional **date**, and an optional **time** that can be given only with a date. Both are kept exactly as typed, with no time zone, because the need happens where the family is. They show above the body in smaller, lighter text, such as "Fri, Oct 17" or "Fri, Oct 17 · 5:30 PM."
 
-Family members add, edit, and delete requests. Only they see the form for adding one, at the top of the page above the requests. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Deleting asks for confirmation on the page and removes every offer on that request. Requests are shown oldest first. A family can have at most 100.
+Family members add, edit, and delete requests. Only they see the form for adding one, at the top of the page above the requests. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Editing can change anything, including the checkboxes, date, and time; offers already made stay as they are. Deleting asks for confirmation on the page and removes every offer on that request. A family can have at most 100.
+
+Requests are shown in this order:
+
+1. Upcoming dated requests, soonest first. On the same date, one without a time comes before those with one.
+2. Requests without a date, oldest first.
+3. Past requests, most recently past first.
+
+A request is past, by the clock of the device showing it, from the start of the next day when it has only a date, and from its time when it has both. A past request's text is struck through, like a covered one but without the check, and **✋ I can help with this** is hidden from anyone who hasn't offered on it. Since "past" depends on the viewer's clock, the server doesn't refuse offers on a past request.
 
 ### Offering to help
 
-Anyone signed in can press **✋ I can help with this**. An offer needs a name, the same way a note does: when the person doesn't have one, pressing the button shows "Your name" on that request with a Cancel button, and pressing it again with a name makes the offer and puts that name on their record. A person who already has a name offers under it and can't change it here. The page never asks for an email. Once someone has offered, the button goes away and "👍 You are helping" takes its place, whether or not the request is covered.
+Anyone signed in can press **✋ I can help with this**. What happens next depends on the request and on what's already on the person's record:
+
+- **A name**, when the request requires one and the person doesn't have one: pressing the button shows "Your name" on that request, the same way a note asks. The name goes on their record. A person who already has a name offers under it and can't change it here. On a request that doesn't require a name, a person without one offers without one, and a person with one still offers under it.
+- **An email**, when the request requires one and the person has no email on their record: pressing the button shows "Your email," saying only the family will see it. It's kept with that offer, as a way for the family to reach them, and nowhere else: it doesn't go on their record, isn't verified, sends nothing, doesn't appear on the People page, and doesn't sign them up for notifications. Withdrawing deletes it. A person with an email on their record, verified or not, isn't asked; the family sees that one.
+
+When both are needed, both fields show together, with a Cancel button, and pressing the button again makes the offer. Once someone has offered, the button goes away and "👍 You are helping" takes its place, whether or not the request is covered.
 
 To withdraw, the person presses the **×** just after "You are helping." On a computer it appears when resting on that line or reaching it with the keyboard; on a touch screen it is always shown. It opens a dialog, "Need to bow out? No problem — thanks for letting us know," with **Cancel** and **Confirm**. Confirming withdraws the offer.
 
@@ -168,9 +184,9 @@ A covered request's text is struck through, with a green check in front of it. T
 
 **✋ I can help with this** is hidden from anyone who hasn't offered on a covered request.
 
-Only family members see who offered. Under each request, they see the list of everyone who offered, with **Remove** on each name. Removing asks for confirmation. Supporters see the count and their own "You are helping," never anyone else's name, so offering doesn't invite comparison between supporters, while the family can still coordinate with and thank each person.
+Only family members see who offered. Under each request, they see the list of everyone who offered, with **Remove** on each name. An offer made without a name shows as "Someone." Removing asks for confirmation. Supporters see the count and their own "You are helping," never anyone else's name, so offering doesn't invite comparison between supporters, while the family can still coordinate with and thank each person.
 
-The server sends a supporter only the number of offers and whether one of them is theirs: never another person's name, email, or id. Family members see each name, with the person's email beside it when they have one. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
+The server sends a supporter only the number of offers and whether one of them is theirs: never another person's name, email, or id, and not the email they gave with their own offer. Family members see each name, with an email beside it when there is one: the email given with the offer, or else the one on the person's record. A supporter can't add, edit, or delete a request, and can't remove someone else's offer.
 
 A removed person's offers are hidden and don't fill a place, and a removed person can't offer. Restoring a supporter brings their offers back, which can leave a numbered request with more offers than its number.
 
