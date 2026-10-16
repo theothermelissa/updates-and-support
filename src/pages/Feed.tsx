@@ -177,7 +177,7 @@ function UpdateItem(props: {
         <CardHeader>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{update.authorName}</span> ·{" "}
-            {new Date(update.createdAt).toLocaleString()}
+            {new Date(update.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
             {update.editedAt && " · edited"}
           </p>
         </CardHeader>

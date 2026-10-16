@@ -27,7 +27,7 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
         )}
       </p>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
-        <time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleString()}</time>
+        <time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
         {props.canDelete && !confirming && (
           <button className="underline underline-offset-2" onClick={() => setConfirming(true)}>
             Delete
