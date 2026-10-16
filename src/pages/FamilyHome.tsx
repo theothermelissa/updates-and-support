@@ -1,8 +1,17 @@
+import { MenuIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { ErrorMessage, Field, PageShell } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
@@ -42,19 +51,31 @@ export function FamilyHome({ slug }: { slug: string }) {
     <PageShell
       title={me.family.displayName}
       actions={
-        <>
-          {me.person.role === "family" && (
-            <Button variant="ghost" size="sm" asChild>
-              <a href={`/f/${slug}/people`}>People</a>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Menu" className="text-muted-foreground">
+              <MenuIcon className="size-5" />
             </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={signOut}>
-            Sign out
-          </Button>
-        </>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {me.person.name && (
+              <>
+                <DropdownMenuLabel className="font-normal text-muted-foreground">
+                  Signed in as <span className="font-medium text-foreground">{me.person.name}</span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            {me.person.role === "family" && (
+              <DropdownMenuItem asChild>
+                <a href={`/f/${slug}/people`}>People</a>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={signOut}>Sign out</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
     >
-      {me.person.name && <p className="text-sm text-muted-foreground">Signed in as {me.person.name}.</p>}
       {me.person.role === "supporter" && !me.person.email && <EmailPrompt slug={slug} reload={load} />}
       {me.person.role === "supporter" && me.person.email && (
         <div className="space-y-2">
