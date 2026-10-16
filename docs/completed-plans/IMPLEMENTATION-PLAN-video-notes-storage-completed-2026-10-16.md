@@ -91,7 +91,7 @@ Referrers are already covered. `index.html` has `<meta name="referrer" content="
 
 - **Note dialog.** Add an "Upload a video" button. It opens a file picker (`accept="video/*"`), and before anything uploads, the browser checks the file is at most 60 seconds (from its metadata) and at most 100MB. The review step plays the file with "Post" and "Choose another." "Post" gets a ticket, uploads with `XMLHttpRequest` so progress can be shown (`fetch` can't report upload progress), then attaches the note. A failure keeps the file and offers "Try again."
 - **Card.** A 16:9 box with a thin frame in the note's color and a play button. The still uses `object-fit: contain` on the note's color, so an upright video gets colored sides with no dimensions stored. Below it is the color strip with the signature and time, as on a written note.
-- **Playback.** Tapping the card opens a dialog with `<video controls autoplay>` at the video's own shape.
+- **Playback.** Tapping the play button swaps the still for `<video controls autoplay playsInline>` in the same 16:9 box. Starting one video pauses any other video note that's playing.
 - **Still processing.** If the still fails to load because Cloudinary is still converting, the card says "Video is processing. Check back in a minute."
 
 ## Steps
@@ -150,6 +150,8 @@ There's no unit test for URL signing (it's the SDK's job). Step 1's manual check
   - the converted mp4 is h264 with no location atoms;
   - deleting a note in the UI removes its video from Cloudinary.
 - **Deleted videos linger briefly.** Links to a deleted video keep playing until Cloudinary's CDN clears its cached copies. That took from under a minute to as long as 15 minutes, even with `invalidate: true`. The spec's Stated limits says links stop working "within minutes."
+
+- **In-card playback.** The first build played videos in a dialog. On the preview, Melissa asked for them to play inside the card instead, and the spec changed with it.
 
 ## Cut for speed
 
