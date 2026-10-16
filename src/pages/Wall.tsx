@@ -55,15 +55,23 @@ export function Wall({ slug }: { slug: string }) {
     load();
   }, [slug]);
 
-  async function remove(id: string): Promise<boolean> {
+  async function change(path: string, method: string, body?: unknown): Promise<boolean> {
     setError("");
-    const { status, data } = await api<{ error?: string }>(slug, `notes/${id}`, { method: "DELETE" });
+    const { status, data } = await api<{ error?: string }>(slug, path, { method, body });
     if (status >= 300) {
       setError(data?.error ?? "Something went wrong. Please try again.");
       return false;
     }
     await load();
     return true;
+  }
+
+  function remove(id: string): Promise<boolean> {
+    return change(`notes/${id}`, "DELETE");
+  }
+
+  function react(id: string, kind: string | null): Promise<boolean> {
+    return change("reactions", "POST", { noteId: id, kind });
   }
 
   if (error && !me) return <PageShell title="Notes">{<ErrorMessage>{error}</ErrorMessage>}</PageShell>;
@@ -113,6 +121,7 @@ export function Wall({ slug }: { slug: string }) {
               note={note}
               canDelete={me.person.role === "family" || note.mine}
               onDelete={() => remove(note.id)}
+              onReact={(kind) => react(note.id, kind)}
             />
           ))}
         </div>

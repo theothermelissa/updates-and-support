@@ -112,6 +112,17 @@ Some routine commands refuse to run or error out from an agent, which can look l
 - Write the migration SQL by hand in a new `prisma/migrations/<timestamp>_<name>/` folder, then confirm `prisma migrate diff` shows no drift from the schema.
 - Edit a PR body with `gh api -X PATCH repos/theothermelissa/updates-and-support/pulls/<n> -F body=@file`.
 
+### Testing locally on Melissa's Mac
+
+The local database holds several families, so `scripts/seed-preview.ts` refuses to run against it. It also falls behind `main`'s migrations.
+
+**Why:** on the live feed, the local feed returned 500 errors because the photos migration had never been applied there, and the seed script stopped itself.
+
+**How to apply:**
+- Run `npm run db:deploy` first.
+- Make a fictional family by piping answers into `npm run family:create`.
+- To act as a family member without a sign-in email, write a scratchpad `.mts` script that calls the `server/` functions with absolute imports, and run it with `npx tsx --env-file=.env`.
+
 ### Cloud sessions differ from Melissa's Mac
 
 A cloud session can run the tests and its pushes build Vercel previews, but it can't read Vercel's logs or seed the preview, and its local setup starts from nothing.
@@ -165,3 +176,15 @@ With a custom viewport size set, the pane's screenshots can show a stale frame f
 **Why:** while checking the wall's filter, screenshots showed the unfiltered page while the DOM had already updated. That nearly passed as a bug.
 
 **How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it.
+
+### Testing video notes in the browser pane
+
+The pane blocks the camera, so only the refused-camera path of the recorder can be tested there. Uploads can be: copy a test video into `public/` temporarily, then in `javascript_tool` fetch it, wrap it in a `File`, set it on the hidden `input[type=file]` with a `DataTransfer`, and dispatch `change`. Delete the file from `public/` afterward. This machine has no ffmpeg; a short Swift script using `AVAssetWriter` makes labeled test videos of any shape.
+
+**Why:** checking how odd-shaped videos display needed a 9:16 file and a way to pick it without a file dialog.
+
+**How to apply:** leave the live camera, countdown, and Re-record to Melissa's own browser, and say so.
+
+### Don't run prettier
+
+The repo has no prettier config, and default prettier reformats whole files to 80 columns. Match the surrounding style by hand.

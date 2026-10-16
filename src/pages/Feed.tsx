@@ -1,14 +1,16 @@
-import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
 import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
+import { ReactionControls } from "@/components/reactions";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
+import { applyFetched, newUpdatesLabel } from "../liveFeed.js";
 import type { Note } from "../notes.js";
-import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
+import type { Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
 
 // Supporters never load the editor; family members load it when they first write or edit.
@@ -30,39 +32,88 @@ type Update = {
 const UPDATE_WIDTH = "lg:w-[42rem]";
 // Notes shown beside an update; the rest are a link away, on the wall.
 const NOTES_SHOWN = 6;
+// How often an open, visible feed checks for changes.
+const CHECK_EVERY = 30_000;
 
 // canEdit: the viewer is a family member. name: theirs, or null until they give one with a
-// note; onNamed passes it back once a note sets it.
+// note; onNamed passes it back once a note sets it. onSignedOut: a check found the reader's
+// session ended, for example because they were removed.
 export function Feed(props: {
   slug: string;
   canEdit: boolean;
   photos: PhotoMode;
   name: string | null;
   onNamed: (name: string) => void;
+  onSignedOut: () => void;
 }) {
   const { slug, canEdit } = props;
   const [updates, setUpdates] = useState<Update[] | null>(null);
+  const [waiting, setWaiting] = useState(0);
   const [error, setError] = useState("");
+  // The updates the reader has been shown; newer ones wait behind the "new updates" button.
+  const shownIds = useRef(new Set<string>());
+  // Set when the next response should show everything. It outlives a request that a newer one
+  // overtakes, so a check can't hide the reader's own post.
+  const showAll = useRef(true);
+  // Only the newest request's response is applied, so a slow one can't undo a fresher one.
+  const latest = useRef(0);
 
-  async function load() {
+  // Fetches the feed. everything: show new updates too, as on first load, after the reader's
+  // own post, or from the button. A failed check shows nothing and waits for the next one.
+  async function load(everything = false) {
+    if (everything) showAll.current = true;
+    const request = ++latest.current;
     const { status, data } = await api<{ updates: Update[] }>(slug, "updates");
-    if (status === 200) setUpdates(data.updates);
-    else setError("Couldn't load updates. Please refresh the page.");
+    if (request !== latest.current) return;
+    if (status === 401) return props.onSignedOut();
+    if (status !== 200) {
+      if (shownIds.current.size === 0 && showAll.current) setError("Couldn't load updates. Please refresh the page.");
+      return;
+    }
+    if (showAll.current) {
+      showAll.current = false;
+      shownIds.current = new Set(data.updates.map((u) => u.id));
+    }
+    const { visible, waiting } = applyFetched(shownIds.current, data.updates);
+    setUpdates(visible);
+    setWaiting(waiting);
   }
 
+  // Checks every so often while the page is visible, and at once when the reader comes back.
   useEffect(() => {
-    load();
+    load(true);
+    let timer: number | undefined;
+    const follow = () => {
+      window.clearInterval(timer);
+      if (document.visibilityState !== "visible") return;
+      timer = window.setInterval(load, CHECK_EVERY);
+    };
+    const comeBack = () => {
+      if (document.visibilityState === "visible") load();
+      follow();
+    };
+    follow();
+    document.addEventListener("visibilitychange", comeBack);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", comeBack);
+    };
   }, [slug]);
 
-  // Runs a change, then reloads the feed. Returns whether it worked.
-  async function change(path: string, method: string, body?: unknown): Promise<boolean> {
+  function showNew() {
+    load(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // Runs a change, then reloads the feed. Returns whether it worked. everything: as for load.
+  async function change(path: string, method: string, body?: unknown, everything = false): Promise<boolean> {
     setError("");
     const { status, data } = await api<{ error?: string }>(slug, path, { method, body });
     if (status >= 300) {
       setError(data?.error ?? "Something went wrong. Please try again.");
       return false;
     }
-    await load();
+    await load(everything);
     return true;
   }
 
@@ -82,10 +133,18 @@ export function Feed(props: {
     <section className="space-y-6">
       {canEdit && (
         <div className={UPDATE_WIDTH}>
-          <PostForm slug={slug} photos={props.photos} onPost={(content, notify) => change("updates", "POST", { content, notify })} />
+          <PostForm slug={slug} photos={props.photos} onPost={(content, notify) => change("updates", "POST", { content, notify }, true)} />
         </div>
       )}
       {error && <ErrorMessage>{error}</ErrorMessage>}
+      {waiting > 0 && (
+        // Fixed, so it shows wherever the reader is and never moves the page.
+        <div className="fixed inset-x-0 top-3 z-20 flex justify-center px-4">
+          <Button className="rounded-full shadow-md" onClick={showNew}>
+            {newUpdatesLabel(waiting)}
+          </Button>
+        </div>
+      )}
       {updates?.length === 0 && <p className="text-muted-foreground">No updates yet.</p>}
       {updates?.map((update) => (
         <UpdateItem
@@ -100,6 +159,7 @@ export function Feed(props: {
           name={props.name}
           onLeaveNote={(draft) => leaveNote(update.id, draft)}
           onDeleteNote={(id) => change(`notes/${id}`, "DELETE")}
+          onReactToNote={(id, kind) => change("reactions", "POST", { noteId: id, kind })}
         />
       ))}
     </section>
@@ -165,6 +225,7 @@ function UpdateItem(props: {
   name: string | null;
   onLeaveNote: (draft: NoteDraft) => Promise<string | null>;
   onDeleteNote: (id: string) => Promise<boolean>;
+  onReactToNote: (id: string, kind: string | null) => Promise<boolean>;
 }) {
   const { update } = props;
   const [writing, setWriting] = useState(false);
@@ -225,11 +286,11 @@ function UpdateItem(props: {
             </Confirm>
           ) : (
             <>
-              <Reactions update={update} onReact={props.onReact}>
+              <ReactionControls reactions={update.reactions} onReact={props.onReact}>
                 <Button variant="outline" className="h-11 rounded-full px-4" onClick={() => setWriting(true)}>
                   Leave a note
                 </Button>
-              </Reactions>
+              </ReactionControls>
               {props.canEdit && (
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                   <Button variant="outline" onClick={startEditing}>
@@ -253,6 +314,7 @@ function UpdateItem(props: {
               note={note}
               canDelete={props.canEdit || note.mine}
               onDelete={() => props.onDeleteNote(note.id)}
+              onReact={(kind) => props.onReactToNote(note.id, kind)}
             />
           ))}
           {noteCount > NOTES_SHOWN && (
@@ -272,144 +334,5 @@ function EditorSlot({ children }: { children: React.ReactNode }) {
     <Suspense fallback={<div className="h-[12.5rem] rounded-lg border border-input" aria-busy="true" />}>
       {children}
     </Suspense>
-  );
-}
-
-const HOVER_DELAY = 300;
-
-// A React button that opens a tray of the six emoji, and a summary ("❤️🙏😂")
-// that shows who reacted. With a mouse, hovering opens either one; on a phone, tapping does.
-function Reactions({
-  update,
-  onReact,
-  children,
-}: {
-  update: Update;
-  onReact: (kind: string | null) => Promise<boolean>;
-  children: ReactNode;
-}) {
-  const r = update.reactions;
-  const [tray, setTray] = useState(false);
-  const [names, setNames] = useState<"closed" | "hover" | "pinned">("closed");
-  const [pending, setPending] = useState(false);
-  const area = useRef<HTMLSpanElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
-  const timer = useRef<number | undefined>(undefined);
-
-  // The button and tray share one hover area, and the delay lets the pointer cross to the tray.
-  // Touch has no hover, so it's ignored here and a tap opens the tray instead.
-  function hoverTray(e: PointerEvent, open: boolean) {
-    if (e.pointerType !== "mouse") return;
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setTray(open), HOVER_DELAY);
-  }
-
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-  useEffect(() => {
-    if (!tray) return;
-    const outside = (e: globalThis.PointerEvent) => {
-      if (!area.current?.contains(e.target as Node)) setTray(false);
-    };
-    const escape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setTray(false);
-      button.current?.focus();
-    };
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [tray]);
-
-  async function pick(kind: string) {
-    window.clearTimeout(timer.current);
-    setTray(false);
-    setPending(true);
-    await onReact(kind === r.mine ? null : kind);
-    setPending(false);
-  }
-
-  const mine = REACTIONS.find((x) => x.kind === r.mine);
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="relative"
-          ref={area}
-          onPointerEnter={(e) => hoverTray(e, true)}
-          onPointerLeave={(e) => hoverTray(e, false)}
-        >
-          <Button
-            ref={button}
-            variant="outline"
-            className={cn("h-11 min-w-11 rounded-full px-4", mine && "border-foreground bg-muted text-2xl")}
-            aria-label={mine ? `Your reaction: ${mine.name}. Change it` : "React"}
-            aria-expanded={tray}
-            disabled={pending}
-            onClick={() => {
-              window.clearTimeout(timer.current);
-              setTray(true);
-            }}
-          >
-            {mine ? mine.emoji : "React"}
-          </Button>
-          {tray && (
-            <span
-              className="absolute bottom-full left-0 z-10 mb-1 flex gap-0.5 rounded-full border bg-popover p-1 shadow-md"
-              role="group"
-              aria-label="Pick a reaction"
-            >
-              {REACTIONS.map((x) => (
-                <button
-                  key={x.kind}
-                  className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
-                  aria-label={x.name}
-                  aria-pressed={x.kind === r.mine}
-                  onClick={() => pick(x.kind)}
-                >
-                  {x.emoji}
-                </button>
-              ))}
-            </span>
-          )}
-        </span>
-        {r.count > 0 && (
-          <span
-            className="relative"
-            onPointerEnter={(e) => e.pointerType === "mouse" && setNames((n) => (n === "pinned" ? n : "hover"))}
-            onPointerLeave={() => setNames((n) => (n === "hover" ? "closed" : n))}
-          >
-            <button
-              className="rounded-sm py-2 text-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              aria-label={summaryLabel(r)}
-              aria-expanded={names === "pinned"}
-              onClick={() => setNames((n) => (n === "pinned" ? "closed" : "pinned"))}
-            >
-              {summary(r)}
-            </button>
-            {names === "hover" && (
-              <NameList
-                r={r}
-                className="absolute top-full left-0 z-10 rounded-md bg-foreground px-3 py-1.5 text-sm whitespace-nowrap text-background"
-              />
-            )}
-          </span>
-        )}
-        {children}
-      </div>
-      {names === "pinned" && <NameList r={r} className="text-sm text-muted-foreground" />}
-    </div>
-  );
-}
-
-function NameList({ r, className }: { r: ReactionsData; className: string }) {
-  return (
-    <ul className={className}>
-      {whoReacted(r).map((line, i) => (
-        <li key={i}>{line}</li>
-      ))}
-    </ul>
   );
 }
