@@ -62,17 +62,17 @@ A note has:
 
 Each update has a "Leave a note" button. It opens a dialog with a text box, a row of the palette's colors with one chosen at random, and a "Leave note" button. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
 
-A note needs a name. A supporter who hasn't given one also sees a "Your name" field in the dialog. The name goes on their record, so their later notes and reactions show it too. Giving an email later keeps this name: the feed's email form then asks only for the email. The dialog never asks for an email. Anyone who already has a name signs with it.
+A note needs a name. The dialog shows "Your name": filled in and read-only for anyone who already has one, and empty for a supporter who hasn't given one. A name entered there goes on their record, so their later notes and reactions show it too, and the feed's email form later shows it the same way, filled in and read-only. The dialog never asks for an email.
 
 A person can leave any number of notes on an update, up to 20 notes an hour across the family, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
 
-### Notes under an update
+### Notes beside an update
 
-Under each update, next to the reactions, a "Notes" button shows how many notes the update has, such as "3 notes," and opens or closes them. They show oldest first, as colored cards: one column on a phone and two on a computer.
+An update's notes are always shown, newest first, as colored cards: beside the update's card on a wide screen, and below it on a phone. Up to six are shown; when there are more, a "See all 14 notes" link opens the wall showing only that update's notes.
 
 ### The wall
 
-The wall, at `/f/<slug>/wall` and linked from "Notes" beside the feed's menu, shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Everyone signed in to the family can open it; anyone else sees the gate.
+The wall, at `/f/<slug>/wall` and linked from "Notes" beside the feed's menu, shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
 
 ### Deleting a note
 

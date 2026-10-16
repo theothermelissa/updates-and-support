@@ -49,6 +49,7 @@ export function FamilyHome({ slug }: { slug: string }) {
   if (me === "signed-out") return <Gate slug={slug} onJoined={load} />;
   return (
     <PageShell
+      wide
       title={me.family.displayName}
       actions={
         <>
@@ -82,10 +83,12 @@ export function FamilyHome({ slug }: { slug: string }) {
       }
     >
       {me.person.role === "supporter" && !me.person.email && (
-        <EmailPrompt slug={slug} reload={load} hasName={me.person.name !== null} />
+        <div className="lg:w-[42rem]">
+          <EmailPrompt slug={slug} reload={load} storedName={me.person.name} />
+        </div>
       )}
       {me.person.role === "supporter" && me.person.email && (
-        <div className="space-y-2">
+        <div className="space-y-2 lg:w-[42rem]">
           <Label>
             <Checkbox
               checked={me.person.notificationsOn}
@@ -104,7 +107,7 @@ export function FamilyHome({ slug }: { slug: string }) {
       <Feed
         slug={slug}
         canEdit={me.person.role === "family"}
-        needsName={me.person.name === null}
+        name={me.person.name}
         onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
       />
     </PageShell>
@@ -112,8 +115,9 @@ export function FamilyHome({ slug }: { slug: string }) {
 }
 
 // For a supporter who hasn't given an email. Optional, and never in the way of reading. Someone
-// who already gave a name with a note keeps it, so they're asked only for an email.
-function EmailPrompt({ slug, reload, hasName }: { slug: string; reload: () => void; hasName: boolean }) {
+// who already gave a name with a note sees it read-only; names change on their profile.
+function EmailPrompt(props: { slug: string; reload: () => void; storedName: string | null }) {
+  const { slug, reload, storedName } = props;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -127,7 +131,7 @@ function EmailPrompt({ slug, reload, hasName }: { slug: string; reload: () => vo
     setError("");
     const { status, data } = await api<{ result?: "verify" | "sign-in-link"; error?: string }>(slug, "email", {
       method: "POST",
-      body: hasName ? { email } : { name, email },
+      body: storedName ? { email } : { name, email },
     });
     setBusy(false);
     // A new email, or signed out in the meantime: reloading shows what's next.
@@ -166,13 +170,15 @@ function EmailPrompt({ slug, reload, hasName }: { slug: string; reload: () => vo
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          {!hasName && (
-            <Field label="Your name">
+          <Field label="Your name">
+            {storedName ? (
+              <Input value={storedName} readOnly className="bg-muted text-muted-foreground" />
+            ) : (
               <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
-            </Field>
-          )}
+            )}
+          </Field>
           <Field label="Your email">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus={hasName} />
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus={storedName !== null} />
           </Field>
           <div className="flex gap-2">
             <Button disabled={busy}>Keep me updated</Button>

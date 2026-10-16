@@ -21,9 +21,14 @@ type Update = {
   notes: Note[];
 };
 
-// canEdit: the viewer is a family member. needsName: they haven't given a name, so leaving a
-// note asks for one; onNamed passes the name back once a note sets it.
-export function Feed(props: { slug: string; canEdit: boolean; needsName: boolean; onNamed: (name: string) => void }) {
+// The width of an update's card when its notes sit beside it on a wide screen.
+const UPDATE_WIDTH = "lg:w-[42rem]";
+// Notes shown beside an update; the rest are a link away, on the wall.
+const NOTES_SHOWN = 6;
+
+// canEdit: the viewer is a family member. name: theirs, or null until they give one with a
+// note; onNamed passes it back once a note sets it.
+export function Feed(props: { slug: string; canEdit: boolean; name: string | null; onNamed: (name: string) => void }) {
   const { slug, canEdit } = props;
   const [updates, setUpdates] = useState<Update[] | null>(null);
   const [error, setError] = useState("");
@@ -57,14 +62,18 @@ export function Feed(props: { slug: string; canEdit: boolean; needsName: boolean
       body: { updateId, ...draft },
     });
     if (status >= 300) return data?.error ?? "Something went wrong. Please try again.";
-    if (data.name && props.needsName) props.onNamed(data.name);
+    if (data.name && props.name === null) props.onNamed(data.name);
     await load();
     return null;
   }
 
   return (
     <section className="space-y-6">
-      {canEdit && <PostForm onPost={(body, notify) => change("updates", "POST", { body, notify })} />}
+      {canEdit && (
+        <div className={UPDATE_WIDTH}>
+          <PostForm onPost={(body, notify) => change("updates", "POST", { body, notify })} />
+        </div>
+      )}
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {updates?.length === 0 && <p className="text-muted-foreground">No updates yet.</p>}
       {updates?.map((update) => (
@@ -75,7 +84,8 @@ export function Feed(props: { slug: string; canEdit: boolean; needsName: boolean
           onEdit={(body) => change(`updates/${update.id}`, "PATCH", { body })}
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
-          needsName={props.needsName}
+          slug={slug}
+          name={props.name}
           onLeaveNote={(draft) => leaveNote(update.id, draft)}
           onDeleteNote={(id) => change(`notes/${id}`, "DELETE")}
         />
@@ -124,12 +134,12 @@ function UpdateItem(props: {
   onEdit: (body: string) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
-  needsName: boolean;
+  slug: string;
+  name: string | null;
   onLeaveNote: (draft: NoteDraft) => Promise<string | null>;
   onDeleteNote: (id: string) => Promise<boolean>;
 }) {
   const { update } = props;
-  const [notesOpen, setNotesOpen] = useState(false);
   const [writing, setWriting] = useState(false);
   const noteCount = update.notes.length;
   const [draft, setDraft] = useState<string | null>(null);
@@ -144,9 +154,10 @@ function UpdateItem(props: {
   }
 
   return (
-    <article>
+    // On a wide screen the update's notes sit beside its card; on a phone, below it.
+    <article className="flex flex-col gap-4 lg:flex-row lg:items-start">
       {/* Visible overflow, so the reaction tray is never clipped by the card's edge. */}
-      <Card className="overflow-visible">
+      <Card className={cn("overflow-visible lg:shrink-0", UPDATE_WIDTH)}>
         <CardHeader>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{update.authorName}</span> ·{" "}
@@ -161,38 +172,10 @@ function UpdateItem(props: {
             <Textarea className="min-h-32" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Update" />
           )}
           <Reactions update={update} onReact={props.onReact} />
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <Button variant="outline" className="h-11 rounded-full px-4" onClick={() => setWriting(true)}>
-              Leave a note
-            </Button>
-            {noteCount > 0 && (
-              <Button variant="ghost" className="h-11 px-3" aria-expanded={notesOpen} onClick={() => setNotesOpen((o) => !o)}>
-                {noteCount === 1 ? "1 note" : `${noteCount} notes`}
-              </Button>
-            )}
-          </div>
-          {notesOpen && noteCount > 0 && (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {update.notes.map((note) => (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  canDelete={props.canEdit || note.mine}
-                  onDelete={() => props.onDeleteNote(note.id)}
-                />
-              ))}
-            </div>
-          )}
-          <NoteDialog
-            open={writing}
-            onOpenChange={setWriting}
-            needsName={props.needsName}
-            onLeave={async (draft) => {
-              const failed = await props.onLeaveNote(draft);
-              if (!failed) setNotesOpen(true);
-              return failed;
-            }}
-          />
+          <Button variant="outline" className="mt-3 h-11 rounded-full px-4" onClick={() => setWriting(true)}>
+            Leave a note
+          </Button>
+          <NoteDialog open={writing} onOpenChange={setWriting} name={props.name} onLeave={props.onLeaveNote} />
         </CardContent>
         {props.canEdit && (
           <CardFooter className="flex flex-wrap items-center gap-2 border-t py-3">
@@ -223,6 +206,23 @@ function UpdateItem(props: {
           </CardFooter>
         )}
       </Card>
+      {noteCount > 0 && (
+        <aside className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-1" aria-label="Notes">
+          {update.notes.slice(0, NOTES_SHOWN).map((note) => (
+            <NoteCard
+              key={note.id}
+              note={note}
+              canDelete={props.canEdit || note.mine}
+              onDelete={() => props.onDeleteNote(note.id)}
+            />
+          ))}
+          {noteCount > NOTES_SHOWN && (
+            <a className="text-sm font-medium" href={`/f/${props.slug}/wall#update=${update.id}`}>
+              See all {noteCount} notes
+            </a>
+          )}
+        </aside>
+      )}
     </article>
   );
 }

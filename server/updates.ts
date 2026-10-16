@@ -20,7 +20,7 @@ export type UpdateView = {
 export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[] };
 
 // Everyone signed in to the family reads every update, newest first, with its reactions and
-// its notes, oldest first.
+// its notes, newest first.
 // Reactions are filtered by family on their own, rather than trusting how they were written,
 // and a removed person's reactions are hidden until they're restored.
 export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]> {
@@ -34,7 +34,7 @@ export async function listUpdates(db: Db, person: Person): Promise<FeedUpdate[]>
         orderBy: { createdAt: "asc" },
         select: { kind: true, personId: true, person: { select: { name: true } } },
       },
-      notes: { where: visibleNotes(person.familyId), orderBy: { createdAt: "asc" }, select: noteSelect },
+      notes: { where: visibleNotes(person.familyId), orderBy: { createdAt: "desc" }, select: noteSelect },
     },
   });
   return updates.map((u) => ({

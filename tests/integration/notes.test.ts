@@ -96,11 +96,11 @@ describe("what each reader sees", () => {
     }
   });
 
-  it("lists the feed's notes oldest first, and the wall's newest first", async () => {
+  it("lists notes newest first, in the feed and on the wall", async () => {
     const { sam, update } = await setUp();
     await leave(sam, update.id, "First");
     await leave(sam, update.id, "Second");
-    expect((await feedNotes(sam)).map((n) => n.body)).toEqual(["First", "Second"]);
+    expect((await feedNotes(sam)).map((n) => n.body)).toEqual(["Second", "First"]);
     expect((await listNotes(db, sam)).map((n) => n.body)).toEqual(["Second", "First"]);
   });
 });

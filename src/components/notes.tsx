@@ -47,12 +47,12 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
 
 export type NoteDraft = { body: string; color: NoteColor; name?: string };
 
-// The "Leave a note" dialog. Starts in a random color; asks for a name only from someone
-// without one. `onLeave` returns an error message, or null once the note is saved.
+// The "Leave a note" dialog. Starts in a random color. Shows the viewer's name read-only, or
+// asks for one from someone without it; a name is changed on their profile, never here. `onLeave` returns an error message, or null once the note is saved.
 export function NoteDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  needsName: boolean;
+  name: string | null;
   onLeave: (draft: NoteDraft) => Promise<string | null>;
 }) {
   return (
@@ -65,12 +65,16 @@ export function NoteDialog(props: {
   );
 }
 
-function NoteForm(props: { needsName: boolean; onOpenChange: (open: boolean) => void; onLeave: (draft: NoteDraft) => Promise<string | null> }) {
+function NoteForm(props: {
+  name: string | null;
+  onOpenChange: (open: boolean) => void;
+  onLeave: (draft: NoteDraft) => Promise<string | null>;
+}) {
   const [body, setBody] = useState("");
   const [color, setColor] = useState<NoteColor>(() => randomColor());
   const [name, setName] = useState("");
-  // Fixed when the dialog opens, so the field doesn't vanish once the name is saved.
-  const [askName] = useState(props.needsName);
+  // Fixed when the dialog opens, so the field doesn't change once a new name is saved.
+  const [askName] = useState(props.name === null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const colors = PALETTE[color];
@@ -121,11 +125,13 @@ function NoteForm(props: { needsName: boolean; onOpenChange: (open: boolean) => 
           />
         ))}
       </RadioGroupPrimitive.Root>
-      {askName && (
-        <Field label="Your name">
+      <Field label="Your name">
+        {askName ? (
           <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-        </Field>
-      )}
+        ) : (
+          <Input value={props.name ?? ""} readOnly className="bg-muted text-muted-foreground" />
+        )}
+      </Field>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       <DialogFooter>
         <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>

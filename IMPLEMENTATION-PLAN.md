@@ -53,7 +53,7 @@ Migration SQL is written by hand (see `claude/lessons.md` → Commands that fail
 - **`validName`** is extracted from `validNameAndEmail` in `server/families.ts`, with the same rule and message, and used by both.
 - **`listNotes(db, person)`**: every visible note in the person's family, newest first, for the wall.
 - **`deleteNote(db, person, id)`**: `deleteMany({ where: { id, ...visibleNotes(familyId), ...(role === "family" ? {} : { authorId: person.id }) } })`. The family scope applies in both branches. Count 0 → 404, so a note the person can't delete looks the same as one that doesn't exist.
-- **Notes in the feed:** `listUpdates` includes each update's visible notes, oldest first, through a shared `noteView`, so the feed needs no second request.
+- **Notes in the feed:** `listUpdates` includes each update's visible notes, newest first, through a shared `noteView`, so the feed needs no second request.
 - **`addEmail` keeps an existing name.** A supporter who already has a name (from a note) keeps it when giving an email: the name is written only where `name` is null, and the client's email form leaves out the name field for them. Otherwise giving an email could silently re-sign every earlier note.
 
 A note's view: `{ id, updateId, body, color, authorName, authorIsFamily, createdAt, mine }`. `mine` tells the client whether to show Delete to the author; family members see Delete on every note. `authorIsFamily` gives family members' notes a small "Family" marker, which a supporter can't fake by signing with a family member's name. Never author IDs or emails.
@@ -122,7 +122,18 @@ Palette, `NoteCard`, `NoteDialog`, the feed's "Leave a note" and notes toggle, t
 
 **Verify:** the wall shows every note newest first in columns at both widths; signed out, it shows the gate.
 
-### 4. Ship
+### 4. Names shown, notes beside updates ✅
+
+From Melissa's first look at the preview:
+
+- **Names, read-only.** `NoteDialog` takes the viewer's `name` (or null) instead of `needsName`: with a name, "Your name" shows it in a read-only field; without one, it's an empty required field. `EmailPrompt` shows a stored name the same way. The server already ignores a name sent by someone who has one, so this is display only.
+- **Notes beside updates, always shown.** The "N notes" toggle goes. The feed's server order becomes newest first. On `lg` screens the family home page widens (`PageShell` gets a `wide` option, `lg:max-w-6xl`), and each update becomes a two-column grid row: the update card (42rem) on the left, its notes stacked on the right. The prompt, notification setting, and post form keep the narrow width. On smaller screens the notes sit below the card.
+- **Six, then a link.** Each update shows its six newest notes. With more, "See all N notes" links to `/f/<slug>/wall#update=<id>`. The update ID goes after `#` because preview logins drop query strings.
+- **Wall filtered by update.** `Wall` reads `#update=<id>` (and listens for `hashchange`) and shows only that update's notes. A bar above them always says the filter is on, naming the update's author, date, and first line, with a "Show all notes" button that clears it. The filter is client-side over the notes it already loaded, since every visible note in the family is already the reader's to see.
+
+**Verify:** at 375px and desktop width: a named reader sees their name read-only in both forms; a nameless reader types it once; notes sit beside the update on desktop and below on phones; an update with seven notes shows six and the link, and the link shows only its notes on the wall.
+
+### 5. Ship
 
 Typecheck, test, PR, CI, `npm run preview:seed` and `npm run preview`, and hand Melissa the preview link with what to try.
 
@@ -136,6 +147,8 @@ Typecheck, test, PR, CI, `npm run preview:seed` and `npm run preview`, and hand 
 - The wall's CSS columns fill top to bottom, so "newest first" reads down the first column, then the next. Verified at 375px (one column, no sideways scroll) and desktop width (two to three columns); a signed-out visit lands on the gate.
 - `src/linkify.test.ts` already covers `javascript:` and `data:` text, so the unit tests need no new linkify case.
 - Each access rule in `server/notes.ts` and `addEmail`'s name rule was removed in turn; every removal failed at least one test.
+
+- Verified the side-by-side feed at an emulated 1280px width (the pane itself is under the `lg` breakpoint), stacked notes at 375px with no sideways scroll, read-only names in both forms, "See all 7 notes" opening the wall filtered with its bar, "Show all notes" clearing it, and Back restoring it.
 
 ## Cut for speed
 
