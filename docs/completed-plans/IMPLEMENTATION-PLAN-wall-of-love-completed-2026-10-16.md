@@ -133,7 +133,7 @@ From Melissa's first look at the preview:
 
 **Verify:** at 375px and desktop width: a named reader sees their name read-only in both forms; a nameless reader types it once; notes sit beside the update on desktop and below on phones; an update with seven notes shows six and the link, and the link shows only its notes on the wall.
 
-### 5. Ship
+### 5. Ship ✅
 
 Typecheck, test, PR, CI, `npm run preview:seed` and `npm run preview`, and hand Melissa the preview link with what to try.
 
