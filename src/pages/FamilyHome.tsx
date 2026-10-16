@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ErrorMessage, Field } from "@/components/page";
+import { EmailInput, ErrorMessage, Field } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -128,7 +128,7 @@ function EmailPrompt(props: { slug: string; reload: () => void; storedName: stri
             />
           </Field>
           <Field label="Your email">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus={storedName !== null} />
+            <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus={storedName !== null} />
           </Field>
           <div className="flex gap-2">
             <Button disabled={busy}>Keep me updated</Button>

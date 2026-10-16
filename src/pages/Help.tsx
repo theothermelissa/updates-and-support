@@ -1,7 +1,7 @@
 import { CheckIcon, EllipsisVerticalIcon, XIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { PageTitle } from "@/components/familyShell";
-import { Confirm, ErrorMessage, Field, LinkedText, PhoneLink } from "@/components/page";
+import { Confirm, EmailInput, ErrorMessage, Field, LinkedText, PhoneLink } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -210,8 +210,7 @@ function RequestCard(props: {
           )}
           {asking && props.needsEmail && (
             <Field label={<span>Your email <span className="font-normal text-muted-foreground">(only the family will see this)</span></span>}>
-              <Input
-                type="email"
+              <EmailInput
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

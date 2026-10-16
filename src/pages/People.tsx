@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { PageTitle } from "@/components/familyShell";
-import { Confirm, ErrorMessage, Field, PhoneLink } from "@/components/page";
+import { Confirm, EmailInput, ErrorMessage, Field, PhoneLink } from "@/components/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -307,7 +307,7 @@ function FamilyMembers({
               <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
             </Field>
             <Field label="Email">
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} required />
             </Field>
             {confirmingAdd ? (
               <Confirm yes="Yes, add" onYes={add} onCancel={() => setConfirmingAdd(false)}>
@@ -352,7 +352,7 @@ function AddSupporter({ onAdd }: { onAdd: (name: string, email: string) => Promi
             <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
           </Field>
           <Field label="Email">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} required />
           </Field>
           <Button disabled={busy}>Add supporter</Button>
         </form>

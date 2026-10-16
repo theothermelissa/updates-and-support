@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { linkify } from "../lib/links.js";
 
@@ -49,6 +50,25 @@ export function Confirm(props: { children: ReactNode; yes: string; onYes: () => 
         Cancel
       </Button>
     </div>
+  );
+}
+
+// An email box whose warning for a malformed address is our own wording, not the browser's,
+// which differs between browsers and talks about "@" symbols.
+export function EmailInput(props: Omit<ComponentProps<typeof Input>, "type">) {
+  return (
+    <Input
+      {...props}
+      type="email"
+      onInvalid={(e) => {
+        e.currentTarget.setCustomValidity(e.currentTarget.validity.typeMismatch ? "Please enter a valid email address." : "");
+        props.onInvalid?.(e);
+      }}
+      onInput={(e) => {
+        e.currentTarget.setCustomValidity("");
+        props.onInput?.(e);
+      }}
+    />
   );
 }
 
