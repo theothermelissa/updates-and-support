@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
 import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { ReactionControls } from "@/components/reactions";
