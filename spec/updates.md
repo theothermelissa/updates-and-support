@@ -123,6 +123,8 @@ Video notes are stored and delivered by Cloudinary, which also converts them to 
 
 An update's notes are always shown, newest first, as colored cards: beside the update's card on a wide screen, and below it on a phone. Up to six are shown; when there are more, a "See all 14 notes" link opens the wall showing only that update's notes.
 
+On a wide screen, an update with no notes has an empty note card beside it instead: note-sized, filled with the palette's Oak color, with a dashed border so it reads as empty rather than as a blank note, and a "Leave a note" button in its center that opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an empty card under every note-less update would crowd the feed; the footer's button serves instead. The empty card goes away when the update's first note appears, including when that note arrives through the feed's regular check.
+
 ### The wall
 
 The wall, at `/f/<slug>/wall` and linked from "Notes" beside the feed's menu, shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.

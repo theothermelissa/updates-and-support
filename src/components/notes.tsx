@@ -64,6 +64,22 @@ export function NoteCard(props: {
   );
 }
 
+// Holds a note's place beside an update with none yet: an Oak card, dashed so it reads as
+// empty, with a button that opens the note dialog.
+export function EmptyNoteCard({ onLeave }: { onLeave: () => void }) {
+  const colors = PALETTE.oak;
+  return (
+    <div
+      className="flex min-h-36 items-center justify-center rounded-xl border-2 border-dashed p-4"
+      style={{ backgroundColor: colors.fill, borderColor: `${colors.text}4D` }}
+    >
+      <Button variant="outline" className="h-11 rounded-full px-4" onClick={onLeave}>
+        Leave a note
+      </Button>
+    </div>
+  );
+}
+
 // A blurred, enlarged copy of a video's still that fills its box behind the video, so a
 // video of another shape has no empty bars. Enlarged so the blur's soft edges fall outside
 // the box. A video source shows its frame at the given time, for a video not yet uploaded.

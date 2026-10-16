@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
-import { NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
+import { EmptyNoteCard, NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
 import { ReactionControls } from "@/components/reactions";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
@@ -306,6 +306,12 @@ function UpdateItem(props: {
         </CardFooter>
       </Card>
       <NoteDialog open={writing} onOpenChange={setWriting} slug={props.slug} name={props.name} onLeave={props.onLeaveNote} />
+      {noteCount === 0 && (
+        // Only on a wide screen, where notes sit beside the update; on a phone it would crowd the feed.
+        <aside className="hidden min-w-0 flex-1 lg:block" aria-label="Notes">
+          <EmptyNoteCard onLeave={() => setWriting(true)} />
+        </aside>
+      )}
       {noteCount > 0 && (
         <aside className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-1" aria-label="Notes">
           {update.notes.slice(0, NOTES_SHOWN).map((note) => (
