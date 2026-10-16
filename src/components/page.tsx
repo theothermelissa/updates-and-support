@@ -53,7 +53,8 @@ export function Confirm(props: { children: ReactNode; yes: string; onYes: () => 
 }
 
 // Plain text with its line breaks kept and its web addresses as links.
-export function LinkedText({ text, className }: { text: string; className?: string }) {
+// Children follow the text on its last line.
+export function LinkedText({ text, className, children }: { text: string; className?: string; children?: ReactNode }) {
   return (
     <p className={`break-words whitespace-pre-wrap ${className ?? ""}`}>
       {linkify(text).map((segment, i) =>
@@ -65,6 +66,7 @@ export function LinkedText({ text, className }: { text: string; className?: stri
           segment.text
         ),
       )}
+      {children}
     </p>
   );
 }

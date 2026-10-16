@@ -121,7 +121,9 @@ The local database holds several families, so `scripts/seed-preview.ts` refuses 
 **How to apply:**
 - Run `npm run db:deploy` first.
 - Make a fictional family by piping answers into `npm run family:create`.
-- To act as a family member without a sign-in email, write a scratchpad `.mts` script that calls the `server/` functions with absolute imports, and run it with `npx tsx --env-file=.env`.
+- To act as a family member without a sign-in email, write a scratchpad `.mts` script that calls the `server/` functions with absolute imports, and run it with `npx tsx --env-file=.env`. One that creates a `sign_in` link with `newSignInLink` and prints its `/sign-in#token=` URL uses the real flow; the page then needs its Sign in button pressed.
+- To be a family member and a supporter at once, open one tab on `localhost` and the other on `127.0.0.1`: cookies are per host, so the two sessions don't replace each other.
+- To work on another branch while this checkout has uncommitted work, use `git worktree add` in `~/repos/`, copy `.env` and `.vercel` into it, run `npm ci` and `npx prisma generate` (npm skips Prisma's install scripts), and start it on its own port.
 
 ### Cloud sessions differ from Melissa's Mac
 
@@ -175,7 +177,7 @@ With a custom viewport size set, the pane's screenshots can show a stale frame f
 
 **Why:** while checking the wall's filter, screenshots showed the unfiltered page while the DOM had already updated. That nearly passed as a bug.
 
-**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it.
+**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane's `hover` action doesn't trigger CSS `:hover`, so check hover-only controls by keyboard focus there and ask Melissa to hover in her own browser. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it.
 
 ### Testing video notes in the browser pane
 

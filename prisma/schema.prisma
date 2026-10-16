@@ -22,6 +22,7 @@ model Family {
   people       Person[]
   gateAttempts GateAttempt[]
   updates      Update[]
+  helpRequests HelpRequest[]
 }
 
 enum Role {
@@ -59,6 +60,7 @@ model Person {
   noteReactions NoteReaction[]
   notes         Note[]
   videoUploads  VideoUpload[]
+  helpOffers    HelpOffer[]
 
   @@unique([familyId, email])
 }
@@ -206,6 +208,34 @@ model VideoUpload {
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@index([personId, createdAt])
+}
+
+// Something the family needs. slots is how many people can take it; null means no limit.
+model HelpRequest {
+  id        String   @id @default(cuid())
+  familyId  String
+  body      String
+  slots     Int?
+  createdAt DateTime @default(now())
+
+  family Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  offers HelpOffer[]
+
+  @@index([familyId, createdAt])
+}
+
+// One person's offer to take a request. Withdrawing deletes the row.
+model HelpOffer {
+  id        String   @id @default(cuid())
+  requestId String
+  personId  String
+  createdAt DateTime @default(now())
+
+  request HelpRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  person  Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, personId])
+  @@index([personId])
 }
 
 // A wrong answer at a family's gate, counted against per-browser and per-network limits.

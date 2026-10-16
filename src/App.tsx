@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api.js";
 import { FamilyHome } from "./pages/FamilyHome.js";
+import { Help } from "./pages/Help.js";
 import { FamilySignIn } from "./pages/FamilySignIn.js";
 import { NotFound } from "./pages/NotFound.js";
 import { People } from "./pages/People.js";
@@ -9,7 +10,7 @@ import { Unsubscribe } from "./pages/Unsubscribe.js";
 import { Verify } from "./pages/Verify.js";
 import { Wall } from "./pages/Wall.js";
 
-const FAMILY_PATH = /^\/f\/([a-z0-9-]+)(?:\/(family|sign-in|verify|unsubscribe|people|wall))?\/?$/;
+const FAMILY_PATH = /^\/f\/([a-z0-9-]+)(?:\/(family|sign-in|verify|unsubscribe|people|wall|help))?\/?$/;
 
 // Routes on the path. A handful of routes don't justify a router dependency.
 export function App() {
@@ -62,6 +63,7 @@ function FamilyPage({ slug, page }: { slug: string; page?: string }) {
   if (page === "unsubscribe") return <Unsubscribe slug={current} />;
   if (page === "people") return <People slug={current} />;
   if (page === "wall") return <Wall slug={current} />;
+  if (page === "help") return <Help slug={current} />;
   return <FamilyHome slug={current} />;
 }
 
