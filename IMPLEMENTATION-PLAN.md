@@ -41,3 +41,7 @@ None automated. No server code or access rule changes: every page still gets its
 - **No loading indicator.** While a page fetches its data, the area under the bar is empty for a moment.
 - **No scroll restoration on Back.** Back returns to the top of the previous page, not where the reader was.
 - **Drafts aren't protected.** Leaving a page with an unposted update or note loses it, as a full page load does today.
+
+## Verification results
+
+All steps are implemented. On the PR's preview, signed in as the test family member, with the test family as the site's root family (so Updates lives at `/`): moving through Updates, How to help, Notes, and People kept the same `<header>` node and one document load throughout; the current page's link and the family's name on Updates left history unchanged; the name returned to `/` from other pages; Back and Forward showed the matching page; a ⌘-click wasn't prevented; no console errors. Not checked here: the feed's "See all notes" link (the test family has no update with enough notes), the supporter view, and signing out.
