@@ -57,12 +57,21 @@ export function NoteCard(props: { note: Note; canDelete: boolean; onDelete: () =
 
 // The video's still in a 16:9 box, shown whole on the note's color, with a play button. The
 // video plays in the same box, and starting it pauses any other video note that's playing.
-// Until the host has converted the video, the still doesn't load and the box says so.
+// Until the host has converted the video, the still doesn't load and the box says so; when
+// the server couldn't make its links, the box says that instead.
 function VideoStill({ note, video }: { note: Note; video: NonNullable<Note["video"]> }) {
   const [playing, setPlaying] = useState(false);
   const [processing, setProcessing] = useState(false);
   const colors = PALETTE[note.color];
   const box = "relative block aspect-video w-full overflow-hidden rounded-lg";
+
+  if ("unavailable" in video) {
+    return (
+      <p className={cn(box, "flex items-center justify-center p-4 text-sm")} style={{ backgroundColor: colors.fill }}>
+        This video can't be shown right now.
+      </p>
+    );
+  }
 
   if (playing) {
     return (

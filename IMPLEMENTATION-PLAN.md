@@ -76,3 +76,4 @@ The rest is UI and timing, which the project's testing rules leave to hand and b
 
   React's development double mount opens the camera twice; the first stream is stopped by the cleanup.
 - **"Cancel countdown."** During the countdown, a plain "Cancel" sat beside the dialog's own "Cancel," so the countdown's button says "Cancel countdown."
+- **A malformed `CLOUDINARY_URL` took down the whole feed.** On the preview, a Preview value that didn't start with `cloudinary://` made the Cloudinary SDK throw as it loaded. That crashed the updates function for every family, video or not. The SDK now loads behind a guard in `server/videos.ts`, so a bad value breaks only video calls. A video note whose links can't be made comes back as `unavailable`, and its card says "This video can't be shown right now." An integration test covers the feed and the wall with failing links, and fails without the guard.

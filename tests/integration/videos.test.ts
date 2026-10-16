@@ -177,6 +177,18 @@ describe("who sees a video", () => {
   });
 });
 
+describe("when the video host can't make links", () => {
+  it("still shows the feed and the wall, with the video marked unavailable", async () => {
+    const { ana, sam, update, videos } = await setUp();
+    await attach(videos, sam, update.id, await upload(videos, sam));
+    await createNote(db, sam, { updateId: update.id, body: "Written", color: "sky" }, videos.store);
+    videos.failUrls(true);
+    const feed = (await listUpdates(db, ana, videos.store)).find((u) => u.id === update.id)!;
+    expect(feed.notes.map((n) => n.video)).toEqual([null, { unavailable: true }]);
+    expect((await listNotes(db, ana, videos.store)).map((n) => n.video)).toEqual([null, { unavailable: true }]);
+  });
+});
+
 describe("deleting a video note", () => {
   it("lets only the author or a family member of this family delete it, destroying the video", async () => {
     const { ana, chidi, sam, tess, olu, update, videos } = await setUp();

@@ -91,6 +91,7 @@ export function fakeVideoStore() {
   const videos = new Map<string, number>();
   const calls: { method: keyof VideoStore; publicIds: string[] }[] = [];
   let failDestroy = false;
+  let failUrls = false;
   let hold: Promise<void> | null = null;
   let release = () => {};
   const store: VideoStore = {
@@ -110,6 +111,7 @@ export function fakeVideoStore() {
       for (const id of publicIds) videos.delete(id);
     },
     urls(publicId) {
+      if (failUrls) throw new Error("Video host misconfigured");
       return { src: `https://videos.example.test/${publicId}.mp4`, poster: `https://videos.example.test/${publicId}.jpg` };
     },
   };
@@ -118,6 +120,7 @@ export function fakeVideoStore() {
     videos,
     calls,
     failDestroy: (fail: boolean) => (failDestroy = fail),
+    failUrls: (fail: boolean) => (failUrls = fail),
     holdDestroy() {
       hold = new Promise((resolve) => (release = resolve));
       return () => release();

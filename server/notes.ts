@@ -21,8 +21,9 @@ export type NoteView = {
   id: string;
   updateId: string;
   body: string;
-  // Signed links for a video note, built only for someone allowed to see the note.
-  video: { src: string; poster: string } | null;
+  // Signed links for a video note, built only for someone allowed to see the note, or
+  // `unavailable` when the video host can't make them, so one video can't break the page.
+  video: { src: string; poster: string } | { unavailable: true } | null;
   color: NoteColor;
   authorName: string;
   authorIsFamily: boolean;
@@ -56,7 +57,7 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
     id: note.id,
     updateId: note.updateId,
     body: note.body,
-    video: note.videoId ? store.urls(note.videoId) : null,
+    video: note.videoId ? videoLinks(store, note.videoId) : null,
     color: note.color,
     // Notes are only written with a name.
     authorName: note.author.name ?? "",
@@ -64,6 +65,15 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
     createdAt: note.createdAt,
     mine: note.authorId === viewerId,
   };
+}
+
+function videoLinks(store: VideoStore, publicId: string): NoteView["video"] {
+  try {
+    return store.urls(publicId);
+  } catch (err) {
+    console.error("Couldn't make video links", err);
+    return { unavailable: true };
+  }
 }
 
 // Gives the person a ticket to upload one video straight to the video host, and the signed
