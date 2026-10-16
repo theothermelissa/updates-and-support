@@ -334,10 +334,14 @@ function RequestForm(props: {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <h4 className="font-semibold">What Would Help</h4>
-      <Field label="Description">
-        <Textarea value={body} onChange={(e) => setBody(e.target.value)} required maxLength={2000} rows={4} />
-      </Field>
+      <Textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        required
+        maxLength={2000}
+        rows={4}
+        aria-label="What would help"
+      />
       <div className="flex flex-wrap gap-4">
         <Field label="Date (optional)">
           <Input
