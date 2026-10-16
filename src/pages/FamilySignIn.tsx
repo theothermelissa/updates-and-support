@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from "react";
-import { ErrorMessage, Field, PageShell } from "@/components/page";
+import { EmailInput, ErrorMessage, Field, PageShell } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { api } from "../api.js";
 
 // Family members and returning supporters both sign in here; the server sends the
@@ -31,7 +30,7 @@ export function FamilySignIn({ slug }: { slug: string }) {
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
             <Field label="Email">
-              <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <EmailInput required value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
             <Button disabled={state === "sending"}>Send sign-in link</Button>
           </form>

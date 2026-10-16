@@ -37,8 +37,10 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   Once a network reaches 30 wrong answers in an hour, every answer from it is refused, correct ones included. So one guesser on hospital or school Wi-Fi can lock out real supporters there for an hour. Watch for reports after the gate ships; if it happens, consider letting a correct answer through for a browser with no wrong answers of its own.
 - **2026-10-12** — Run a manual Reddit search on CaringBridge and alternatives.
   The CaringBridge research agent couldn't reach Reddit, so the user-sentiment findings in `docs/research/caringbridge.md` come from app stores, review sites, and forums. Worth 20 minutes before the post-MVP features are specced.
-- **2026-10-16** — Add "Require phone" to help requests.
-  Cut from help request requirements because the phone-notifications work owns phone numbers. It would mirror Require email: asked only when the record has none, stored on the offer, seen only by family.
+- **2026-10-16** — Show supporters who gave only a phone number on the People page.
+  The People page lists only supporters with an email, so a phone number given without one shows only beside that supporter's offers. Cut from supporter phone numbers for speed.
+- **2026-10-16** — Let a family member add or edit a supporter's phone number.
+  Today only the supporter can set it. Useful when a supporter tells the family their number in person. Cut from supporter phone numbers for speed.
 - **2026-10-12** — Give `/` a simple page.
   The site root shows "Not found" because the spec only defines family addresses. A one-line page naming the app would reassure a stray visitor, without listing or linking any family.
 - **2026-10-12** — Switch database URLs to `sslmode=verify-full`.

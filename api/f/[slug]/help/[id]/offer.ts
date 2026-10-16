@@ -4,7 +4,7 @@ import { sendEmails } from "../../../../../server/email.js";
 import { offerHelp } from "../../../../../server/help.js";
 import { familyContext, jsonBody, methodNotAllowed, param, sendRequestError, unauthorized } from "../../../../../server/http.js";
 
-// POST { helping, name?, email? }: the signed-in person offers to help, or withdraws.
+// POST { helping, name?, email?, phone? }: the signed-in person offers to help, or withdraws.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return methodNotAllowed(res);
   const ctx = await familyContext(getDb(), req, res);

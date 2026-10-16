@@ -151,13 +151,21 @@ Three places save a name:
 
 Someone with no name doesn't see "Edit name." They give one by leaving a note or adding an email. After saving, the page reloads what it shows, so the new name appears at once.
 
+## Your phone number
+
+A supporter can keep a phone number on their record so the family can call or text them, for example to coordinate on a request they offered to help with. It's optional, and only the family's family members ever see it: on the People page and beside the supporter's offers on "How to help" (see [updates.md](updates.md#who-has-offered)). Nothing is ever sent to it; the app doesn't call or text anyone.
+
+The navigation bar's menu shows supporters "Add phone number," or "Edit phone number" once they have one. It opens a dialog saying only the family will see the number, with the number filled in when there is one. "Save" stores it, and saving an empty box clears it. "Cancel" leaves it as it was. Offering on a request that requires a phone number also asks for one when the supporter has none (see [updates.md](updates.md#offering-to-help)). Those are the only two places a phone number is given; no one else can set or change a person's phone number.
+
+A phone number is kept as typed, after trimming. It can contain only digits, spaces, and `+ - ( ) .`, with 7 to 15 digits, so numbers from any country fit. Two people in a family can share a number. Family members can't add one, since no one would see it, and a supporter who becomes a family member loses theirs.
+
 ## Managing supporters
 
-Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately.
+Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, phone number, when they have one, as a link that calls it on a phone, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately.
 
 Supporters without an email aren't listed, even when they've given a name with a note. Instead the page shows how many devices are signed in without a verified email. Each device counts separately, so one person reading on a phone and a laptop counts twice, and listed supporters who haven't verified yet count too.
 
-Supporters never see this page, the list, the count, or each other's details; the server refuses them to anyone but a family member of that family. The one thing supporters see of each other is the name on a reaction or a note (see [updates.md](updates.md#reactions) and [updates.md](updates.md#notes)). Supporters never see who else offered to help (see [updates.md](updates.md#how-to-help)).
+Supporters never see this page, the list, the count, or each other's details; the server refuses them to anyone but a family member of that family. Supporters never see each other's phone numbers. The one thing supporters see of each other is the name on a reaction or a note (see [updates.md](updates.md#reactions) and [updates.md](updates.md#notes)). Supporters never see who else offered to help (see [updates.md](updates.md#how-to-help)).
 
 A family member can **remove** a supporter after confirming. Removal:
 

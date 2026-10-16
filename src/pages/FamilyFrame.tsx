@@ -51,7 +51,7 @@ export function FamilyFrame({ slug, home, page }: { slug: string; home: string; 
       me={me}
       page={page}
       column={page === "help" || page === "people"}
-      onNameChanged={load}
+      onPersonChanged={load}
     >
       {page === "updates" && <FamilyHome {...props} />}
       {page === "help" && <Help {...props} />}

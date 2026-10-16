@@ -44,6 +44,14 @@ When a PR's preview has built, run `npm run preview:seed` and `npm run preview` 
 
 **How to apply:** the scripts are described in README → Deployment. `npm run preview` prints the branch's stable address, which always shows the latest push; send that one, not a push's own address. To sign the browser pane in as the family member, run `npm run preview:sign-in` and navigate the pane to the printed link, then press Sign in; the pane stays signed in on that address for the whole PR. The pane must be signed in to Vercel first. Never put a sign-in link in a PR description or commit. Always put the preview link in both the closing message and the PR description; Melissa asked for this on 2026-10-16. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
 
+### Link the spec and plan when asking for approval
+
+When asking Melissa to approve a spec or plan, link each changed file (for example [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md), [spec/access.md](spec/access.md)) in that same message.
+
+**Why:** she reviews them in the app's file pane, and asked for this on 2026-10-16 after an approval request named the files without linking them.
+
+**How to apply:** any approval ask, including one in the wrap-up box, comes after a closing line that links every spec and plan file the change touched.
+
 ### The community question keeps casual observers out, nothing more
 
 Don't add friction, such as confirmation steps or forced sign-outs, to defend against someone who already knows the answer. Server-side authorization, family isolation, and access tests stay non-negotiable.
