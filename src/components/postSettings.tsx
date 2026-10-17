@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { BellCheckIcon, BellMinusIcon, ChevronDownIcon, FaceSlightlySmilingIcon, FaceSlightlySmilingPlusIcon } from "lucide-react";
+import {
+  BellCheckIcon,
+  BellMinusIcon,
+  ChevronDownIcon,
+  FaceSlightlySmilingIcon,
+  FaceSlightlySmilingPlusIcon,
+  MessageSquareIcon,
+  MessageSquareOffIcon,
+} from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,12 +17,14 @@ import { inCatalogOrder, isUsual, MAX_REACTIONS, reactionFor, REACTIONS, USUAL_R
 
 // A button showing an update's settings as icons, which opens them below it.
 // Closed when it mounts; the form remounts it (with a new key) to start fresh. Without
-// onNotify, as when editing, it has only the reactions setting.
+// onNotify, as when editing, it has only the reactions and notes settings.
 export function PostSettings(props: {
   notify?: boolean;
   onNotify?: (notify: boolean) => void;
   reactions: string[];
   onReactions: (kinds: string[]) => void;
+  allowNotes: boolean;
+  onAllowNotes: (allow: boolean) => void;
   disabled?: boolean;
   children?: React.ReactNode;
 }) {
@@ -44,6 +54,9 @@ export function PostSettings(props: {
           <SettingIcon label={usual ? "Usual reactions" : "Chosen reactions"}>
             {usual ? <FaceSlightlySmilingIcon /> : <FaceSlightlySmilingPlusIcon />}
           </SettingIcon>
+          <SettingIcon label={props.allowNotes ? "Allows notes" : "No notes"}>
+            {props.allowNotes ? <MessageSquareIcon /> : <MessageSquareOffIcon />}
+          </SettingIcon>
           <ChevronDownIcon aria-hidden className={cn("transition-transform", open && "rotate-180")} />
         </Button>
       </div>
@@ -66,6 +79,14 @@ export function PostSettings(props: {
             onChoosing={setChoosing}
             disabled={disabled}
           />
+          <Label>
+            <Checkbox
+              checked={props.allowNotes}
+              onCheckedChange={(checked) => props.onAllowNotes(checked === true)}
+              disabled={disabled}
+            />
+            Allow notes
+          </Label>
         </div>
       )}
     </>

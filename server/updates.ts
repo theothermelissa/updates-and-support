@@ -20,12 +20,16 @@ export type UpdateView = {
   content: Doc;
   // Signed links for a video update, or `unavailable` when the host can't make them.
   video: { src: string; poster: string } | { unavailable: true } | null;
+  // Whether anyone may leave a new note; the notes already on it stay either way.
+  allowNotes: boolean;
   authorName: string;
   createdAt: Date;
   editedAt: Date | null;
 };
 
 export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[] };
+
+type UpdateInput = { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown; allowNotes?: unknown };
 
 // Everyone signed in to the family reads every update, newest first, with its reactions and
 // its notes, newest first.
@@ -68,20 +72,21 @@ export async function listUpdates(
 export async function createUpdate(
   db: Db,
   person: Person,
-  input: { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown },
+  input: UpdateInput,
   notifyWith?: SendEmails,
   settings: PhotoSettings = NO_PHOTOS,
   store: VideoStore = cloudinaryStore,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
   const reactionKinds = reactionSetFrom(input);
-  if (input.video !== undefined) return createVideoUpdate(db, person, input, reactionKinds, notifyWith, store);
+  const allowNotes = allowNotesFrom(input) ?? (await allowNotesByDefault(db, person.familyId));
+  if (input.video !== undefined) return createVideoUpdate(db, person, input, reactionKinds, allowNotes, notifyWith, store);
   const { content, body } = contentFrom(input, settings, { familyId: person.familyId });
   const ids = [...publicIdsIn(content)];
   const update = await savePhoto(async () =>
     db.$transaction(async (tx) => {
       const created = await tx.update.create({
-        data: { familyId: person.familyId, authorId: person.id, content, body, reactionKinds },
+        data: { familyId: person.familyId, authorId: person.id, content, body, reactionKinds, allowNotes },
         include: { author: { select: { name: true } } },
       });
       if (ids.length > 0) {
@@ -105,8 +110,9 @@ export async function createUpdate(
 async function createVideoUpdate(
   db: Db,
   person: Person,
-  input: { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown },
+  input: UpdateInput,
   reactionKinds: string[],
+  allowNotes: boolean,
   notifyWith: SendEmails | undefined,
   store: VideoStore,
 ): Promise<UpdateView> {
@@ -126,7 +132,7 @@ async function createVideoUpdate(
       }
       await lockUnusedVideo(tx, person.id, videoId);
       return tx.update.create({
-        data: { familyId: person.familyId, authorId: person.id, body: "[Video]", videoId, reactionKinds },
+        data: { familyId: person.familyId, authorId: person.id, body: "[Video]", videoId, reactionKinds, allowNotes },
         include: { author: { select: { name: true } } },
       });
     });
@@ -151,7 +157,7 @@ export async function editUpdate(
   db: Db,
   person: Person,
   id: string,
-  input: { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown },
+  input: UpdateInput,
   settings: PhotoSettings = NO_PHOTOS,
   store: VideoStore = cloudinaryStore,
 ): Promise<UpdateView> {
@@ -159,6 +165,7 @@ export async function editUpdate(
   if (input.video !== undefined) throw new RequestError(400, "A video update can't be edited");
   // Absent leaves the update's set as it is.
   const reactionKinds = input.reactions === undefined ? undefined : parseReactionSet(input.reactions);
+  const allowNotes = allowNotesFrom(input);
   const { update, dropped } = await savePhoto(() =>
     db.$transaction(async (tx) => {
       const [row] = await tx.$queryRaw<{ id: string; videoId: string | null }[]>`
@@ -178,7 +185,7 @@ export async function editUpdate(
       }
       const updated = await tx.update.update({
         where: { id },
-        data: { content, body, reactionKinds, editedAt: new Date() },
+        data: { content, body, reactionKinds, allowNotes, editedAt: new Date() },
         include: { author: { select: { name: true } } },
       });
       return { update: updated, dropped: removed };
@@ -204,7 +211,7 @@ export async function deleteUpdate(
   const photoIds = await db.$transaction(
     async (tx) => {
       // Locks the update, so a note can't be attached while its videos are being deleted: a
-      // note's insert waits on this lock and then finds the update gone. An edit waits too.
+      // note waits on this lock at its read of the update, then finds it gone. An edit waits too.
       const [update] = await tx.$queryRaw<{ id: string; videoId: string | null }[]>`
         SELECT id, "videoId" FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
       if (!update) throw new RequestError(404, "Update not found");
@@ -227,6 +234,24 @@ export async function deleteUpdate(
 // A new update's reactions: the usual six unless the request chooses a set.
 function reactionSetFrom(input: { reactions?: unknown }): string[] {
   return input.reactions === undefined ? [...USUAL_REACTIONS] : parseReactionSet(input.reactions);
+}
+
+// Absent is undefined: a new update takes the family's default, an edit keeps its setting.
+function allowNotesFrom(input: { allowNotes?: unknown }): boolean | undefined {
+  if (input.allowNotes === undefined) return undefined;
+  if (typeof input.allowNotes !== "boolean") throw new RequestError(400, "Expected allowNotes to be true or false");
+  return input.allowNotes;
+}
+
+async function allowNotesByDefault(db: Db, familyId: string): Promise<boolean> {
+  const family = await db.family.findUniqueOrThrow({ where: { id: familyId }, select: { allowNotesByDefault: true } });
+  return family.allowNotesByDefault;
+}
+
+// What the post form starts from: for family members only, since only they post.
+export async function newUpdateDefaults(db: Db, person: Person): Promise<{ allowNotesByDefault: boolean } | null> {
+  if (person.role !== "family") return null;
+  return { allowNotesByDefault: await allowNotesByDefault(db, person.familyId) };
 }
 
 // A photo already stored for another update hits the unique public id. Nothing is saved.
@@ -284,6 +309,7 @@ function view(
     body: string;
     content: unknown;
     videoId?: string | null;
+    allowNotes: boolean;
     createdAt: Date;
     editedAt: Date | null;
     author: { name: string | null };
@@ -295,6 +321,7 @@ function view(
     body: update.body,
     content: shownContent(update.content, update.body),
     video: update.videoId ? shownVideo(store, update.videoId) : null,
+    allowNotes: update.allowNotes,
     // Authors are family members, who always have a name.
     authorName: update.author.name ?? "",
     createdAt: update.createdAt,
