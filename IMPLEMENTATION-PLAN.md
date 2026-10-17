@@ -37,3 +37,9 @@ No UI tests; the People page and the shared picker are checked in the browser pa
 - A reaction arriving at the moment the set changes can land with an emoji that was just dropped. It only affects which emoji shows, not who sees anything; updates have the same race. No lock.
 - Two family members saving at once: the later save wins, with no warning.
 - The People page doesn't refresh the set while open; a save from another family member shows on reload.
+
+## Discoveries
+
+- `ReactionChooser` is controlled (`choosing` and `onChoosing` come from its owner). Post settings unmounts its contents when closed, so a chooser that kept its own `choosing` state would reopen checked after "Use the usual reactions" was unchecked with the usual six still selected.
+- All nine rule removals tried (each of the four read sites, the helper's family filter, clear-always-allowed, `requireFamilyMember`, writing by family, validation) failed at least one test.
+- In the browser pane, clicking several grid buttons in one synchronous script loses all but the last toggle, because each click sees the same pre-render state. Await between clicks.
