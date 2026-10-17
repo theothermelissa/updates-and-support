@@ -94,7 +94,7 @@ export function PostSettings(props: {
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap gap-0.5">
+              <div className="flex flex-wrap gap-1.5">
                 {REACTIONS.map((x) => {
                   const on = reactions.includes(x.kind);
                   return (
