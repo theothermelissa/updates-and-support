@@ -30,7 +30,8 @@ export function RichText({ doc, className, trailing }: { doc: unknown; className
   return (
     <div className={`${DOC_CLASSES} ${className ?? ""}`}>
       {content}
-      {ownLine && <p>{trailing}</p>}
+      {/* Pulled up into the paragraph gap, so it sits just under the list or quote it follows. */}
+      {ownLine && <p className="mt-[calc(0.25rem-1lh)]">{trailing}</p>}
     </div>
   );
 }

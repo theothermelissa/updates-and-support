@@ -86,6 +86,6 @@ it("ends the last paragraph with trailing, or puts it on its own line after a li
     "<p>a</p><p>b<span>(2)</span></p>",
   );
   expect(draw(doc({ type: "paragraph", content: [text("a")] }, list))).toBe(
-    "<p>a</p><ul><li><p>one</p></li></ul><p><span>(2)</span></p>",
+    "<p>a</p><ul><li><p>one</p></li></ul><p class=\"mt-[calc(0.25rem-1lh)]\"><span>(2)</span></p>",
   );
 });
