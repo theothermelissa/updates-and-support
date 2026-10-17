@@ -29,3 +29,4 @@ Browser checks in the pane, which blocks the camera: opening each tab shows the 
 - Typecheck and all 354 tests pass locally. CI passes.
 - On the preview, in the browser pane, which blocks the camera: opening the post form's Video tab shows "Waiting for camera access…" at once, then the camera message and "Upload a video". Opening the note dialog's "Video note" tab does the same.
 - Change made while building: a recording that produced no data used to stop the camera and return to the button. Now it keeps the camera on and returns to the live preview, since there's no longer a button that would turn the camera back on.
+- Melissa's check in Chrome found slivers at the sides of the live view: the frame's 4px border made the view inside it narrower than 16:9. The frame is now padding around an exactly 16:9 view.

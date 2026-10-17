@@ -20,6 +20,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 - **2026-10-17** — Add "Allow notes," per update and family-wide.
   The last step after per-update and family-wide note reactions: a per-update checkbox in Post settings (default on) and a family-wide switch on the People page (default on). Turning notes off keeps existing notes visible and deletable and removes only "Leave a note." Still to decide: whether the family-wide switch overrides the per-update one or only sets its default.
+- **2026-10-17** — Give video updates a note color.
+  Melissa expected the post form's Video tab to have the note dialog's color swatches. A color on a video update would need a new column, swatches on the Video tab, and the frame and backdrop in the feed; decide too whether text updates get one. Came up while adding the live camera preview.
 - **2026-10-17** — Let a family member change a video update's post settings.
   Video updates can't be edited, so their reactions stay as posted (and, once "Allow notes" exists, so will that). A settings-only edit would fix a regretted choice.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
