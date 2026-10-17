@@ -69,6 +69,7 @@ export function FamilyFrame({ slug, home, page }: { slug: string; home: string; 
         me={me}
         page={page}
         column={page === "help" || page === "people"}
+        noCopy={page !== "people"}
         onPersonChanged={load}
       >
         {page === "updates" && <FamilyHome {...props} />}

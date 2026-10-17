@@ -1,5 +1,5 @@
 import { MenuIcon } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode, type SyntheticEvent } from "react";
 import { ErrorMessage, Field } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,7 +20,8 @@ export type FamilyPage = "updates" | "help" | "notes" | "people";
 // The frame of every page signed in to a family: the family's name and the navigation bar,
 // above one centered container. column keeps the content to the feed's width on a wide
 // screen, for pages that read top to bottom. onPersonChanged runs after the menu saves a name or phone number.
-// home is the address of Updates. Its links move between pages without a page load.
+// home is the address of Updates. Its links move between pages without a page load. noCopy
+// discourages copying the page's content, leaving text boxes and the editor alone.
 export function FamilyShell(props: {
   slug: string;
   home: string;
@@ -28,6 +29,7 @@ export function FamilyShell(props: {
   page: FamilyPage;
   onPersonChanged: () => void;
   column?: boolean;
+  noCopy?: boolean;
   children?: ReactNode;
 }) {
   const { slug, me, page } = props;
@@ -57,7 +59,12 @@ export function FamilyShell(props: {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-4 py-8 lg:max-w-6xl">
+    <main
+      className={`mx-auto max-w-2xl space-y-6 px-4 py-8 lg:max-w-6xl ${props.noCopy ? "no-copy" : ""}`}
+      onCopy={props.noCopy ? blockOutsideEditable : undefined}
+      onCut={props.noCopy ? blockOutsideEditable : undefined}
+      onContextMenu={props.noCopy ? blockOutsideEditable : undefined}
+    >
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">
           <a href={props.home} data-slot="family-name" onClick={followLink}>
@@ -135,6 +142,13 @@ export function FamilyShell(props: {
       )}
     </main>
   );
+}
+
+// Cancels a copy, cut, or right-click unless it happens in a text box or the editor. React
+// events bubble through portals, so the dialogs' text boxes are covered too.
+function blockOutsideEditable(e: SyntheticEvent) {
+  const target = e.target instanceof Element ? e.target : null;
+  if (!target?.closest("input, textarea, [contenteditable]")) e.preventDefault();
 }
 
 // A one-field dialog from the menu, for "Edit name" and the phone number. Saving stores the

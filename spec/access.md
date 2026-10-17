@@ -220,6 +220,8 @@ The People page has a **Privacy banner** section, after "Notes on new updates," 
 
 The banner is always shown; a family can reword it but not turn it off. It is a request, not a protection: nothing stops a reader from taking a screenshot.
 
+To back the request up, the Updates, How to help, and Notes pages discourage copying. Their text can't be selected, and copying, right-clicking, long-pressing for the phone's menu, and dragging images out of the page do nothing. Text boxes and the update editor are exempt, so people can still select, copy, and paste in what they're writing. The People page is exempt as well: only family members see it, and they may need to copy a supporter's email or phone number. This only slows a reader down; a screenshot, the browser's reader mode, or its developer tools still get the text.
+
 Only a family member of that family can change the wording; the server refuses anyone else.
 
 ## Changing the community question

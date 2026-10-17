@@ -22,7 +22,11 @@ The family's wording is one nullable column. `null` means "use the standard word
    - In `App.tsx`, every return that isn't `FamilyFrame` or `null` gets the standard banner: family sign-in, sign-in, verify, unsubscribe and not-found.
    - Loading states that render `null` show no banner.
 7. **People page.** Add a "Privacy banner" section after "Notes on new updates": a textarea, starting empty when `privacyNotice` is `null`, with `maxLength=300`, a Save banner button, an inline status, and the explanation and standard wording from the spec. A successful save calls `reloadMe()`, so the banner updates right away.
-8. **Types.** Add `privacyNotice: string | null` to `Me.family` in `src/api.ts`, and to the `People` type in `People.tsx`.
+8. **Copy discouragement.** `FamilyShell` gets a `noCopy` flag, which `FamilyFrame` sets on every page but People. When it's set:
+   - The shell's `<main>` gets a `no-copy` class. In `src/index.css`, that class sets `user-select: none`, `-webkit-touch-callout: none` (iOS's long-press menu), and `-webkit-user-drag: none` on images and videos.
+   - `input`, `textarea` and `[contenteditable]` inside it get `user-select: text` back.
+   - `onCopy`, `onCut` and `onContextMenu` on `<main>` call `preventDefault()` unless the event's target is inside one of those editable elements. React events bubble through portals, so the dialogs' text boxes are covered by the same exemption.
+9. **Types.** Add `privacyNotice: string | null` to `Me.family` in `src/api.ts`, and to the `People` type in `People.tsx`.
 
 ## Tests
 
@@ -39,6 +43,7 @@ Integration tests go in `tests/integration/privacyNotice.test.ts`, with the Rive
 - On the gate, before signing in, the standard banner shows at 360px with no sideways scroll.
 - Signed in as a family member, save custom wording on People and check that the banner changes right away and stays the same across Updates, How to help and Notes.
 - Clearing the box brings back the standard wording.
+- On Updates, How to help, and Notes, text can't be selected and right-click does nothing; the update editor, a note's text box, and People still allow selecting and copying.
 
 ## Cut for speed
 
