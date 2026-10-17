@@ -102,7 +102,7 @@ With a custom viewport size set, the pane's screenshots can show a stale frame f
 
 **Why:** while checking the wall's filter, screenshots showed the unfiltered page while the DOM had already updated. That nearly passed as a bug.
 
-**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane's `hover` action doesn't trigger CSS `:hover`, so check hover-only controls by keyboard focus there and ask Melissa to hover in her own browser. The pane can't type into native date and time inputs; set them with `form_input` on the input's ref. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it.
+**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane's `hover` action doesn't trigger CSS `:hover`, so check hover-only controls by keyboard focus there and ask Melissa to hover in her own browser. The pane can't type into native date and time inputs; set them with `form_input` on the input's ref. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it. Clicking several React-controlled buttons in one synchronous `javascript_tool` script keeps only the last toggle, because each click sees the same pre-render state; await a short delay between clicks.
 
 ### Testing video notes in the browser pane
 
