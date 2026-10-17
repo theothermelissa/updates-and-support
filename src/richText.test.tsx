@@ -78,3 +78,14 @@ it("draws a placeholder photo as a grey box, with its caption beneath when it ha
       `<figure class="space-y-2 whitespace-normal">${box}</figure>`,
   );
 });
+
+it("ends the last paragraph with trailing, or puts it on its own line after a list", () => {
+  const draw = (d: unknown) => renderToStaticMarkup(<RichText doc={d} trailing={<span>(2)</span>} />).replace(/^<div[^>]*>|<\/div>$/g, "");
+  const list = { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [text("one")] }] }] };
+  expect(draw(doc({ type: "paragraph", content: [text("a")] }, { type: "paragraph", content: [text("b")] }))).toBe(
+    "<p>a</p><p>b<span>(2)</span></p>",
+  );
+  expect(draw(doc({ type: "paragraph", content: [text("a")] }, list))).toBe(
+    "<p>a</p><ul><li><p>one</p></li></ul><p><span>(2)</span></p>",
+  );
+});

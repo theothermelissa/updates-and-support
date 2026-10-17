@@ -1,14 +1,13 @@
 import { CheckIcon, EllipsisVerticalIcon, XIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { PageTitle } from "@/components/familyShell";
-import { Confirm, EmailInput, ErrorMessage, Field, LinkedText, PhoneLink } from "@/components/page";
+import { Confirm, EmailInput, ErrorMessage, Field, PhoneLink } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
 import type { Doc } from "../lib/doc.js";
 import { RichText } from "../richText.js";
@@ -21,7 +20,7 @@ const RichEditor = lazy(() => import("../editor/RichEditor.js"));
 type Offer = { id: string | null; name: string | null; mine: boolean; email: string | null; phone: string | null };
 // What the family sets on a request. date is "YYYY-MM-DD" and time "HH:MM", or null.
 type RequestFields = {
-  body: string;
+  content: Doc;
   slots: number | null;
   requireName: boolean;
   requireEmail: boolean;
@@ -86,6 +85,7 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
       {family && <h3 className="text-lg font-semibold tracking-tight">What Would Help</h3>}
       {family && (
         <RequestForm
+          slug={slug}
           submitLabel="Add request"
           onSubmit={(fields) => change("help", "POST", fields).then((r) => r.ok)}
         />
@@ -96,6 +96,7 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
         {sortRequests(requests, new Date()).map((request) => (
           <RequestCard
             key={request.id}
+            slug={slug}
             request={request}
             family={family}
             needsName={request.requireName && me.person.name === null}
@@ -218,6 +219,7 @@ function MessageBox(props: { heading: string; doc: Doc; action: ReactNode }) {
 }
 
 function RequestCard(props: {
+  slug: string;
   request: HelpRequest;
   family: boolean;
   needsName: boolean;
@@ -266,6 +268,7 @@ function RequestCard(props: {
     <article className="space-y-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10">
       {editing ? (
         <RequestForm
+          slug={props.slug}
           initial={request}
           submitLabel="Save"
           onSubmit={async (fields) => {
@@ -281,13 +284,17 @@ function RequestCard(props: {
           {/* The count is inline-block, so the line through a covered or past request skips it. */}
           <div className="min-w-0 flex-1">
             {request.date && <p className="text-sm text-muted-foreground">{whenLabel(request.date, request.time)}</p>}
-            <LinkedText text={request.body} className={request.full || past ? "line-through" : ""}>
-              {/* inline-block, so the parentheses wrap with what's inside them. A margin rather
-                  than a space, so a covered request's line through stops at its text. */}
-              <span className="ml-1 inline-block text-sm text-muted-foreground">
-                ({capacityLabel(request.slots, request.offered)})
-              </span>
-            </LinkedText>
+            <RichText
+              doc={request.content}
+              className={request.full || past ? "line-through" : ""}
+              trailing={
+                // inline-block, so the parentheses wrap with what's inside them. A margin rather
+                // than a space, so a covered request's line through stops at its text.
+                <span className="ml-1 inline-block text-sm text-muted-foreground">
+                  ({capacityLabel(request.slots, request.offered)})
+                </span>
+              }
+            />
           </div>
           {props.family && (
             <DropdownMenu>
@@ -445,12 +452,15 @@ function OfferList(props: {
 }
 
 function RequestForm(props: {
+  slug: string;
   initial?: RequestFields;
   submitLabel: string;
   onSubmit: (fields: RequestFields) => Promise<boolean>;
   onCancel?: () => void;
 }) {
-  const [body, setBody] = useState(props.initial?.body ?? "");
+  // Null while the editor is empty. Bumping editorKey clears the editor after an add.
+  const [content, setContent] = useState<Doc | null>(props.initial?.content ?? null);
+  const [editorKey, setEditorKey] = useState(0);
   const [many, setMany] = useState(props.initial ? props.initial.slots === null : false);
   const [count, setCount] = useState(String(props.initial?.slots ?? 1));
   const [requireName, setRequireName] = useState(props.initial?.requireName ?? true);
@@ -462,9 +472,10 @@ function RequestForm(props: {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!content) return;
     setBusy(true);
     const ok = await props.onSubmit({
-      body,
+      content,
       slots: many ? null : Number(count),
       requireName,
       requireEmail,
@@ -474,7 +485,8 @@ function RequestForm(props: {
     });
     setBusy(false);
     if (ok && !props.initial) {
-      setBody("");
+      setContent(null);
+      setEditorKey((k) => k + 1);
       setMany(false);
       setCount("1");
       setRequireName(true);
@@ -487,14 +499,16 @@ function RequestForm(props: {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        required
-        maxLength={2000}
-        rows={4}
-        aria-label="What would help"
-      />
+      <Suspense fallback={<div className="h-[12.5rem] rounded-lg border border-input" aria-busy="true" />}>
+        <RichEditor
+          key={editorKey}
+          initial={props.initial?.content}
+          slug={props.slug}
+          photos="off"
+          label="What would help"
+          onChange={(doc) => setContent(doc as Doc | null)}
+        />
+      </Suspense>
       <div className="flex flex-wrap gap-4">
         <Field label="Date (optional)">
           <Input
@@ -542,7 +556,7 @@ function RequestForm(props: {
         Require phone
       </Label>
       <div className="flex gap-2">
-        <Button disabled={busy}>{props.submitLabel}</Button>
+        <Button disabled={busy || !content}>{props.submitLabel}</Button>
         {props.onCancel && (
           <Button type="button" variant="outline" onClick={props.onCancel}>
             Cancel

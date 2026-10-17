@@ -8,10 +8,10 @@ import { validPhone } from "./phone.js";
 import { docFromText, shownContent, textOf, validDoc } from "./richText.js";
 import type { Doc } from "../src/lib/doc.js";
 
-const MAX_BODY = 2_000;
 const MAX_SLOTS = 99;
 const MAX_REQUESTS = 100;
 const MESSAGE_LIMITS = { noun: "message", maxText: 2_000 } as const;
+const REQUEST_LIMITS = { noun: "request", maxText: 2_000 } as const;
 
 // What a viewer sees of an offer. A supporter gets only their own offer, with no email or
 // phone. Family members get every offer, with the email when there is one, a supporter's
@@ -27,6 +27,8 @@ export type HelpOfferView = {
 
 export type HelpRequestView = {
   id: string;
+  // The description, and its plain text for pages loaded before formatting.
+  content: Doc;
   body: string;
   // Null means as many people as want to may offer.
   slots: number | null;
@@ -70,6 +72,7 @@ function view(request: LoadedRequest, viewer: Person): HelpRequestView {
   const visible = family ? offers : offers.filter((offer) => offer.personId === viewer.id);
   return {
     id: request.id,
+    content: shownContent(request.content, request.body),
     body: request.body,
     slots: request.slots,
     requireName: request.requireName,
@@ -171,12 +174,14 @@ async function loadOne(db: Db, person: Person, id: string): Promise<HelpRequestV
   return request ? view(request, person) : null;
 }
 
-function validBody(body: unknown): string {
-  const clean = typeof body === "string" ? body.trim() : "";
-  if (clean.length < 1 || clean.length > MAX_BODY) {
-    throw new RequestError(400, `A request must be 1 to ${MAX_BODY.toLocaleString("en-US")} characters.`);
-  }
-  return clean;
+// The description as a checked document and its plain text. Pages loaded before formatting
+// send body as plain text instead of content.
+function validDescription(input: RequestInput): { content: Doc; body: string } {
+  let content: Doc;
+  if (input.content !== undefined) content = validDoc(input.content, undefined, undefined, REQUEST_LIMITS);
+  else if (typeof input.body === "string") content = validDoc(docFromText(input.body.trim()), undefined, undefined, REQUEST_LIMITS);
+  else throw new RequestError(400, "Expected the request's description");
+  return { content, body: textOf(content) };
 }
 
 // Null is "many people." Anything else has to be a whole number of places.
@@ -216,6 +221,7 @@ function validTime(value: unknown, date: string | null): string | null {
 }
 
 type RequestInput = {
+  content?: unknown;
   body?: unknown;
   slots?: unknown;
   requireName?: unknown;
@@ -231,7 +237,7 @@ function validRequest(input: RequestInput) {
   if (fields.includes(undefined)) throw new RequestError(400, "This page is out of date. Please refresh it and try again.");
   const date = validDate(input.date);
   return {
-    body: validBody(input.body),
+    ...validDescription(input),
     slots: validSlots(input.slots),
     requireName: validFlag(input.requireName, "requireName"),
     requireEmail: validFlag(input.requireEmail, "requireEmail"),
