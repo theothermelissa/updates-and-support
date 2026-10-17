@@ -38,3 +38,9 @@ Browser check: add a request with bold, a link, and a list; edit it; confirm the
 
 - The extra toolbar: editing the family's message while the add form is open shows four editors. That stays in the backlog as "Tidy the How to Help message editor."
 - No character counter. An overlong description fails on Save with the server's message, as the family's message does today.
+
+## Results
+
+- `npm run typecheck` and `npm test` pass (378 tests), including the new integration tests and the `RichText` trailing test.
+- On the preview: a request added with the editor saves, and the editor clears afterward. Editing loads the saved content, and toolbar bold and bullet list save. The count ends a final paragraph, and goes on its own line after a final list. Requests written before this change show as before.
+- The browser pane's typing doesn't trigger Tiptap's markdown shortcuts (`**bold**`, `- `), so those were checked with the toolbar instead. A real keyboard triggers them.
