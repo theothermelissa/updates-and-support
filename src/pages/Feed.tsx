@@ -31,8 +31,12 @@ type Update = {
   createdAt: string;
   editedAt: string | null;
   reactions: ReactionsData;
+  // False: no new notes; the ones already left stay.
+  allowNotes: boolean;
   notes: Note[];
 };
+
+type PostSettingsValues = { notify: boolean; reactions: string[]; allowNotes: boolean };
 
 // The width of an update's card when its notes sit beside it on a wide screen.
 const UPDATE_WIDTH = "lg:w-[42rem]";
@@ -54,6 +58,9 @@ export function Feed(props: {
 }) {
   const { slug, canEdit } = props;
   const [updates, setUpdates] = useState<Update[] | null>(null);
+  // Where the post form's "Allow notes" starts. Re-read with every load, so a change on the
+  // People page reaches the form without a reload.
+  const [allowNotesByDefault, setAllowNotesByDefault] = useState(true);
   const [waiting, setWaiting] = useState(0);
   const [error, setError] = useState("");
   // The updates the reader has been shown; newer ones wait behind the "new updates" button.
@@ -69,7 +76,10 @@ export function Feed(props: {
   async function load(everything = false) {
     if (everything) showAll.current = true;
     const request = ++latest.current;
-    const { status, data } = await api<{ updates: Update[] }>(slug, "updates");
+    const { status, data } = await api<{ updates: Update[]; defaults: { allowNotesByDefault: boolean } | null }>(
+      slug,
+      "updates",
+    );
     if (request !== latest.current) return;
     if (status === 401) return props.onSignedOut();
     if (status !== 200) {
@@ -80,6 +90,7 @@ export function Feed(props: {
       showAll.current = false;
       shownIds.current = new Set(data.updates.map((u) => u.id));
     }
+    if (data.defaults) setAllowNotesByDefault(data.defaults.allowNotesByDefault);
     const { visible, waiting } = applyFetched(shownIds.current, data.updates);
     setUpdates(visible);
     setWaiting(waiting);
@@ -143,6 +154,7 @@ export function Feed(props: {
           <PostForm
             slug={slug}
             photos={props.photos}
+            allowNotesByDefault={allowNotesByDefault}
             onPost={(body, settings) => change("updates", "POST", { ...body, ...settings }, true)}
           />
         </div>
@@ -163,7 +175,7 @@ export function Feed(props: {
           update={update}
           canEdit={canEdit}
           photos={props.photos}
-          onEdit={(content, reactions) => change(`updates/${update.id}`, "PATCH", { content, reactions })}
+          onEdit={(content, reactions, allowNotes) => change(`updates/${update.id}`, "PATCH", { content, reactions, allowNotes })}
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
           slug={slug}
@@ -180,11 +192,13 @@ export function Feed(props: {
 function PostForm({
   slug,
   photos,
+  allowNotesByDefault,
   onPost,
 }: {
   slug: string;
   photos: PhotoMode;
-  onPost: (body: { content?: unknown; video?: string }, settings: { notify: boolean; reactions: string[] }) => Promise<boolean>;
+  allowNotesByDefault: boolean;
+  onPost: (body: { content?: unknown; video?: string }, settings: PostSettingsValues) => Promise<boolean>;
 }) {
   const [mode, setMode] = useState<"write" | "video">("write");
   const [content, setContent] = useState<unknown>(null);
@@ -196,6 +210,9 @@ function PostForm({
   const [error, setError] = useState("");
   const [notify, setNotify] = useState(true);
   const [reactions, setReactions] = useState<string[]>([...USUAL_REACTIONS]);
+  // Null until chosen, so it follows the family's default, which arrives after this mounts.
+  const [chosenAllowNotes, setChosenAllowNotes] = useState<boolean | null>(null);
+  const allowNotes = chosenAllowNotes ?? allowNotesByDefault;
   // Changing the key closes Post settings and starts them fresh after posting.
   const [settingsKey, setSettingsKey] = useState(0);
   const [posting, setPosting] = useState(false);
@@ -206,7 +223,7 @@ function PostForm({
     e.preventDefault();
     setPosting(true);
     setError("");
-    const posted = mode === "write" ? content !== null && (await onPost({ content }, { notify, reactions })) : await postVideo();
+    const posted = mode === "write" ? content !== null && (await onPost({ content }, { notify, reactions, allowNotes })) : await postVideo();
     if (posted) {
       setContent(null);
       setVideo(null);
@@ -214,6 +231,7 @@ function PostForm({
       setEditorKey((k) => k + 1);
       setNotify(true);
       setReactions([...USUAL_REACTIONS]);
+      setChosenAllowNotes(null);
       setSettingsKey((k) => k + 1);
       setMode("write");
     }
@@ -235,7 +253,7 @@ function PostForm({
       }
     }
     setProgress(1);
-    return onPost({ video: publicId }, { notify, reactions });
+    return onPost({ video: publicId }, { notify, reactions, allowNotes });
   }
 
   const ready = mode === "write" ? content !== null : file !== null;
@@ -277,6 +295,8 @@ function PostForm({
             onNotify={setNotify}
             reactions={reactions}
             onReactions={setReactions}
+            allowNotes={allowNotes}
+            onAllowNotes={setChosenAllowNotes}
             disabled={posting}
           >
             <Button disabled={posting || !ready}>{mode === "video" && error ? "Try again" : "Post"}</Button>
@@ -291,7 +311,7 @@ function UpdateItem(props: {
   update: Update;
   canEdit: boolean;
   photos: PhotoMode;
-  onEdit: (content: unknown, reactions: string[]) => Promise<boolean>;
+  onEdit: (content: unknown, reactions: string[], allowNotes: boolean) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
   slug: string;
@@ -307,19 +327,21 @@ function UpdateItem(props: {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<unknown>(null);
   const [reactions, setReactions] = useState<string[]>([]);
+  const [allowNotes, setAllowNotes] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function save() {
     if (draft === null) return;
     setSaving(true);
-    if (await props.onEdit(draft, reactions)) setEditing(false);
+    if (await props.onEdit(draft, reactions, allowNotes)) setEditing(false);
     setSaving(false);
   }
 
   function startEditing() {
     setDraft(update.content);
     setReactions(update.reactions.allowed);
+    setAllowNotes(update.allowNotes);
     setEditing(true);
   }
 
@@ -349,7 +371,13 @@ function UpdateItem(props: {
         <CardFooter className="flex flex-wrap items-center gap-2">
           {editing ? (
             <div className="w-full space-y-4">
-              <PostSettings reactions={reactions} onReactions={setReactions} disabled={saving}>
+              <PostSettings
+                reactions={reactions}
+                onReactions={setReactions}
+                allowNotes={allowNotes}
+                onAllowNotes={setAllowNotes}
+                disabled={saving}
+              >
                 <Button onClick={save} disabled={saving || draft === null}>
                   Save
                 </Button>
@@ -366,14 +394,16 @@ function UpdateItem(props: {
           ) : (
             <>
               <ReactionControls reactions={update.reactions} onReact={props.onReact}>
-                <Button
-                  variant="outline"
-                  className="size-11 rounded-full [&_svg]:size-5"
-                  aria-label="Leave a note"
-                  onClick={() => setWriting(true)}
-                >
-                  <MessageSquareHeartIcon aria-hidden />
-                </Button>
+                {update.allowNotes && (
+                  <Button
+                    variant="outline"
+                    className="size-11 rounded-full [&_svg]:size-5"
+                    aria-label="Leave a note"
+                    onClick={() => setWriting(true)}
+                  >
+                    <MessageSquareHeartIcon aria-hidden />
+                  </Button>
+                )}
               </ReactionControls>
               {props.canEdit && (
                 <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -392,7 +422,8 @@ function UpdateItem(props: {
         </CardFooter>
       </Card>
       <NoteDialog open={writing} onOpenChange={setWriting} slug={props.slug} name={props.name} onLeave={props.onLeaveNote} />
-      {noteCount === 0 && (
+      {/* Only the buttons go when notes are off: a dialog already open stays, and its post is refused. */}
+      {noteCount === 0 && update.allowNotes && (
         // Only on a wide screen, where notes sit beside the update; on a phone it would crowd the feed.
         <aside className="hidden min-w-0 flex-1 lg:block" aria-label="Notes">
           <EmptyNoteButton onLeave={() => setWriting(true)} />

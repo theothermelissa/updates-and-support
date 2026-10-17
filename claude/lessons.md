@@ -20,6 +20,14 @@ When a PR's preview has built, run `npm run preview:seed` and `npm run preview` 
 
 **How to apply:** the scripts are described in README → Deployment. `npm run preview` prints the branch's stable address, which always shows the latest push; send that one, not a push's own address. To sign the browser pane in as the family member, run `npm run preview:sign-in` and navigate the pane to the printed link, then press Sign in; the pane stays signed in on that address for the whole PR. The pane must be signed in to Vercel first. Never put a sign-in link in a PR description or commit. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
 
+### Stop the local dev server when its PR merges
+
+When a PR merges, stop any local dev server started for it (`preview_stop`), without being asked.
+
+**Why:** Melissa asked for this after a merged PR's server was left running on port 3000.
+
+**How to apply:** make stopping it part of concluding the PR, right after the merge.
+
 ## Technical
 
 ### Keep git repos out of synced folders

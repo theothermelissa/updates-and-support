@@ -4,6 +4,8 @@ import { Confirm, EmailInput, ErrorMessage, Field, PhoneLink } from "@/component
 import { ReactionChooser } from "@/components/postSettings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -33,6 +35,7 @@ type People = {
   question: string;
   acceptedAnswers: string[];
   noteReactions: string[];
+  allowNotesByDefault: boolean;
 };
 
 function date(iso: string) {
@@ -43,7 +46,7 @@ function devices(count: number) {
   return count === 1 ? "1 device" : `${count} devices`;
 }
 
-// Family members' page for family members, supporters, note reactions, and the community question. The server
+// Family members' page for family members, supporters, note reactions, notes on new updates, and the community question. The server
 // refuses the data to anyone else; this page only shows what it's given.
 export function People({ slug, home, me }: FamilyPageProps) {
   const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
@@ -52,6 +55,9 @@ export function People({ slug, home, me }: FamilyPageProps) {
   const [noteReactions, setNoteReactions] = useState<string[]>([]);
   const [choosingNoteReactions, setChoosingNoteReactions] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [allowNotesByDefault, setAllowNotesByDefault] = useState(true);
+  // Shown beside the checkbox, since it saves on its own without a button.
+  const [notesDefaultStatus, setNotesDefaultStatus] = useState<{ text: string; error: boolean } | null>(null);
 
   function load() {
     api<People>(slug, "people").then(({ status, data }) => {
@@ -61,6 +67,7 @@ export function People({ slug, home, me }: FamilyPageProps) {
         setAnswers(data.acceptedAnswers.join("\n"));
         setNoteReactions(data.noteReactions);
         setChoosingNoteReactions(!isUsual(data.noteReactions));
+        setAllowNotesByDefault(data.allowNotesByDefault);
       } else setPeople(status === 404 ? "not-found" : status === 403 ? "forbidden" : "signed-out");
     });
   }
@@ -135,6 +142,24 @@ export function People({ slug, home, me }: FamilyPageProps) {
       setNoteReactions(data.reactions);
       setMessage({ text: "Note reactions saved.", error: false });
     } else setMessage({ text: data?.error ?? "Something went wrong. Please try again.", error: true });
+  }
+
+  // Saves at once; on failure the checkbox goes back to the saved value.
+  async function saveNotesDefault(allow: boolean) {
+    const before = allowNotesByDefault;
+    setAllowNotesByDefault(allow);
+    setNotesDefaultStatus(null);
+    const { status, data } = await api<{ allowNotesByDefault?: boolean; error?: string }>(slug, "notes-default", {
+      method: "PUT",
+      body: { allowNotesByDefault: allow },
+    });
+    if (status === 200 && typeof data?.allowNotesByDefault === "boolean") {
+      setAllowNotesByDefault(data.allowNotesByDefault);
+      setNotesDefaultStatus({ text: "Saved", error: false });
+    } else {
+      setAllowNotesByDefault(before);
+      setNotesDefaultStatus({ text: data?.error ?? "Couldn't save. Please try again.", error: true });
+    }
   }
 
   async function saveQuestion(e: FormEvent) {
@@ -237,6 +262,28 @@ export function People({ slug, home, me }: FamilyPageProps) {
               />
               <Button>Save reactions</Button>
             </form>
+          </CardContent>
+        </Card>
+      </Section>
+
+      <Section title="Notes on new updates">
+        <p className="text-muted-foreground">
+          Whether new updates start out allowing notes. You can still change it for each update in Post settings.
+        </p>
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-3">
+            <Label>
+              <Checkbox checked={allowNotesByDefault} onCheckedChange={(checked) => saveNotesDefault(checked === true)} />
+              New updates allow notes
+            </Label>
+            {notesDefaultStatus && (
+              <span
+                className={notesDefaultStatus.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}
+                role="status"
+              >
+                {notesDefaultStatus.text}
+              </span>
+            )}
           </CardContent>
         </Card>
       </Section>
