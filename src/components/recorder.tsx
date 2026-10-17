@@ -150,72 +150,73 @@ export function VideoRecorder(props: {
 
   return (
     <div className="grid gap-2">
-      <div
-        className={cn(
-          "relative aspect-[3/4] w-full overflow-hidden rounded-xl border-4 sm:aspect-video",
-          !colors && "border-border bg-muted",
-        )}
-        style={colors ? { backgroundColor: colors.fill, borderColor: colors.fill } : undefined}
-      >
-        <video
-          ref={live}
-          autoPlay
-          muted
-          playsInline
-          className="size-full -scale-x-100 object-contain"
-          aria-label="Your camera"
-        />
-        {phase === "starting" && (
-          <p
-            className={cn("absolute inset-0 flex items-center justify-center p-4 text-sm", !colors && "text-muted-foreground")}
-            style={colors ? { color: colors.text } : undefined}
-          >
-            Waiting for camera access…
-          </p>
-        )}
-        {phase === "countdown" && (
-          <span
-            className="absolute inset-0 flex items-center justify-center text-8xl font-semibold text-white [text-shadow:0_2px_12px_rgb(0_0_0/0.6)]"
-            aria-live="assertive"
-          >
-            {count}
-          </span>
-        )}
-        {phase === "recording" && (
-          <span
-            className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-sm font-medium text-white"
-            role="timer"
-          >
-            <span className="size-2.5 animate-pulse rounded-full bg-red-500" aria-hidden />
-            {props.maxSeconds === null ? elapsedTime(elapsed) : timeLeft(elapsed, props.maxSeconds)}
-          </span>
-        )}
-        {/* One control at a time, in the same place, so a thumb never has to move. */}
-        <span className="absolute inset-x-0 bottom-3 flex justify-center px-3">
-          {phase === "ready" && (
-            <Button
-              type="button"
-              className="hover:opacity-90"
-              style={inked}
-              onClick={() => {
-                setCount(3);
-                setPhase("countdown");
-              }}
+      {/* The frame is padding around the view rather than a border, so the view itself is
+          exactly 16:9 and a 16:9 camera fills it with no slivers at the sides. */}
+      <div className={cn("rounded-xl p-1", !colors && "bg-border")} style={colors ? { backgroundColor: colors.fill } : undefined}>
+        <div
+          className={cn("relative aspect-[3/4] w-full overflow-hidden rounded-lg sm:aspect-video", !colors && "bg-muted")}
+          style={colors ? { backgroundColor: colors.fill } : undefined}
+        >
+          <video
+            ref={live}
+            autoPlay
+            muted
+            playsInline
+            className="size-full -scale-x-100 object-contain"
+            aria-label="Your camera"
+          />
+          {phase === "starting" && (
+            <p
+              className={cn("absolute inset-0 flex items-center justify-center p-4 text-sm", !colors && "text-muted-foreground")}
+              style={colors ? { color: colors.text } : undefined}
             >
-              Start recording
-            </Button>
+              Waiting for camera access…
+            </p>
           )}
           {phase === "countdown" && (
-            <Button type="button" variant="outline" onClick={() => setPhase("ready")}>
-              Cancel countdown
-            </Button>
+            <span
+              className="absolute inset-0 flex items-center justify-center text-8xl font-semibold text-white [text-shadow:0_2px_12px_rgb(0_0_0/0.6)]"
+              aria-live="assertive"
+            >
+              {count}
+            </span>
           )}
           {phase === "recording" && (
-            <Button type="button" variant="destructive" onClick={stop}>
-              Stop
-            </Button>
+            <span
+              className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-sm font-medium text-white"
+              role="timer"
+            >
+              <span className="size-2.5 animate-pulse rounded-full bg-red-500" aria-hidden />
+              {props.maxSeconds === null ? elapsedTime(elapsed) : timeLeft(elapsed, props.maxSeconds)}
+            </span>
           )}
-        </span>
+          {/* One control at a time, in the same place, so a thumb never has to move. */}
+          <span className="absolute inset-x-0 bottom-3 flex justify-center px-3">
+            {phase === "ready" && (
+              <Button
+                type="button"
+                className="hover:opacity-90"
+                style={inked}
+                onClick={() => {
+                  setCount(3);
+                  setPhase("countdown");
+                }}
+              >
+                Start recording
+              </Button>
+            )}
+            {phase === "countdown" && (
+              <Button type="button" variant="outline" onClick={() => setPhase("ready")}>
+                Cancel countdown
+              </Button>
+            )}
+            {phase === "recording" && (
+              <Button type="button" variant="destructive" onClick={stop}>
+                Stop
+              </Button>
+            )}
+          </span>
+        </div>
       </div>
     </div>
   );
