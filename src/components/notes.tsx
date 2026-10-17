@@ -28,7 +28,7 @@ export function NoteCard(props: {
   const byline = `${note.authorName} · ${noteTime(note)}`;
   // A written note's author, time, and Delete, behind its "···".
   const details = (
-    <span className="flex flex-wrap items-center gap-x-3">
+    <span className="flex flex-col items-start gap-1">
       {byline}
       {props.canDelete && !confirming && (
         <button
@@ -39,7 +39,7 @@ export function NoteCard(props: {
             setConfirming(true);
           }}
         >
-          Delete
+          Delete note
         </button>
       )}
     </span>

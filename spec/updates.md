@@ -168,7 +168,7 @@ The rules, the React button, the tray, and the summary are the ones under "React
 
 ### The written note's author
 
-A written note's card doesn't show its author's name or the time. Its bottom row ends in a quiet "···" author control, small and muted but with a full-size tap area. On a computer, resting the pointer on it shows the author's name and when the note was left, such as "Ana Rivera · Oct 17, 2026, 3:04 PM," in the same floating style as the list of who reacted, followed by Delete for those who may delete the note; the pointer can move onto it to press Delete. On a phone, tapping it shows the same line, with Delete, under that row, and tapping again hides it. Screen readers hear the author and time as the control's name. A family member's note keeps its "Family" mark on the card, beside the control.
+A written note's card doesn't show its author's name or the time. Its bottom row ends in a quiet "···" author control, small and muted but with a full-size tap area. On a computer, resting the pointer on it shows the author's name and when the note was left, such as "Ana Rivera · Oct 17, 2026, 3:04 PM," in the same floating style as the list of who reacted, with "Delete note" on a second line for those who may delete the note; the pointer can move onto it to press it. On a phone, tapping it shows the same lines under that row, and tapping again hides it. Screen readers hear the author and time as the control's name. A family member's note keeps its "Family" mark on the card, beside the control.
 
 ### Deleting a note
 
