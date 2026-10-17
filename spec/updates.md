@@ -24,7 +24,7 @@ The feed is the family's main page. Everyone signed in to the family sees every 
 
 The feed, like every page signed in to a family, sits under the family's navigation bar (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
-Each update has a footer of actions in one row: **React** (unless the update allows no reactions; see "Reactions") and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
+Each update has a footer of actions in one row: **React** (unless the update allows no reactions; see "Reactions") and **Leave a note** (unless the update doesn't allow notes; see "Allowing notes") for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
 **The feed stays current without a refresh.** While the page is open and visible, it checks for changes every 30 seconds, and immediately when the reader returns to the tab. A hidden tab doesn't check, so a forgotten tab costs nothing. Changes to updates already on screen (edits, reactions, notes, and deletions) appear in place. New updates don't appear on their own, because inserting one at the top would move whatever the reader is in the middle of; instead a "1 new update" (or "3 new updates") button appears at the top of the screen, and pressing it shows them and scrolls to the top. A family member's own post appears at once. A failed check shows nothing and simply tries again at the next one. If the reader has been signed out, for example because they were removed or the community question's answer changed, the next check takes them to the gate. The wall doesn't update itself; it's current each time it's opened.
 
@@ -36,16 +36,17 @@ Pasting from another app or a website keeps only formatting the editor allows (p
 
 ## Posting
 
-A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when supporters will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none. Screen readers hear each icon's meaning, such as "Emails supporters" or "Chosen reactions." The settings apply to either tab:
+A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when supporters will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none; then a speech bubble when the update will allow notes, or the same bubble crossed out when it won't. Screen readers hear each icon's meaning, such as "Emails supporters," "Chosen reactions," or "No notes." The settings apply to either tab:
 
 - **"Notify supporters by email,"** checked by default, so a small follow-up can go out without emailing everyone.
 - **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
+- **"Allow notes,"** which starts checked or unchecked according to the family's default (see "Allowing notes").
 
-Posting resets both settings to their defaults.
+Posting resets the settings to their defaults.
 
 ## Editing
 
-A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with only the reactions setting, showing the update's current reactions: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"). A video update can't be edited, so its reactions stay as they were posted.
+A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with the reactions and "Allow notes" settings, showing the update's current ones: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"), and changing "Allow notes" keeps the notes already left (see "Allowing notes"). A video update can't be edited, so its reactions and "Allow notes" stay as they were posted.
 
 ## Deleting
 
@@ -137,7 +138,15 @@ Each update's footer has a round "Leave a note" button showing a speech bubble w
 
 A note needs a name. The dialog shows "Your name", filled in with the name on their record, or empty if they haven't given one, and they can change it. Leaving the note saves that name on their record (see [access.md](access.md#changing-your-name)). Cancelling, or a note that isn't saved, leaves the name as it was. The dialog never asks for an email.
 
-A person can leave any number of notes on an update, up to 20 notes an hour across the family, written and video notes together, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
+A person can leave any number of notes on an update that allows notes, up to 20 notes an hour across the family, written and video notes together, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
+
+### Allowing notes
+
+Each update either allows notes or doesn't, set by "Allow notes" in Post settings when it's posted and changeable by editing a text update (see "Posting" and "Editing"). On an update that doesn't allow notes, no one can leave a new one: its footer has no "Leave a note" button, it has no "Leave a note" button beside it (see "Notes beside an update"), and the server refuses a new note on it, so posting from a note dialog opened before notes were turned off says "Notes are turned off for this update". The notes already on it stay: they're shown beside the update and on the wall, and anyone can still react to them, and their authors and family members can still delete them. Turning notes back on brings back "Leave a note."
+
+**The family's default.** The People page has a "New updates allow notes" setting (see [access.md](access.md#notes-on-new-updates)). It decides only whether "Allow notes" starts checked in Post settings. Changing it never changes an update already posted. It's on unless the family turned it off, and updates posted before it existed allow notes.
+
+Only family members can set "Allow notes" on an update or change the family's default; the server refuses anyone else.
 
 ### Video notes
 
@@ -159,7 +168,7 @@ Video notes are stored and delivered by Cloudinary, which also converts them to 
 
 An update's notes are always shown, newest first, as colored cards: beside the update's card on a wide screen, and below it on a phone. Up to six are shown; when there are more, a "See all 14 notes" link opens the wall showing only that update's notes.
 
-On a wide screen, an update with no notes has a round "Leave a note" button beside it instead, at the top, filled with the palette's Oak color. It opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an extra button under every note-less update would crowd the feed; the footer's button serves instead. The button goes away when the update's first note appears, including when that note arrives through the feed's regular check.
+On a wide screen, an update with no notes that allows notes has a round "Leave a note" button beside it instead, at the top, filled with the palette's Oak color. It opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an extra button under every note-less update would crowd the feed; the footer's button serves instead. The button goes away when the update's first note appears, including when that note arrives through the feed's regular check, and when the update stops allowing notes.
 
 ### The wall
 

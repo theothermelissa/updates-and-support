@@ -2,6 +2,7 @@ import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import { validName } from "./families.js";
 import { NoteColor, type Person, type Prisma } from "./generated/prisma/client.js";
+import { requireFamilyMember } from "./people.js";
 import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
 import { cloudinaryStore, newPublicId, type VideoStore } from "./videos.js";
 
@@ -166,9 +167,13 @@ export async function createNote(
         FOR UPDATE`;
       if (!author) throw new RequestError(403, "You can't leave a note here");
 
-      // Another family's update behaves like one that doesn't exist.
-      const update = await tx.update.findFirst({ where: { id: updateId, familyId: person.familyId } });
+      // Another family's update behaves like one that doesn't exist. Shared-locked, so an edit
+      // turning notes off, or a delete, finishes first and this sees its result; notes being
+      // left at the same moment don't wait on each other.
+      const [update] = await tx.$queryRaw<{ allowNotes: boolean }[]>`
+        SELECT "allowNotes" FROM "Update" WHERE id = ${updateId} AND "familyId" = ${person.familyId} FOR SHARE`;
       if (!update) throw new RequestError(404, "Update not found");
+      if (!update.allowNotes) throw new RequestError(403, "Notes are turned off for this update");
 
       const since = new Date(Date.now() - 60 * 60 * 1000);
       const recent = await tx.note.count({ where: { authorId: person.id, createdAt: { gte: since } } });
@@ -289,4 +294,22 @@ function validBody(body: unknown): string {
     throw new RequestError(400, `A note must be 1 to ${MAX_BODY.toLocaleString("en-US")} characters`);
   }
   return text;
+}
+
+// A family member sets whether "Allow notes" starts checked when anyone in the family posts.
+// Updates already posted keep their own setting.
+export async function setAllowNotesByDefault(
+  db: Db,
+  person: Person,
+  input: { allowNotesByDefault?: unknown },
+): Promise<{ allowNotesByDefault: boolean }> {
+  requireFamilyMember(person);
+  if (typeof input.allowNotesByDefault !== "boolean") {
+    throw new RequestError(400, "Expected allowNotesByDefault to be true or false");
+  }
+  return db.family.update({
+    where: { id: person.familyId },
+    data: { allowNotesByDefault: input.allowNotesByDefault },
+    select: { allowNotesByDefault: true },
+  });
 }
