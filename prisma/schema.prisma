@@ -19,6 +19,8 @@ model Family {
   acceptedAnswers String[]
   // The message at the top of How to help, trimmed; null when there is none.
   helpMessage     String?
+  // The emoji anyone may react with on any of the family's notes, in catalog order; empty allows none.
+  noteReactionKinds String[] @default(["heart", "hug", "strong", "clap", "party", "laugh"])
   createdAt       DateTime @default(now())
 
   people       Person[]

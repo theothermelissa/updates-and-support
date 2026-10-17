@@ -18,10 +18,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 ## Features and fixes
 
-- **2026-10-17** — Let the family choose the note reactions on the People page.
-  The second of three planned steps after per-update reactions: one family-wide set of 0–6 emoji from the same catalog, applying to every note (today notes always use the usual six). Reactions on notes are the family's way to thank supporters for writing. Everyone, supporters included, can still react to notes; 0 hides React on notes, keeping each person's own reaction removable as on updates.
 - **2026-10-17** — Add "Allow notes," per update and family-wide.
-  The third step: a per-update checkbox in Post settings (default on) and a family-wide switch on the People page (default on). Turning notes off keeps existing notes visible and deletable and removes only "Leave a note." Still to decide: whether the family-wide switch overrides the per-update one or only sets its default.
+  The last step after per-update and family-wide note reactions: a per-update checkbox in Post settings (default on) and a family-wide switch on the People page (default on). Turning notes off keeps existing notes visible and deletable and removes only "Leave a note." Still to decide: whether the family-wide switch overrides the per-update one or only sets its default.
 - **2026-10-17** — Let a family member change a video update's post settings.
   Video updates can't be edited, so their reactions stay as posted (and, once "Allow notes" exists, so will that). A settings-only edit would fix a regretted choice.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.

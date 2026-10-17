@@ -190,6 +190,14 @@ Only an active supporter with an unverified email in the family member's own fam
 
 Family members are added and removed under "Adding family members" and "Removing family members."
 
+## Reactions on notes
+
+The People page has a **Reactions on notes** section, above the community question, where a family member chooses the family's note set: the emoji everyone can use to react to notes (see [updates.md](updates.md#reactions)). It explains: "The emoji everyone can use to react to notes, including supporters' notes to you. Changing them keeps reactions already given."
+
+The control is the one from Post settings: a **"Use the usual reactions"** checkbox, checked when the set is exactly the usual six, and, when unchecked, the tray preview and the whole catalog as one grid, allowing up to six and as few as none. Nothing changes until the family member presses **Save reactions**; the new set then applies to every note at once. When two family members save at about the same time, the later save wins.
+
+Only a family member of that family can change the set; the server refuses anyone else, and accepts only up to six distinct emoji from the catalog. Supporters see the set only as the emoji offered when they react to a note.
+
 ## Changing the community question
 
 The People page also shows the community question and its accepted answers, and a family member can change them at any time. A question must not be empty and needs at least one non-empty accepted answer; answers are entered one per line.

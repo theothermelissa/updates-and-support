@@ -27,8 +27,8 @@ export function requireFamilyMember(person: Person) {
 }
 
 // The People page: the family's members, its supporters with an email (active and removed,
-// newest first), how many devices are signed in without a verified email, and the community
-// question. Family members only; supporters never see each other.
+// newest first), how many devices are signed in without a verified email, the community
+// question, and the family's note reactions. Family members only; supporters never see each other.
 export async function listPeople(db: Db, person: Person) {
   requireFamilyMember(person);
   const family = await db.family.findUniqueOrThrow({
@@ -48,6 +48,7 @@ export async function listPeople(db: Db, person: Person) {
     devicesWithoutVerifiedEmail,
     question: family.question,
     acceptedAnswers: family.acceptedAnswers,
+    noteReactions: family.noteReactionKinds,
   };
 }
 

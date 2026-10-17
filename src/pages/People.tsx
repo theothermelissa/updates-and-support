@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { PageTitle } from "@/components/familyShell";
 import { Confirm, EmailInput, ErrorMessage, Field, PhoneLink } from "@/components/page";
+import { ReactionChooser } from "@/components/postSettings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
+import { isUsual } from "../lib/reactionCatalog.js";
 import { followLink } from "../navigate.js";
 import type { FamilyPageProps } from "./FamilyFrame.js";
 import { NotFound } from "./NotFound.js";
@@ -30,6 +32,7 @@ type People = {
   devicesWithoutVerifiedEmail: number;
   question: string;
   acceptedAnswers: string[];
+  noteReactions: string[];
 };
 
 function date(iso: string) {
@@ -40,12 +43,14 @@ function devices(count: number) {
   return count === 1 ? "1 device" : `${count} devices`;
 }
 
-// Family members' page for family members, supporters, and the community question. The server
+// Family members' page for family members, supporters, note reactions, and the community question. The server
 // refuses the data to anyone else; this page only shows what it's given.
 export function People({ slug, home, me }: FamilyPageProps) {
   const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState("");
+  const [noteReactions, setNoteReactions] = useState<string[]>([]);
+  const [choosingNoteReactions, setChoosingNoteReactions] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   function load() {
@@ -54,6 +59,8 @@ export function People({ slug, home, me }: FamilyPageProps) {
         setPeople(data);
         setQuestion(data.question);
         setAnswers(data.acceptedAnswers.join("\n"));
+        setNoteReactions(data.noteReactions);
+        setChoosingNoteReactions(!isUsual(data.noteReactions));
       } else setPeople(status === 404 ? "not-found" : status === 403 ? "forbidden" : "signed-out");
     });
   }
@@ -116,6 +123,18 @@ export function People({ slug, home, me }: FamilyPageProps) {
     setMessage({ text: `Added ${data.name}. They'll get an email to confirm.`, error: false });
     load();
     return true;
+  }
+
+  async function saveNoteReactions(e: FormEvent) {
+    e.preventDefault();
+    const { status, data } = await api<{ reactions?: string[]; error?: string }>(slug, "note-reactions", {
+      method: "PUT",
+      body: { reactions: noteReactions },
+    });
+    if (status === 200 && data?.reactions) {
+      setNoteReactions(data.reactions);
+      setMessage({ text: "Note reactions saved.", error: false });
+    } else setMessage({ text: data?.error ?? "Something went wrong. Please try again.", error: true });
   }
 
   async function saveQuestion(e: FormEvent) {
@@ -201,6 +220,26 @@ export function People({ slug, home, me }: FamilyPageProps) {
           <SupporterTable rows={people.removed} action="Restore" onAction={(s) => setRemoved(s, false)} />
         </Section>
       )}
+
+      <Section title="Reactions on notes">
+        <p className="text-muted-foreground">
+          The emoji everyone can use to react to notes, including supporters' notes to you. Changing them keeps
+          reactions already given.
+        </p>
+        <Card>
+          <CardContent>
+            <form onSubmit={saveNoteReactions} className="space-y-4">
+              <ReactionChooser
+                reactions={noteReactions}
+                onReactions={setNoteReactions}
+                choosing={choosingNoteReactions}
+                onChoosing={setChoosingNoteReactions}
+              />
+              <Button>Save reactions</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </Section>
 
       <Section title="Community question">
         <p className="text-muted-foreground">

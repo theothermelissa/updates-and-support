@@ -1,12 +1,14 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import noteReactionsHandler from "../../api/f/[slug]/note-reactions.js";
 import handler from "../../api/f/[slug]/reactions.js";
 import { getDb } from "../../server/db.js";
 import { addEmail } from "../../server/gate.js";
 import type { Person } from "../../server/generated/prisma/client.js";
 import { setRemoved } from "../../server/people.js";
 import { createNote, deleteNote, listNotes } from "../../server/notes.js";
-import { setReaction } from "../../server/reactions.js";
+import { setNoteReactions, setReaction } from "../../server/reactions.js";
+import { hashToken, newToken } from "../../server/tokens.js";
 import { createUpdate, deleteUpdate, editUpdate, listUpdates } from "../../server/updates.js";
 import { USUAL_REACTIONS } from "../../src/lib/reactionCatalog.js";
 import { createTestDb } from "./db.js";
@@ -327,18 +329,6 @@ describe("reactions on notes", () => {
     expect(await db.reaction.count()).toBe(0);
   });
 
-  it("allows only the usual six on a note, whatever its update allows", async () => {
-    const { ana, sam } = await setUp();
-    const update = await createUpdate(db, ana, { body: "Custom", reactions: ["skull", "pray"] });
-    const note = await leaveNote(sam, update.id);
-    for (const kind of ["skull", "pray", "sunflower"]) {
-      await expect(reactToNote(ana, note.id, kind)).rejects.toMatchObject({ status: 400 });
-    }
-    expect(await db.noteReaction.count()).toBe(0);
-    await reactToNote(ana, note.id, "hug");
-    expect((await noteReactionsFor(ana, note.id)).allowed).toEqual(usual);
-  });
-
   it("filters reactions by family when reading, on the wall and on the feed", async () => {
     const { ana, olu, update } = await setUp();
     const note = await leaveNote(ana, update.id);
@@ -424,7 +414,85 @@ describe("reactions on notes", () => {
   });
 });
 
-describe("the reactions endpoint", () => {
+// The Okafor family's family member and update, from setUp.
+async function okaforOf(olu: { person: Person }) {
+  const chidi = await db.person.findFirstOrThrow({ where: { familyId: olu.person.familyId, role: "family" } });
+  const update = await db.update.findFirstOrThrow({ where: { familyId: chidi.familyId } });
+  return { chidi, okaforUpdate: update };
+}
+
+async function noteSetOf(familyId: string) {
+  return (await db.family.findUniqueOrThrow({ where: { id: familyId } })).noteReactionKinds;
+}
+
+describe("the family's note set", () => {
+  it("offers each family's own set on its notes, wherever a note is read, and accepts only that set", async () => {
+    const { ana, sam, olu, update } = await setUp();
+    const { chidi, okaforUpdate } = await okaforOf(olu);
+    // Both differ from the usual six and from each other, so reading the wrong family's set fails.
+    await setNoteReactions(db, ana, { reactions: ["skull", "pray"] });
+    await setNoteReactions(db, chidi, { reactions: ["sunflower"] });
+
+    const families = [
+      { member: ana, reader: sam, updateId: update.id, set: ["pray", "skull"], others: ["sunflower", "heart"] },
+      { member: chidi, reader: olu.person, updateId: okaforUpdate.id, set: ["sunflower"], others: ["pray", "heart"] },
+    ];
+    for (const f of families) {
+      const note = await leaveNote(f.reader, f.updateId);
+      expect(note.reactions.allowed).toEqual(f.set);
+      expect((await noteReactionsFor(f.member, note.id)).allowed).toEqual(f.set);
+      const feed = (await listUpdates(db, f.member)).find((u) => u.id === f.updateId)!;
+      expect(feed.notes.find((n) => n.id === note.id)!.reactions.allowed).toEqual(f.set);
+
+      for (const kind of f.others) {
+        await expect(reactToNote(f.member, note.id, kind)).rejects.toMatchObject({ status: 400 });
+        await expect(reactToNote(f.reader, note.id, kind)).rejects.toMatchObject({ status: 400 });
+      }
+      expect(await db.noteReaction.count({ where: { noteId: note.id } })).toBe(0);
+      await reactToNote(f.reader, note.id, f.set[0]);
+      expect(await db.noteReaction.count({ where: { noteId: note.id } })).toBe(1);
+    }
+  });
+
+  it("refuses every note reaction once the set is empty, keeping earlier ones, which their owners can clear", async () => {
+    const { ana, sam, update } = await setUp();
+    const note = await leaveNote(ana, update.id);
+    await reactToNote(sam, note.id, "hug");
+    await setNoteReactions(db, ana, { reactions: [] });
+
+    for (const kind of ["hug", "heart", "skull"]) {
+      await expect(reactToNote(ana, note.id, kind)).rejects.toMatchObject({ status: 400 });
+    }
+    await expect(reactToNote(sam, note.id, "clap")).rejects.toMatchObject({ status: 400 });
+    expect(await noteReactionsFor(ana, note.id)).toEqual({
+      count: 1,
+      kinds: ["hug"],
+      mine: null,
+      allowed: [],
+      named: [{ name: "Sam", kind: "hug" }],
+    });
+
+    await reactToNote(sam, note.id, null);
+    expect(await db.noteReaction.count()).toBe(0);
+  });
+
+  it("lets only a family member change it, only for their own family, and only to a valid set", async () => {
+    const { ana, sam, olu } = await setUp();
+    const { chidi } = await okaforOf(olu);
+
+    await expect(setNoteReactions(db, sam, { reactions: ["skull"] })).rejects.toMatchObject({ status: 403 });
+    const seven = [...usual, "skull"];
+    await expect(setNoteReactions(db, ana, { reactions: seven })).rejects.toMatchObject({ status: 400 });
+    expect(await noteSetOf(ana.familyId)).toEqual(usual);
+
+    expect(await setNoteReactions(db, ana, { reactions: ["skull", "heart"] })).toEqual({ reactions: ["heart", "skull"] });
+    await setNoteReactions(db, chidi, { reactions: ["sunflower"] });
+    expect(await noteSetOf(ana.familyId)).toEqual(["heart", "skull"]);
+    expect(await noteSetOf(chidi.familyId)).toEqual(["sunflower"]);
+  });
+});
+
+describe("the reactions endpoints", () => {
   const savedUrl = process.env.DATABASE_URL;
   beforeAll(() => {
     // The handler uses getDb, which reads DATABASE_URL on first use.
@@ -435,8 +503,18 @@ describe("the reactions endpoint", () => {
     process.env.DATABASE_URL = savedUrl;
   });
 
-  async function post(slug: string, cookies: Record<string, string>, body: unknown) {
-    const req = { method: "POST", query: { slug }, headers: { "content-type": "application/json" }, cookies, body };
+  function post(slug: string, cookies: Record<string, string>, body: unknown) {
+    return send(handler, "POST", slug, cookies, body);
+  }
+
+  async function send(
+    h: (req: VercelRequest, res: VercelResponse) => Promise<unknown>,
+    method: string,
+    slug: string,
+    cookies: Record<string, string>,
+    body: unknown,
+  ) {
+    const req = { method, query: { slug }, headers: { "content-type": "application/json" }, cookies, body };
     const res = {
       statusCode: 0,
       setHeader() {},
@@ -449,8 +527,17 @@ describe("the reactions endpoint", () => {
         return this;
       },
     };
-    await handler(req as unknown as VercelRequest, res as unknown as VercelResponse);
+    await h(req as unknown as VercelRequest, res as unknown as VercelResponse);
     return res.statusCode;
+  }
+
+  // A family member's session, made directly rather than through a sign-in email.
+  async function sessionFor(person: Person) {
+    const token = newToken();
+    await db.session.create({
+      data: { personId: person.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+    });
+    return token;
   }
 
   it("refuses a request without this family's session, storing nothing", async () => {
@@ -477,5 +564,23 @@ describe("the reactions endpoint", () => {
 
     expect(await post(family.slug, { [`session_${family.slug}`]: samToken }, body)).toBe(200);
     expect(await db.noteReaction.count()).toBe(1);
+  });
+
+  it("lets only this family's family members change the note set", async () => {
+    const { family, ana, olu, samToken } = await setUp();
+    const { chidi } = await okaforOf(olu);
+    const cookie = (token: string) => ({ [`session_${family.slug}`]: token });
+    const body = { reactions: ["skull"] };
+    const put = (cookies: Record<string, string>) => send(noteReactionsHandler, "PUT", family.slug, cookies, body);
+
+    expect(await put({})).toBe(401);
+    expect(await put(cookie(olu.sessionToken))).toBe(401);
+    expect(await put(cookie(await sessionFor(chidi)))).toBe(401);
+    expect(await put(cookie(samToken))).toBe(403);
+    expect(await noteSetOf(ana.familyId)).toEqual(usual);
+
+    expect(await put(cookie(await sessionFor(ana)))).toBe(200);
+    expect(await noteSetOf(ana.familyId)).toEqual(["skull"]);
+    expect(await noteSetOf(chidi.familyId)).toEqual(usual);
   });
 });

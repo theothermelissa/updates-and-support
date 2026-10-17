@@ -4,7 +4,7 @@ import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
-import { claimVideo, destroyVideos, lockUnusedVideo, noteSelect, noteView, shownVideo, visibleNotes, type NoteView } from "./notes.js";
+import { claimVideo, destroyVideos, lockUnusedVideo, noteReactionSet, noteSelect, noteView, shownVideo, visibleNotes, type NoteView } from "./notes.js";
 import { notifySupporters } from "./notifications.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
@@ -51,13 +51,14 @@ export async function listUpdates(
       notes: { where: visibleNotes(person.familyId), orderBy: { createdAt: "desc" }, select: noteSelect(person.familyId) },
     },
   });
+  const noteReactions = await noteReactionSet(db, person.familyId);
   return updates.map((u) => {
     const shown = view(u, store);
     return {
       ...shown,
       content: withPhotoLinks(shown.content, person.familyId, new Set(u.photos.map((p) => p.publicId)), settings.cloudinary ?? null),
       ...reactionsView(u.reactions, person.id, u.reactionKinds),
-      notes: u.notes.map((n) => noteView(n, person.id, store)),
+      notes: u.notes.map((n) => noteView(n, person.id, store, noteReactions)),
     };
   });
 }
