@@ -118,7 +118,7 @@ The pane blocks the camera, so only the refused-camera path of the recorder can 
 
 **Why:** checking how odd-shaped videos display needed a 9:16 file and a way to pick it without a file dialog.
 
-**How to apply:** leave the live camera, countdown, and Re-record to Melissa's own browser, and say so.
+**How to apply:** leave the live camera, countdown, and Re-record to Melissa's own browser, and say so. Chrome allows the camera on `http://localhost`, so a local server plus a sign-in link she opens in Chrome works as well as a preview.
 
 ### Don't run prettier
 
