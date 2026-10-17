@@ -33,6 +33,8 @@ export type Me = {
     // Supporters see "How to help" once either is true.
     hasHelpRequests: boolean;
     hasHelpMessage: boolean;
+    // The family's wording for the privacy banner; null for the standard wording.
+    privacyNotice: string | null;
   };
   person: PersonView;
 };

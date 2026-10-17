@@ -28,6 +28,8 @@ model Family {
   noteReactionKinds String[] @default(["heart", "hug", "strong", "clap", "party", "laugh"])
   // Where a new update's "Allow notes" starts in Post settings. Never changes posted updates.
   allowNotesByDefault Boolean @default(true)
+  // The family's wording for the privacy banner atop every signed-in page; null shows the standard wording.
+  privacyNotice   String?
   createdAt       DateTime @default(now())
 
   people       Person[]
