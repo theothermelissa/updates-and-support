@@ -29,3 +29,15 @@ No automated tests. The change touches no visibility, authentication, or server 
 
 - No unit test for `noteTime`.
 - Hover is checked only by Melissa, by hand.
+
+## Results
+
+All steps are built. Typecheck and all 343 tests pass locally and in CI. Checked on the PR preview in the browser pane:
+
+- On the wall and the feed, written notes show no signature or time, and each shows an author control named "Left by Name · date".
+- Tapping the control pins the author line under the row.
+- A family member's written note shows its Family pill beside the control. A test note was posted to check this, then deleted.
+- Video notes look the same as before.
+- The reactor summary still pins its list.
+- At 360px the row fits without scrolling sideways.
+- Mouse hover is left for Melissa to check, because the pane doesn't trigger hover.
