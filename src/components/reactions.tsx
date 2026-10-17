@@ -3,11 +3,15 @@ import { createPortal } from "react-dom";
 import { HeartPlusIcon } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
-import { REACTIONS, summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
+import { inCatalogOrder, reactionFor } from "../lib/reactionCatalog.js";
+import { summary, summaryLabel, whoReacted, type Reactions as ReactionsData } from "../reactions.js";
 
 const HOVER_DELAY = 300;
 
-// A React button that opens a tray of the six emoji, and a summary ("❤️🤗👏") that shows who
+// The tray's look, shared with its preview in Post settings.
+export const TRAY = "flex w-max gap-0.5 rounded-full border bg-popover p-1 text-popover-foreground shadow-md";
+
+// A React button that opens a tray of the emoji allowed here, and a summary ("❤️🤗👏") that shows who
 // reacted. With a mouse, hovering opens either one; on a phone, tapping does. The tray and the
 // hover list are drawn on the page, not inside the card, so the wall's columns can't clip them.
 export function ReactionControls(props: {
@@ -16,7 +20,7 @@ export function ReactionControls(props: {
   children?: ReactNode;
 }) {
   const r = props.reactions;
-  const [tray, setTray] = useState(false);
+  const [trayOpen, setTray] = useState(false);
   const [names, setNames] = useState<"closed" | "hover" | "pinned">("closed");
   const [pending, setPending] = useState(false);
   const area = useRef<HTMLSpanElement>(null);
@@ -34,7 +38,7 @@ export function ReactionControls(props: {
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
   useEffect(() => {
-    if (!tray) return;
+    if (!trayOpen) return;
     const outside = (e: globalThis.PointerEvent) => {
       const target = e.target as Node;
       if (area.current?.contains(target) || trayNode.current?.contains(target)) return;
@@ -51,7 +55,7 @@ export function ReactionControls(props: {
       document.removeEventListener("pointerdown", outside);
       document.removeEventListener("keydown", escape);
     };
-  }, [tray]);
+  }, [trayOpen]);
 
   async function pick(kind: string) {
     window.clearTimeout(timer.current);
@@ -61,55 +65,62 @@ export function ReactionControls(props: {
     setPending(false);
   }
 
-  const mine = REACTIONS.find((x) => x.kind === r.mine);
+  const mine = r.mine ? reactionFor(r.mine) : undefined;
+  // What the server allows, plus the viewer's own when the set no longer has it, so it can be
+  // taken back. With nothing to pick, there's no React button.
+  const tray = inCatalogOrder(r.mine && !r.allowed.includes(r.mine) ? [...r.allowed, r.mine] : r.allowed).flatMap(
+    (kind) => reactionFor(kind) ?? [],
+  );
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="relative"
-          ref={area}
-          onPointerEnter={(e) => hoverTray(e, true)}
-          onPointerLeave={(e) => hoverTray(e, false)}
-        >
-          <Button
-            ref={button}
-            variant="outline"
-            className={cn("h-11 min-w-11 rounded-full px-4 text-foreground", mine ? "border-foreground bg-muted text-2xl" : "px-0 [&_svg]:size-5")}
-            aria-label={mine ? `Your reaction: ${mine.name}. Change it` : "React"}
-            aria-expanded={tray}
-            disabled={pending}
-            onClick={() => {
-              window.clearTimeout(timer.current);
-              setTray(true);
-            }}
-          >
-            {mine ? mine.emoji : <HeartPlusIcon aria-hidden />}
-          </Button>
-          <Floating
-            anchor={area.current}
-            open={tray}
-            side="above"
-            nodeRef={trayNode}
-            className="flex w-max gap-0.5 rounded-full border bg-popover p-1 text-popover-foreground shadow-md"
-            role="group"
-            aria-label="Pick a reaction"
+        {tray.length > 0 && (
+          <span
+            className="relative"
+            ref={area}
             onPointerEnter={(e) => hoverTray(e, true)}
             onPointerLeave={(e) => hoverTray(e, false)}
           >
-            {REACTIONS.map((x) => (
-              <button
-                key={x.kind}
-                type="button"
-                className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
-                aria-label={x.name}
-                aria-pressed={x.kind === r.mine}
-                onClick={() => pick(x.kind)}
-              >
-                {x.emoji}
-              </button>
-            ))}
-          </Floating>
-        </span>
+            <Button
+              ref={button}
+              variant="outline"
+              className={cn("h-11 min-w-11 rounded-full px-4 text-foreground", mine ? "border-foreground bg-muted text-2xl" : "px-0 [&_svg]:size-5")}
+              aria-label={mine ? `Your reaction: ${mine.name}. Change it` : "React"}
+              aria-expanded={trayOpen}
+              disabled={pending}
+              onClick={() => {
+                window.clearTimeout(timer.current);
+                setTray(true);
+              }}
+            >
+              {mine ? mine.emoji : <HeartPlusIcon aria-hidden />}
+            </Button>
+            <Floating
+              anchor={area.current}
+              open={trayOpen}
+              side="above"
+              nodeRef={trayNode}
+              className={TRAY}
+              role="group"
+              aria-label="Pick a reaction"
+              onPointerEnter={(e) => hoverTray(e, true)}
+              onPointerLeave={(e) => hoverTray(e, false)}
+            >
+              {tray.map((x) => (
+                <button
+                  key={x.kind}
+                  type="button"
+                  className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
+                  aria-label={x.name}
+                  aria-pressed={x.kind === r.mine}
+                  onClick={() => pick(x.kind)}
+                >
+                  {x.emoji}
+                </button>
+              ))}
+            </Floating>
+          </span>
+        )}
         {r.count > 0 && <Summary r={r} names={names} setNames={setNames} />}
         {props.children}
       </div>

@@ -23,7 +23,7 @@ The feed is the family's main page. Everyone signed in to the family sees every 
 
 The feed, like every page signed in to a family, sits under the family's navigation bar (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
-Each update has a footer of actions in one row: **React** and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
+Each update has a footer of actions in one row: **React** (unless the update allows no reactions; see "Reactions") and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
 **The feed stays current without a refresh.** While the page is open and visible, it checks for changes every 30 seconds, and immediately when the reader returns to the tab. A hidden tab doesn't check, so a forgotten tab costs nothing. Changes to updates already on screen (edits, reactions, notes, and deletions) appear in place. New updates don't appear on their own, because inserting one at the top would move whatever the reader is in the middle of; instead a "1 new update" (or "3 new updates") button appears at the top of the screen, and pressing it shows them and scrolls to the top. A family member's own post appears at once. A failed check shows nothing and simply tries again at the next one. If the reader has been signed out, for example because they were removed or the community question's answer changed, the next check takes them to the gate. The wall doesn't update itself; it's current each time it's opened.
 
@@ -35,11 +35,16 @@ Pasting from another app or a website keeps only formatting the editor allows (p
 
 ## Posting
 
-A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). The form has a **"Notify supporters by email"** checkbox, checked by default, so a small follow-up can go out without emailing everyone. The checkbox applies to either tab.
+A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when supporters will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none. Screen readers hear each icon's meaning, such as "Emails supporters" or "Chosen reactions." The settings apply to either tab:
+
+- **"Notify supporters by email,"** checked by default, so a small follow-up can go out without emailing everyone.
+- **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
+
+Posting resets both settings to their defaults.
 
 ## Editing
 
-A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. A video update can't be edited.
+A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with only the reactions setting, showing the update's current reactions: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"). A video update can't be edited, so its reactions stay as they were posted.
 
 ## Deleting
 
@@ -78,16 +83,32 @@ Videos are stored and delivered the same way as video notes (see [access.md](acc
 
 ## Reactions
 
-Everyone signed in to the family can react to an update or a note: family members and supporters, including readers who haven't given a name or email. There are six reactions, shown only as emoji, with no labels: ❤️ 🤗 💪 👏 🎉 😂.
+Everyone signed in to the family can react to an update or a note: family members and supporters, including readers who haven't given a name or email. Reactions are shown only as emoji, with no labels.
 
-Each person has at most one reaction on a given update, and at most one on a given note. Picking a different emoji replaces it; picking the same one again removes it. Editing an update keeps its reactions and its notes' reactions.
+**The catalog.** Every reaction comes from a fixed catalog in the app, with no images or data from any other service. The **usual reactions** are ❤️ 🤗 💪 👏 🎉 😂. Its order, listed here in groups for reading, is the order reactions appear everywhere; the app shows it as one list:
+
+- **Love:** ❤️ 🧡 💛 💚 💙 💜 🤍 💖 ❤️‍🩹 🫶 🥰 😘
+- **Support:** 🤗 🫂 💪 🙏 🙌 👏 👍 🤝 🤞 🫡 🕯️ 🕊️
+- **Hope:** 🌻 💐 🌹 🌈 ☀️ ⭐ ✨ 🌱 🦋 🍀
+- **Joy:** 🎉 🎊 😂 🤣 😊 😁 🤩 🏆 💯 🔥
+- **Sad:** 😢 😭 💔 🥀 😔 🥺 🥹 😟 😮‍💨
+- **Angry:** 😠 😡 🤬 🙄 😒 😩 😫 🤯 🖕
+- **Dark humor:** 💀 ⚰️ 👻 🙃 🫠 😅 😬 🤡 🤦 🤷
+
+Each emoji has a name for screen readers, such as "Red heart" or "Skull." Emoji have no skin-tone variants.
+
+**Each update has its own set** of up to six reactions from the catalog, chosen when it's posted and, for a text update, changeable by editing it (see "Posting" and "Editing"). It's the usual six unless the family chose otherwise. An update can allow no reactions. Notes always use the usual six.
+
+Each person has at most one reaction on a given update, and at most one on a given note. Picking a different emoji replaces it; picking the same one again removes it. Editing an update keeps its reactions and its notes' reactions, including reactions with emoji the update no longer allows: those stay shown and counted, but no one can pick them again. Anyone can always remove their own reaction, even when its emoji is no longer allowed.
 
 The React button and the summary work the same way on an update and on a note.
 
-- **A React button.** It's round and shows a heart with a plus until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
-- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
+- **A React button.** It's round and shows a heart with a plus until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the allowed emoji, in catalog order, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray, and is in the tray even when it's no longer allowed, so it can be removed. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers. On an update that allows no reactions, the button is hidden, except for a viewer who already reacted, whose button shows their emoji and opens a tray of just that one, to remove it.
+- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, with ties in catalog order, a little smaller than the button's emoji. It's shown even on an update that allows no reactions. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
 
 On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the signature, with the time and **Delete** (see "Reacting to a note").
+
+**The server enforces the set.** A new reaction is accepted only when its emoji is in the update's current set, or the usual six for a note. Removing one's own reaction is always accepted. Only family members choose an update's set.
 
 **Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it, and a later change of name shows there too (see [access.md](access.md#changing-your-name)).
 
@@ -143,7 +164,7 @@ The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is 
 
 ### Reacting to a note
 
-The rules, the React button, the tray, and the summary are the ones under "Reactions." They sit under the signature, with the time and Delete on that row.
+The rules, the React button, the tray, and the summary are the ones under "Reactions," with the usual six reactions. They sit under the signature, with the time and Delete on that row.
 
 ### Deleting a note
 

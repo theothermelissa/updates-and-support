@@ -7,7 +7,8 @@ import type { Person } from "../../server/generated/prisma/client.js";
 import { setRemoved } from "../../server/people.js";
 import { createNote, deleteNote, listNotes } from "../../server/notes.js";
 import { setReaction } from "../../server/reactions.js";
-import { createUpdate, deleteUpdate, listUpdates } from "../../server/updates.js";
+import { createUpdate, deleteUpdate, editUpdate, listUpdates } from "../../server/updates.js";
+import { USUAL_REACTIONS } from "../../src/lib/reactionCatalog.js";
 import { createTestDb } from "./db.js";
 import { answerCorrectly, fakeMailer, joinWithEmail, makeFamily, resetDb } from "./fixtures.js";
 
@@ -35,7 +36,8 @@ async function reactionsFor(person: Person) {
   return (await listUpdates(db, person)).find((u) => u.body === "Rivera news")!.reactions;
 }
 
-const none = { count: 0, kinds: [], mine: null, named: [] };
+const usual = [...USUAL_REACTIONS];
+const none = { count: 0, kinds: [], mine: null, allowed: usual, named: [] };
 
 describe("who may react, and to what", () => {
   it("treats another family's update as not found", async () => {
@@ -55,7 +57,7 @@ describe("who may react, and to what", () => {
     expect(await reactionsFor(ana)).toEqual(none);
 
     await setRemoved(db, ana, sam.id, false);
-    expect(await reactionsFor(ana)).toEqual({ count: 1, kinds: ["hug"], mine: null, named: [{ name: "Sam", kind: "hug" }] });
+    expect(await reactionsFor(ana)).toEqual({ count: 1, kinds: ["hug"], mine: null, allowed: usual, named: [{ name: "Sam", kind: "hug" }] });
   });
 
   it("rejects an unknown reaction or a missing update, storing nothing", async () => {
@@ -66,6 +68,102 @@ describe("who may react, and to what", () => {
     await expect(setReaction(db, sam, { updateId: update.id })).rejects.toMatchObject({ status: 400 });
     await expect(setReaction(db, sam, { kind: "heart" })).rejects.toMatchObject({ status: 400 });
     expect(await db.reaction.count()).toBe(0);
+  });
+});
+
+// A document of one paragraph, as the editor sends it.
+function doc(text: string) {
+  return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
+}
+
+describe("each update's own set", () => {
+  it("accepts only reactions in the update's set, storing nothing for the rest", async () => {
+    const { ana, sam } = await setUp();
+    const update = await createUpdate(db, ana, { body: "Rough day", reactions: ["middle_finger", "skull", "heart"] });
+
+    await react(sam, update.id, "skull");
+    for (const kind of ["hug", "laugh", "pray"]) {
+      await expect(react(ana, update.id, kind)).rejects.toMatchObject({ status: 400 });
+    }
+    expect(await db.reaction.findMany({ select: { kind: true, personId: true } })).toEqual([{ kind: "skull", personId: sam.id }]);
+    const shown = (await listUpdates(db, sam)).find((u) => u.id === update.id)!.reactions;
+    expect(shown).toMatchObject({ kinds: ["skull"], mine: "skull", allowed: ["heart", "middle_finger", "skull"] });
+  });
+
+  it("refuses every reaction on an update that allows none", async () => {
+    const { ana, sam } = await setUp();
+    const update = await createUpdate(db, ana, { body: "No reactions, please", reactions: [] });
+    for (const kind of ["heart", "skull"]) {
+      await expect(react(sam, update.id, kind)).rejects.toMatchObject({ status: 400 });
+    }
+    expect(await db.reaction.count()).toBe(0);
+    expect((await listUpdates(db, sam)).find((u) => u.id === update.id)!.reactions.allowed).toEqual([]);
+  });
+
+  it("keeps a reaction the set drops, which its owner can clear but no one can pick again", async () => {
+    const { ana, sam, family } = await setUp();
+    const tess = (await joinWithEmail(db, family, "Tess")).person;
+    const update = await createUpdate(db, ana, { content: doc("Scan day") });
+    await react(sam, update.id, "laugh");
+
+    await editUpdate(db, ana, update.id, { content: doc("Scan day"), reactions: ["heart", "pray"] });
+    const shown = (await listUpdates(db, ana)).find((u) => u.id === update.id)!.reactions;
+    expect(shown).toMatchObject({ count: 1, kinds: ["laugh"], allowed: ["heart", "pray"], named: [{ name: "Sam", kind: "laugh" }] });
+
+    await expect(react(tess, update.id, "laugh")).rejects.toMatchObject({ status: 400 });
+    await react(sam, update.id, "heart");
+    await expect(react(sam, update.id, "laugh")).rejects.toMatchObject({ status: 400 });
+    expect(await db.reaction.findFirst({ where: { personId: sam.id } })).toMatchObject({ kind: "heart" });
+
+    await editUpdate(db, ana, update.id, { content: doc("Scan day"), reactions: [] });
+    await react(sam, update.id, null);
+    expect(await db.reaction.count()).toBe(0);
+  });
+
+  it("stores the set in catalog order, and refuses one that isn't a set of at most six catalog emoji", async () => {
+    const { ana } = await setUp();
+    const update = await createUpdate(db, ana, { content: doc("Ordered"), reactions: ["skull", "pray", "heart"] });
+    expect(await db.update.findUniqueOrThrow({ where: { id: update.id } })).toMatchObject({
+      reactionKinds: ["heart", "pray", "skull"],
+    });
+
+    const bad: unknown[] = [
+      ["heart", "hug", "strong", "clap", "party", "laugh", "skull"],
+      ["heart", "heart"],
+      ["thumbsup"],
+      [42],
+      "heart",
+      null,
+    ];
+    for (const reactions of bad) {
+      await expect(createUpdate(db, ana, { content: doc("Bad"), reactions })).rejects.toMatchObject({ status: 400 });
+      await expect(editUpdate(db, ana, update.id, { content: doc("Changed"), reactions })).rejects.toMatchObject({
+        status: 400,
+      });
+    }
+    expect(await db.update.count({ where: { body: "Bad" } })).toBe(0);
+    expect(await db.update.findUniqueOrThrow({ where: { id: update.id } })).toMatchObject({
+      body: "Ordered",
+      reactionKinds: ["heart", "pray", "skull"],
+      editedAt: null,
+    });
+  });
+
+  it("gives a new update the usual six, and leaves the set alone on an edit that doesn't send one", async () => {
+    const { ana, update } = await setUp();
+    expect(await db.update.findUniqueOrThrow({ where: { id: update.id } })).toMatchObject({ reactionKinds: usual });
+    const custom = await createUpdate(db, ana, { content: doc("Custom"), reactions: ["sunflower"] });
+    await editUpdate(db, ana, custom.id, { content: doc("Custom, edited") });
+    expect(await db.update.findUniqueOrThrow({ where: { id: custom.id } })).toMatchObject({ reactionKinds: ["sunflower"] });
+  });
+
+  it("refuses a supporter's edit that changes the set", async () => {
+    const { ana, sam } = await setUp();
+    const update = await createUpdate(db, ana, { content: doc("Family only") });
+    await expect(
+      editUpdate(db, sam, update.id, { content: doc("Family only"), reactions: ["middle_finger"] }),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(await db.update.findUniqueOrThrow({ where: { id: update.id } })).toMatchObject({ reactionKinds: usual });
   });
 });
 
@@ -106,6 +204,7 @@ describe("what each reader sees", () => {
       count: 3,
       kinds: ["laugh", "hug"],
       mine: "laugh",
+      allowed: usual,
       named: [
         { name: "Ana Rivera", kind: "hug" },
         { name: "Tess", kind: "laugh" },
@@ -117,7 +216,7 @@ describe("what each reader sees", () => {
     const { family, ana, update } = await setUp();
     const reader = await answerCorrectly(db, family);
     await react(reader.person, update.id, "hug");
-    expect(await reactionsFor(ana)).toEqual({ count: 1, kinds: ["hug"], mine: null, named: [] });
+    expect(await reactionsFor(ana)).toEqual({ count: 1, kinds: ["hug"], mine: null, allowed: usual, named: [] });
 
     await addEmail(db, fakeMailer().send, family, reader.person, { name: "Tess Neighbor", email: "tess@example.com" });
     expect((await reactionsFor(ana)).named).toEqual([{ name: "Tess Neighbor", kind: "hug" }]);
@@ -190,7 +289,7 @@ describe("reactions on notes", () => {
     expect(await listNotes(db, ana)).toEqual([]);
 
     await setRemoved(db, ana, sam.id, false);
-    expect(await noteReactionsFor(ana, note.id)).toEqual({ count: 1, kinds: ["heart"], mine: "heart", named: [] });
+    expect(await noteReactionsFor(ana, note.id)).toEqual({ count: 1, kinds: ["heart"], mine: "heart", allowed: usual, named: [] });
   });
 
   it("refuses a removed supporter, whose earlier reaction is hidden until restored", async () => {
@@ -208,6 +307,7 @@ describe("reactions on notes", () => {
       count: 1,
       kinds: ["hug"],
       mine: null,
+      allowed: usual,
       named: [{ name: "Sam", kind: "hug" }],
     });
   });
@@ -225,6 +325,18 @@ describe("reactions on notes", () => {
     await expect(reactToNote(sam, "no-such-note")).rejects.toMatchObject({ status: 404 });
     expect(await db.noteReaction.count()).toBe(0);
     expect(await db.reaction.count()).toBe(0);
+  });
+
+  it("allows only the usual six on a note, whatever its update allows", async () => {
+    const { ana, sam } = await setUp();
+    const update = await createUpdate(db, ana, { body: "Custom", reactions: ["skull", "pray"] });
+    const note = await leaveNote(sam, update.id);
+    for (const kind of ["skull", "pray", "sunflower"]) {
+      await expect(reactToNote(ana, note.id, kind)).rejects.toMatchObject({ status: 400 });
+    }
+    expect(await db.noteReaction.count()).toBe(0);
+    await reactToNote(ana, note.id, "hug");
+    expect((await noteReactionsFor(ana, note.id)).allowed).toEqual(usual);
   });
 
   it("filters reactions by family when reading, on the wall and on the feed", async () => {
@@ -250,6 +362,7 @@ describe("reactions on notes", () => {
       count: 3,
       kinds: ["clap", "heart"],
       mine: "heart",
+      allowed: usual,
       named: [
         { name: "Sam", kind: "clap" },
         { name: "Tess", kind: "clap" },
@@ -274,7 +387,7 @@ describe("reactions on notes", () => {
     const note = await leaveNote(ana, update.id);
     const reader = await answerCorrectly(db, family);
     await reactToNote(reader.person, note.id, "hug");
-    expect(await noteReactionsFor(ana, note.id)).toEqual({ count: 1, kinds: ["hug"], mine: null, named: [] });
+    expect(await noteReactionsFor(ana, note.id)).toEqual({ count: 1, kinds: ["hug"], mine: null, allowed: usual, named: [] });
 
     await addEmail(db, fakeMailer().send, family, reader.person, { name: "Tess Neighbor", email: "tess@example.com" });
     expect((await noteReactionsFor(ana, note.id)).named).toEqual([{ name: "Tess Neighbor", kind: "hug" }]);

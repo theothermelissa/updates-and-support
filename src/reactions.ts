@@ -1,23 +1,16 @@
-// The six reactions, in tray order. The keys match the server's ReactionKind. `name` is
-// only for screen readers; the page never shows it.
-export const REACTIONS = [
-  { kind: "heart", emoji: "❤️", name: "Heart" },
-  { kind: "hug", emoji: "🤗", name: "Hug" },
-  { kind: "strong", emoji: "💪", name: "Flexed arm" },
-  { kind: "clap", emoji: "👏", name: "Clapping hands" },
-  { kind: "party", emoji: "🎉", name: "Party popper" },
-  { kind: "laugh", emoji: "😂", name: "Laughing" },
-] as const;
+import { reactionFor } from "./lib/reactionCatalog.js";
 
 export type Reactions = {
   count: number;
   kinds: string[];
   mine: string | null;
+  // The emoji anyone may pick here, in catalog order, as the server allows them.
+  allowed: string[];
   named: { name: string; kind: string }[];
 };
 
 export function emoji(kind: string): string {
-  return REACTIONS.find((r) => r.kind === kind)?.emoji ?? "";
+  return reactionFor(kind)?.emoji ?? "";
 }
 
 // "❤️🙏😂", the three most-used emoji.
