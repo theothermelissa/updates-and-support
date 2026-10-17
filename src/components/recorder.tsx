@@ -17,9 +17,9 @@ const CONSTRAINTS: MediaStreamConstraints = {
   audio: true,
 };
 
-// A "Start recording" button that turns on the camera, which asks for permission the first
-// time, then the live camera, mirrored like a selfie, with a 3-2-1 countdown, then recording
-// with Stop. With a max length it shows the time left and stops at that length; without one
+// Turns the camera on as soon as it appears, which asks for permission the first time, and
+// shows the live camera, mirrored like a selfie, with "Start recording" over its bottom edge.
+// That starts a 3-2-1 countdown, then recording with Stop in the same place. With a max length it shows the time left and stops at that length; without one
 // it shows how long it has run and stops only at Stop, at 100 MB, or when the page is hidden.
 // Hands the recording over as a file and turns the camera off; unmounting turns it off too
 // and discards anything recording. If the camera can't start, reports why instead. A note
@@ -35,7 +35,7 @@ export function VideoRecorder(props: {
   const live = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
-  const [phase, setPhase] = useState<"idle" | "starting" | "ready" | "countdown" | "recording">("idle");
+  const [phase, setPhase] = useState<"starting" | "ready" | "countdown" | "recording">("starting");
   const [count, setCount] = useState(3);
   const [elapsed, setElapsed] = useState(0);
   const colors = props.color ? PALETTE[props.color] : null;
@@ -50,12 +50,28 @@ export function VideoRecorder(props: {
 
   const mounted = useRef(true);
 
-  // A browser that can't record says so at once, before anyone presses the button.
+  // Turns the camera on, or says at once that this browser can't record.
   useEffect(() => {
     mounted.current = true;
+    // Its own flag rather than `mounted`: StrictMode remounts at once, which would set
+    // `mounted` back to true before the first mount's stream arrived and leak that stream.
+    let cancelled = false;
     const type = typeof MediaRecorder === "undefined" ? null : recordingType((t) => MediaRecorder.isTypeSupported(t));
-    if (!navigator.mediaDevices?.getUserMedia || !type) callbacks.current.onUnavailable(cameraProblem(undefined));
+    if (!navigator.mediaDevices?.getUserMedia || !type) {
+      callbacks.current.onUnavailable(cameraProblem(undefined));
+    } else {
+      navigator.mediaDevices.getUserMedia(CONSTRAINTS).then(
+        (s) => {
+          if (cancelled) return stopTracks(s);
+          stream.current = s;
+          if (live.current) live.current.srcObject = s;
+          setPhase("ready");
+        },
+        (err) => !cancelled && callbacks.current.onUnavailable(cameraProblem(err)),
+      );
+    }
     return () => {
+      cancelled = true;
       mounted.current = false;
       // Discards a recording in progress: the dialog closed or switched away.
       if (recorder.current) {
@@ -93,21 +109,6 @@ export function VideoRecorder(props: {
     };
   }, [phase]);
 
-  // Turns the camera on, then goes straight into the countdown.
-  function open() {
-    setPhase("starting");
-    navigator.mediaDevices.getUserMedia(CONSTRAINTS).then(
-      (s) => {
-        if (!mounted.current) return stopTracks(s);
-        stream.current = s;
-        if (live.current) live.current.srcObject = s;
-        setCount(3);
-        setPhase("countdown");
-      },
-      (err) => mounted.current && callbacks.current.onUnavailable(cameraProblem(err)),
-    );
-  }
-
   function start() {
     const type = recordingType((t) => MediaRecorder.isTypeSupported(t))!;
     const chunks: Blob[] = [];
@@ -126,12 +127,13 @@ export function VideoRecorder(props: {
       chunks.push(e.data);
     };
     rec.onstop = () => {
-      stopTracks(stream.current);
+      // Nothing usable: keep the camera on for another try.
       if (chunks.length === 0) {
-        if (mounted.current) setPhase("idle");
+        if (mounted.current) setPhase("ready");
         callbacks.current.onRejected?.("That video is too large. Please choose one under 100 MB.");
         return;
       }
+      stopTracks(stream.current);
       const fileType = type.split(";")[0]!;
       if (hitSize) callbacks.current.onSizeLimit?.();
       callbacks.current.onRecorded(new File(chunks, recordingName(type), { type: fileType }));
@@ -163,19 +165,12 @@ export function VideoRecorder(props: {
           className="size-full -scale-x-100 object-contain"
           aria-label="Your camera"
         />
-        {phase === "idle" && (
-          <span className="absolute inset-0 flex items-center justify-center p-4">
-            <Button type="button" onClick={open} className="hover:opacity-90" style={inked}>
-              Start recording
-            </Button>
-          </span>
-        )}
         {phase === "starting" && (
           <p
             className={cn("absolute inset-0 flex items-center justify-center p-4 text-sm", !colors && "text-muted-foreground")}
             style={colors ? { color: colors.text } : undefined}
           >
-            Starting your camera…
+            Waiting for camera access…
           </p>
         )}
         {phase === "countdown" && (
@@ -195,30 +190,33 @@ export function VideoRecorder(props: {
             {props.maxSeconds === null ? elapsedTime(elapsed) : timeLeft(elapsed, props.maxSeconds)}
           </span>
         )}
+        {/* One control at a time, in the same place, so a thumb never has to move. */}
+        <span className="absolute inset-x-0 bottom-3 flex justify-center px-3">
+          {phase === "ready" && (
+            <Button
+              type="button"
+              className="hover:opacity-90"
+              style={inked}
+              onClick={() => {
+                setCount(3);
+                setPhase("countdown");
+              }}
+            >
+              Start recording
+            </Button>
+          )}
+          {phase === "countdown" && (
+            <Button type="button" variant="outline" onClick={() => setPhase("ready")}>
+              Cancel countdown
+            </Button>
+          )}
+          {phase === "recording" && (
+            <Button type="button" variant="destructive" onClick={stop}>
+              Stop
+            </Button>
+          )}
+        </span>
       </div>
-      {phase === "ready" && (
-        <Button
-          type="button"
-          className="hover:opacity-90"
-          style={inked}
-          onClick={() => {
-            setCount(3);
-            setPhase("countdown");
-          }}
-        >
-          Start recording
-        </Button>
-      )}
-      {phase === "countdown" && (
-        <Button type="button" variant="outline" onClick={() => setPhase("ready")}>
-          Cancel countdown
-        </Button>
-      )}
-      {phase === "recording" && (
-        <Button type="button" variant="destructive" onClick={stop}>
-          Stop
-        </Button>
-      )}
     </div>
   );
 }
