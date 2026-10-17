@@ -80,6 +80,14 @@ A cloud session can run the tests and its pushes build Vercel previews, but it c
 
 CLAUDE.md requires proving each access test fails with its rule removed. Three patterns hide a removed rule. A test can take a path that never reaches the rule: the check that a bad link costs no gate attempt passed with the order reversed, because it sent the *correct* answer, which never records an attempt. Next, a backstop check can mask the cleanup it backs up: removal's session and link deletion passed its test with the deletion gone, because `getSession` and `spendLink` refuse removed people anyway, so assert the cleanup directly. Last, a single concurrent race can come out right by timing alone: the family-member lock's test passed without the lock until it repeated the race 20 times. Where the rule is a lock, make the race deterministic instead: hold the lock in a test transaction, start the competing work, wait until it's queued in `pg_locks` (`queuedOrDone` in the test fixtures), then act and commit. The gate-lock tests work this way, and each one fails every time its lock is removed. Holding the lock in the test doesn't work when the unfixed code would also block on it, for example at a foreign-key check on a row the test locked; then pause the code mid-transaction instead, with a Prisma query extension that waits after the step in question (the magic-link removal race in `tests/integration/auth.test.ts`).
 
+### The local test database is shared between sessions
+
+Every worktree's `.env` points `TEST_DATABASE_URL` at the same local database, and `global-setup.ts` runs `migrate deploy` against it. So a session on a branch with a newer migration leaves it ahead of every other branch.
+
+**Why:** on the note author PR, 20 reaction tests failed with `type "public.ReactionKind" does not exist` because another session's unmerged migration had changed that column to text. The PR's own code was fine.
+
+**How to apply:** when integration tests fail in code the branch didn't touch, compare `_prisma_migrations` with `prisma/migrations`. Then run the suite against a throwaway database: `createdb`, point `TEST_DATABASE_URL` at it for that one command, and `dropdb` afterward.
+
 ### `vercel dev` and previews differ from production
 
 `vercel dev` ignores `vercel.json` headers on pages served by Vite, overrides `Cache-Control` on functions with its own, and doesn't notice newly added files in `api/` until restarted. Previews sit behind Vercel's login, whose redirect drops query strings.
