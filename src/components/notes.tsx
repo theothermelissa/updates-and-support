@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { MessageSquareHeartIcon, UserRoundIcon } from "lucide-react";
+import { EllipsisIcon, MessageSquareHeartIcon } from "lucide-react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { cn } from "cn";
 import { Confirm, ErrorMessage, Field, LinkedText } from "@/components/page";
@@ -65,10 +65,9 @@ export function NoteCard(props: {
                 <Reveal
                   state={author}
                   setState={setAuthor}
-                  className="flex size-11 items-center justify-center rounded-full border outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-black/5 [&_svg]:size-5"
+                  className="flex size-11 items-center justify-center rounded-full opacity-80 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-black/5 [&_svg]:size-5"
                   label={`Left by ${byline}`}
-                  style={{ borderColor: `${colors.text}33` }}
-                  trigger={<UserRoundIcon aria-hidden />}
+                  trigger={<EllipsisIcon aria-hidden />}
                   content={byline}
                 />
               </>
