@@ -1,8 +1,9 @@
 import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
-import { visibleNotes } from "./notes.js";
-import { inCatalogOrder, MAX_REACTIONS, reactionFor, USUAL_REACTIONS } from "../src/lib/reactionCatalog.js";
+import { noteReactionSet, visibleNotes } from "./notes.js";
+import { requireFamilyMember } from "./people.js";
+import { inCatalogOrder, MAX_REACTIONS, reactionFor } from "../src/lib/reactionCatalog.js";
 
 // An update's set of reactions from a request: distinct catalog kinds, at most six, returned in
 // catalog order so the same set is always stored the same way. Empty allows none.
@@ -37,7 +38,7 @@ export function visibleReactors(familyId: string) {
 
 // Sets the signed-in person's one reaction to an update or a note in their own family,
 // replacing any other, or clears it with kind: null. Exactly one target. A new reaction must
-// be one the target allows: the update's own set, or the usual six on a note. Clearing is
+// be one the target allows: the update's own set, or the family's note set on a note. Clearing is
 // always allowed, so anyone can take back a reaction the set no longer offers. Setting rather
 // than toggling, so a repeated request leaves the same state.
 export async function setReaction(
@@ -82,7 +83,8 @@ export async function setReaction(
     where: { id: noteId as string, ...visibleNotes(person.familyId) },
   });
   if (!note) throw new RequestError(404, "Note not found");
-  if (chosen !== null && !USUAL_REACTIONS.includes(chosen)) throw notAllowed();
+  // visibleNotes put the note in the person's family, so this is the note's family's set.
+  if (chosen !== null && !(await noteReactionSet(db, person.familyId)).includes(chosen)) throw notAllowed();
   const key = { noteId: noteId as string, personId: person.id };
   await write(
     () =>
@@ -95,6 +97,23 @@ export async function setReaction(
           }),
     "Note not found",
   );
+}
+
+// A family member sets the emoji anyone may react with on their family's notes. Reactions
+// already given stay, as when an update's set changes.
+export async function setNoteReactions(
+  db: Db,
+  person: Person,
+  input: { reactions?: unknown },
+): Promise<{ reactions: string[] }> {
+  requireFamilyMember(person);
+  const kinds = parseReactionSet(input.reactions);
+  const family = await db.family.update({
+    where: { id: person.familyId },
+    data: { noteReactionKinds: kinds },
+    select: { noteReactionKinds: true },
+  });
+  return { reactions: family.noteReactionKinds };
 }
 
 // Includes a kind that isn't a string, or isn't in the catalog at all.

@@ -22,13 +22,7 @@ export function PostSettings(props: {
   const [open, setOpen] = useState(false);
   // Unchecking "Use the usual reactions" shows the grid, starting from the usual six.
   const [choosing, setChoosing] = useState(!isUsual(reactions));
-  const full = reactions.length >= MAX_REACTIONS;
-
   const usual = !choosing;
-
-  function toggle(kind: string) {
-    onReactions(reactions.includes(kind) ? reactions.filter((k) => k !== kind) : inCatalogOrder([...reactions, kind]));
-  }
 
   return (
     <>
@@ -65,55 +59,85 @@ export function PostSettings(props: {
               Notify supporters by email
             </Label>
           )}
-          <Label>
-            <Checkbox
-              checked={!choosing}
-              onCheckedChange={(checked) => {
-                setChoosing(checked !== true);
-                if (checked === true) onReactions([...USUAL_REACTIONS]);
-              }}
-              disabled={disabled}
-            />
-            Use the usual reactions
-          </Label>
-          {choosing && (
-            <div className="space-y-3">
-              <div className="flex min-h-13 items-center">
-                <span className="sr-only" aria-live="polite">
-                  {reactions.length} of {MAX_REACTIONS} chosen
-                </span>
-                {reactions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No reactions</p>
-                ) : (
-                  <div className={TRAY} aria-hidden>
-                    {reactions.map((kind) => (
-                      <span key={kind} className="grid size-11 place-items-center text-[1.6rem]">
-                        {reactionFor(kind)?.emoji}
-                      </span>
-                    ))}
-                  </div>
-                )}
+          <ReactionChooser
+            reactions={reactions}
+            onReactions={onReactions}
+            choosing={choosing}
+            onChoosing={setChoosing}
+            disabled={disabled}
+          />
+        </div>
+      )}
+    </>
+  );
+}
+
+// "Use the usual reactions," and when it's unchecked, a tray preview and the whole catalog as
+// one grid, up to six. The owner keeps `choosing` (start it as !isUsual(reactions)), so it
+// survives the chooser closing. Post settings and the People page's note reactions use it.
+export function ReactionChooser(props: {
+  reactions: string[];
+  onReactions: (kinds: string[]) => void;
+  choosing: boolean;
+  onChoosing: (choosing: boolean) => void;
+  disabled?: boolean;
+}) {
+  const { reactions, onReactions, choosing, disabled } = props;
+  const full = reactions.length >= MAX_REACTIONS;
+
+  function toggle(kind: string) {
+    onReactions(reactions.includes(kind) ? reactions.filter((k) => k !== kind) : inCatalogOrder([...reactions, kind]));
+  }
+
+  return (
+    <>
+      <Label>
+        <Checkbox
+          checked={!choosing}
+          onCheckedChange={(checked) => {
+            props.onChoosing(checked !== true);
+            if (checked === true) onReactions([...USUAL_REACTIONS]);
+          }}
+          disabled={disabled}
+        />
+        Use the usual reactions
+      </Label>
+      {choosing && (
+        <div className="space-y-3">
+          <div className="flex min-h-13 items-center">
+            <span className="sr-only" aria-live="polite">
+              {reactions.length} of {MAX_REACTIONS} chosen
+            </span>
+            {reactions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No reactions</p>
+            ) : (
+              <div className={TRAY} aria-hidden>
+                {reactions.map((kind) => (
+                  <span key={kind} className="grid size-11 place-items-center text-[1.6rem]">
+                    {reactionFor(kind)?.emoji}
+                  </span>
+                ))}
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {REACTIONS.map((x) => {
-                  const on = reactions.includes(x.kind);
-                  return (
-                    <button
-                      key={x.kind}
-                      type="button"
-                      className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40 disabled:hover:bg-transparent aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
-                      aria-label={x.name}
-                      aria-pressed={on}
-                      disabled={disabled || (full && !on)}
-                      onClick={() => toggle(x.kind)}
-                    >
-                      {x.emoji}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {REACTIONS.map((x) => {
+              const on = reactions.includes(x.kind);
+              return (
+                <button
+                  key={x.kind}
+                  type="button"
+                  className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40 disabled:hover:bg-transparent aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
+                  aria-label={x.name}
+                  aria-pressed={on}
+                  disabled={disabled || (full && !on)}
+                  onClick={() => toggle(x.kind)}
+                >
+                  {x.emoji}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </>

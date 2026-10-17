@@ -3,7 +3,6 @@ import { RequestError } from "./errors.js";
 import { validName } from "./families.js";
 import { NoteColor, type Person, type Prisma } from "./generated/prisma/client.js";
 import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
-import { USUAL_REACTIONS } from "../src/lib/reactionCatalog.js";
 import { cloudinaryStore, newPublicId, type VideoStore } from "./videos.js";
 
 const COLORS = Object.values(NoteColor);
@@ -62,7 +61,15 @@ export function noteSelect(familyId: string) {
 
 type LoadedNote = Prisma.NoteGetPayload<{ select: ReturnType<typeof noteSelect> }>;
 
-export function noteView(note: LoadedNote, viewerId: string, store: VideoStore): NoteView {
+// The emoji anyone may react with on the family's notes. Read by the person's own family
+// rather than the family loaded from the address, which a redirect can point elsewhere.
+export async function noteReactionSet(db: Pick<Db, "family">, familyId: string): Promise<string[]> {
+  const family = await db.family.findUniqueOrThrow({ where: { id: familyId }, select: { noteReactionKinds: true } });
+  return family.noteReactionKinds;
+}
+
+// `allowed` is the family's note set, from noteReactionSet.
+export function noteView(note: LoadedNote, viewerId: string, store: VideoStore, allowed: readonly string[]): NoteView {
   return {
     id: note.id,
     updateId: note.updateId,
@@ -74,7 +81,7 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
     authorIsFamily: note.author.role === "family",
     createdAt: note.createdAt,
     mine: note.authorId === viewerId,
-    ...reactionsView(note.reactions, viewerId, USUAL_REACTIONS),
+    ...reactionsView(note.reactions, viewerId, allowed),
   };
 }
 
@@ -178,7 +185,8 @@ export async function createNote(
         data: { updateId, authorId: person.id, body, videoId, color: color as NoteColor },
         select: noteSelect(person.familyId),
       });
-      return { note: noteView(note, person.id, store), name };
+      const allowed = await noteReactionSet(tx, person.familyId);
+      return { note: noteView(note, person.id, store, allowed), name };
     });
   } catch (err) {
     // Caught outside the transaction, which these errors have already aborted. P2003: the
@@ -244,7 +252,8 @@ export async function listNotes(db: Db, person: Person, store: VideoStore = clou
     orderBy: { createdAt: "desc" },
     select: noteSelect(person.familyId),
   });
-  return notes.map((n) => noteView(n, person.id, store));
+  const allowed = await noteReactionSet(db, person.familyId);
+  return notes.map((n) => noteView(n, person.id, store, allowed));
 }
 
 // A family member may delete any note in their family; anyone else only their own. A note
