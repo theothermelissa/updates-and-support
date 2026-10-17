@@ -201,15 +201,26 @@ A request has:
 - whether an offer needs a phone number: the form's **Require phone** checkbox, unchecked by default, for when the family needs to call or text whoever helps.
 - an optional **date**, and an optional **time** that can be given only with a date. Both are kept exactly as typed, with no time zone, because the need happens where the family is. They show above the body in smaller, lighter text, such as "Sat, Oct 17" or "Sat, Oct 17 · 5:30 PM."
 
-Family members add, edit, and delete requests. Only they see the form for adding one, below the family's message under the heading "What Would Help," with the requests below it under "All Requests." The form starts with the update editor, without **Add photo**, for the description, then the date and time, then "Who Can Help," with "Everyone can help with this," "How many people are needed?", Require name, Require email, and Require phone. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Editing can change anything, including the checkboxes, date, and time; offers already made stay as they are. Deleting asks for confirmation on the page and removes every offer on that request. A family can have at most 100.
+Family members add, edit, and delete requests. Only they see the form for adding one, below the family's message under the heading "What Would Help," with the requests below it under "All Requests." The form starts with the update editor, without **Add photo**, for the description, then the date and time, then "Who Can Help," with "Everyone can help with this," "How many people are needed?", Require name, Require email, and Require phone. Edit, Mark as resolved, and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Editing can change anything, including the checkboxes, date, and time; offers already made stay as they are. Deleting asks for confirmation on the page and removes every offer on that request. A family can have at most 100.
 
 Requests are shown in this order:
 
 1. Upcoming dated requests, soonest first. On the same date, one without a time comes before those with one.
 2. Requests without a date, oldest first.
-3. Past requests, most recently past first.
+3. Resolved requests, most recently resolved first, whatever their date.
+4. Past requests, most recently past first.
 
 A request is past, by the clock of the device showing it, from the start of the next day when it has only a date, and from its time when it has both. A past request's text is struck through, like a covered one but without the check, and **✋ I can help with this** is hidden from anyone who hasn't offered on it. Since "past" depends on the viewer's clock, the server doesn't refuse offers on a past request.
+
+### Resolving a request
+
+A family member marks a request resolved when the need is met, for example an "Everyone can help with this" request the community has answered, which never fills on its own. Resolving keeps the request and everyone who offered on it, so the family can still see and thank them, where deleting would remove both.
+
+**Mark as resolved** is in the request's ⋮ menu. It takes effect at once, with no confirmation, because **Reopen**, in the same menu once a request is resolved, undoes it. Any family member can resolve or reopen any request. Editing a resolved request leaves it resolved.
+
+Everyone signed in to the family sees a resolved request the way they see a covered one: its text struck through, with a green check in front of it, and the count beside it unchanged and not struck through. **✋ I can help with this** is hidden from anyone who hasn't offered on it.
+
+The server refuses a new offer on a resolved request and stores nothing for it. Someone who already offered still sees "You are helping" and can still withdraw, and family members still see who offered and can remove an offer. Reopening lets people offer again. Resolving and reopening send no emails, and a resolved request still counts toward showing supporters "How to help" in the navigation bar. Others see the change when they next load the page.
 
 ### The family's message
 

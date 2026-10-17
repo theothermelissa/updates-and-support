@@ -242,6 +242,8 @@ model HelpRequest {
   // "YYYY-MM-DD" and "HH:MM"; a time only with a date.
   date         String?
   time         String?
+  // When a family member marked it resolved; null while it's open.
+  resolvedAt   DateTime?
   createdAt    DateTime @default(now())
 
   family Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)

@@ -5,6 +5,7 @@ import helpMessageHandler from "../../api/f/[slug]/help-message.js";
 import helpHandler from "../../api/f/[slug]/help/index.js";
 import helpOneHandler from "../../api/f/[slug]/help/[id].js";
 import offerHandler from "../../api/f/[slug]/help/[id]/offer.js";
+import resolveHandler from "../../api/f/[slug]/help/[id]/resolve.js";
 import removeOfferHandler from "../../api/f/[slug]/help/[id]/offers/[offerId].js";
 import { getDb } from "../../server/db.js";
 import { Prisma, type Person } from "../../server/generated/prisma/client.js";
@@ -17,6 +18,7 @@ import {
   listHelp,
   offerHelp,
   removeOffer,
+  resolveHelp,
   setHelpMessage,
   updateHelp,
   type HelpRequestView,
@@ -315,6 +317,64 @@ describe("offering", () => {
   });
 });
 
+describe("resolving", () => {
+  it("lets a family member resolve and reopen a request, keeping its offers", async () => {
+    const { ana, luis, sam } = await setUp();
+    const request = await add(ana, "Prayers", null);
+    await offerHelp(db, undefined, sam, request.id, { helping: true });
+
+    const resolved = await resolveHelp(db, ana, request.id, { resolved: true });
+    expect(resolved.resolvedAt).not.toBeNull();
+    const [forLuis] = await listHelp(db, luis);
+    expect(forLuis!.resolvedAt).toBe(resolved.resolvedAt);
+    expect(names(forLuis!)).toEqual([["Sam", false]]);
+    const [forSam] = await listHelp(db, sam);
+    expect(forSam!.resolvedAt).toBe(resolved.resolvedAt);
+
+    await updateHelp(db, luis, request.id, { ...DEFAULTS, body: "Prayers, please", slots: null });
+    expect((await listHelp(db, ana))[0]!.resolvedAt).toBe(resolved.resolvedAt);
+
+    expect((await resolveHelp(db, luis, request.id, { resolved: false })).resolvedAt).toBeNull();
+    expect((await listHelp(db, ana))[0]!.offered).toBe(1);
+    await expect(resolveHelp(db, ana, request.id, {})).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("refuses a supporter, and another family's member, and changes nothing", async () => {
+    const { ana, sam, chidi } = await setUp();
+    const request = await add(ana, "Prayers", null);
+    await expect(resolveHelp(db, sam, request.id, { resolved: true })).rejects.toMatchObject({ status: 403 });
+    await expect(resolveHelp(db, chidi, request.id, { resolved: true })).rejects.toMatchObject({ status: 404 });
+    expect((await db.helpRequest.findUniqueOrThrow({ where: { id: request.id } })).resolvedAt).toBeNull();
+
+    await resolveHelp(db, ana, request.id, { resolved: true });
+    await expect(resolveHelp(db, sam, request.id, { resolved: false })).rejects.toMatchObject({ status: 403 });
+    await expect(resolveHelp(db, chidi, request.id, { resolved: false })).rejects.toMatchObject({ status: 404 });
+    expect((await db.helpRequest.findUniqueOrThrow({ where: { id: request.id } })).resolvedAt).not.toBeNull();
+  });
+
+  it("takes no new offer on a resolved request, and stores nothing for it, but lets an offer be withdrawn", async () => {
+    const { ana, sam, family } = await setUp();
+    const request = await add(ana, "Prayers", null, { requireName: true, requirePhone: true });
+    await offerHelp(db, undefined, sam, request.id, { helping: true, phone: "555-0100" });
+    await resolveHelp(db, ana, request.id, { resolved: true });
+
+    const reader = await answerCorrectly(db, family);
+    await expect(
+      offerHelp(db, undefined, reader.person, request.id, { helping: true, name: "Tess", phone: "555-0199" }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(await db.helpOffer.count({ where: { personId: reader.person.id } })).toBe(0);
+    const unchanged = await db.person.findUniqueOrThrow({ where: { id: reader.person.id } });
+    expect([unchanged.name, unchanged.phone]).toEqual([null, null]);
+
+    await offerHelp(db, undefined, sam, request.id, { helping: false });
+    expect(await db.helpOffer.count()).toBe(0);
+
+    await resolveHelp(db, ana, request.id, { resolved: false });
+    await offerHelp(db, undefined, reader.person, request.id, { helping: true, name: "Tess", phone: "555-0199" });
+    expect(await db.helpOffer.count({ where: { personId: reader.person.id } })).toBe(1);
+  });
+});
+
 describe("requirements and dates", () => {
   it("stores a request's requirements, date, and time, and refuses bad or missing ones", async () => {
     const { ana } = await setUp();
@@ -609,9 +669,13 @@ describe("the help endpoints", () => {
       expect(await call(helpOneHandler, "PATCH", query, cookies, { body: "Hi", slots: 1 })).toBe(401);
       expect(await call(helpOneHandler, "DELETE", query, cookies)).toBe(401);
       expect(await call(offerHandler, "POST", query, cookies, { helping: true })).toBe(401);
+      expect(await call(resolveHandler, "POST", query, cookies, { resolved: true })).toBe(401);
       expect(await call(removeOfferHandler, "DELETE", query, cookies)).toBe(401);
     }
     expect(await call(helpHandler, "PUT", { slug }, samCookie, { body: "Hi", slots: 1 })).toBe(405);
+    expect(await call(resolveHandler, "GET", query, samCookie)).toBe(405);
+    expect(await call(resolveHandler, "POST", query, samCookie, { resolved: true })).toBe(403);
+    expect((await db.helpRequest.findUniqueOrThrow({ where: { id: request.id } })).resolvedAt).toBeNull();
     expect(await call(helpHandler, "GET", { slug: "no-such-family" }, samCookie)).toBe(404);
     expect(await db.helpRequest.count()).toBe(1);
   });

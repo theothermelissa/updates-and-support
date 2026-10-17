@@ -26,15 +26,22 @@ export function isPast(date: string | null, time: string | null, now: Date): boo
 }
 
 // Upcoming dated requests soonest first (a date alone before times that day), then undated
-// ones in the order given (oldest first), then past ones, most recently past first.
-export function sortRequests<T extends { date: string | null; time: string | null }>(requests: T[], now: Date): T[] {
-  const upcoming = requests.filter((r) => r.date !== null && !isPast(r.date, r.time, now));
-  const undated = requests.filter((r) => r.date === null);
-  const past = requests.filter((r) => isPast(r.date, r.time, now));
+// ones in the order given (oldest first), then resolved ones whatever their date, most recently
+// resolved first, then past ones, most recently past first.
+export function sortRequests<T extends { date: string | null; time: string | null; resolvedAt?: string | null }>(
+  requests: T[],
+  now: Date,
+): T[] {
+  const open = requests.filter((r) => !r.resolvedAt);
+  const upcoming = open.filter((r) => r.date !== null && !isPast(r.date, r.time, now));
+  const undated = open.filter((r) => r.date === null);
+  const resolved = requests.filter((r) => r.resolvedAt);
+  const past = open.filter((r) => isPast(r.date, r.time, now));
   const key = (r: T) => `${r.date} ${r.time ?? ""}`;
   upcoming.sort((a, b) => key(a).localeCompare(key(b)));
+  resolved.sort((a, b) => b.resolvedAt!.localeCompare(a.resolvedAt!));
   past.sort((a, b) => pastFrom(b.date!, b.time).getTime() - pastFrom(a.date!, a.time).getTime());
-  return [...upcoming, ...undated, ...past];
+  return [...upcoming, ...undated, ...resolved, ...past];
 }
 
 // "Fri, Oct 17", or "Fri, Oct 17 · 5:30 PM".
