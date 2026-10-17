@@ -35,7 +35,7 @@ Integration tests, against Postgres, in `tests/integration/reactions.test.ts` an
 
 Each set test is proven to fail with its own check removed: the update branch's check for the first three, and the note branch's separately for the fourth, since removing one leaves the other's test passing. The supporter test is proven to fail with `requireFamilyMember` removed from `editUpdate`.
 
-Unit tests: `parseReactionSet` (ordering, each rejection), and the summary's catalog-order tie-break in `src/reactions.test.ts`.
+`parseReactionSet`'s ordering and each rejection are covered by the integration tests through `createUpdate` and `editUpdate`, so it has no separate unit test. The summary's catalog-order tie-break is computed on the server and checked there; `src/reactions.test.ts` checks that catalog emoji beyond the six draw in the summary.
 
 ## Cut for speed
 
@@ -44,3 +44,11 @@ Unit tests: `parseReactionSet` (ordering, each rejection), and the summary's cat
 - **Older devices may draw some catalog emoji as boxes.** 🫶 🫠 🫡 🥹 are from Emoji 14 (2021), which some older Windows and Android devices lack. They're only offered when a family picks them.
 - **Note sets, "Allow notes," and settings for video updates** are separate backlog entries in `NEXT-SESSION.md`.
 - **Preview database.** The migration changes the schema, so the shared preview branch may need recreating if another open PR also migrates (README → Deployment).
+
+## Progress
+
+Steps 1–6 are done. Discoveries:
+
+- `prisma migrate diff --from-migrations` needs a shadow database in this Prisma version. Instead, apply the migrations to a scratch database and diff it with `--from-config-datasource`.
+- On a phone, the shadcn `Button`'s `shrink-0` kept the Post settings summary on one clipped line. It needs `min-w-0 shrink` to wrap.
+- Each rule's test was confirmed to fail with its rule removed: the update branch's set check (4 tests), the note branch's (2), and `requireFamilyMember` in `editUpdate` (1).

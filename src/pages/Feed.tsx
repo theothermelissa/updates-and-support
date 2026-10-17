@@ -2,17 +2,17 @@ import { MessageSquareHeartIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Confirm, ErrorMessage } from "@/components/page";
 import { EmptyNoteButton, NoteCard, NoteDialog, type NoteDraft } from "@/components/notes";
+import { PostSettings } from "@/components/postSettings";
 import { ReactionControls } from "@/components/reactions";
 import { VideoCapture, VideoPlayer, type Playable } from "@/components/video";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { api, type Me } from "../api.js";
 import { applyFetched, newUpdatesLabel } from "../liveFeed.js";
 import { followLink } from "../navigate.js";
+import { USUAL_REACTIONS } from "../lib/reactionCatalog.js";
 import type { Note } from "../notes.js";
 import type { Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
@@ -143,7 +143,7 @@ export function Feed(props: {
           <PostForm
             slug={slug}
             photos={props.photos}
-            onPost={(body, notify) => change("updates", "POST", { ...body, notify }, true)}
+            onPost={(body, settings) => change("updates", "POST", { ...body, ...settings }, true)}
           />
         </div>
       )}
@@ -163,7 +163,7 @@ export function Feed(props: {
           update={update}
           canEdit={canEdit}
           photos={props.photos}
-          onEdit={(content) => change(`updates/${update.id}`, "PATCH", { content })}
+          onEdit={(content, reactions) => change(`updates/${update.id}`, "PATCH", { content, reactions })}
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
           slug={slug}
@@ -184,7 +184,7 @@ function PostForm({
 }: {
   slug: string;
   photos: PhotoMode;
-  onPost: (body: { content?: unknown; video?: string }, notify: boolean) => Promise<boolean>;
+  onPost: (body: { content?: unknown; video?: string }, settings: { notify: boolean; reactions: string[] }) => Promise<boolean>;
 }) {
   const [mode, setMode] = useState<"write" | "video">("write");
   const [content, setContent] = useState<unknown>(null);
@@ -195,6 +195,9 @@ function PostForm({
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [notify, setNotify] = useState(true);
+  const [reactions, setReactions] = useState<string[]>([...USUAL_REACTIONS]);
+  // Changing the key closes Post settings and starts them fresh after posting.
+  const [settingsKey, setSettingsKey] = useState(0);
   const [posting, setPosting] = useState(false);
   // Changing the key starts a fresh, empty editor after posting.
   const [editorKey, setEditorKey] = useState(0);
@@ -203,13 +206,15 @@ function PostForm({
     e.preventDefault();
     setPosting(true);
     setError("");
-    const posted = mode === "write" ? content !== null && (await onPost({ content }, notify)) : await postVideo();
+    const posted = mode === "write" ? content !== null && (await onPost({ content }, { notify, reactions })) : await postVideo();
     if (posted) {
       setContent(null);
       setVideo(null);
       setUploaded(null);
       setEditorKey((k) => k + 1);
       setNotify(true);
+      setReactions([...USUAL_REACTIONS]);
+      setSettingsKey((k) => k + 1);
       setMode("write");
     }
     setProgress(null);
@@ -230,7 +235,7 @@ function PostForm({
       }
     }
     setProgress(1);
-    return onPost({ video: publicId }, notify);
+    return onPost({ video: publicId }, { notify, reactions });
   }
 
   const ready = mode === "write" ? content !== null : file !== null;
@@ -260,17 +265,22 @@ function PostForm({
           {mode === "video" && (
             <VideoCapture maxSeconds={null} video={video} disabled={posting} onVideo={setVideo} onError={setError} />
           )}
-          <Label>
-            <Checkbox checked={notify} onCheckedChange={(checked) => setNotify(checked === true)} disabled={posting} />
-            Notify supporters by email
-          </Label>
           {progress !== null && (
             <p className="text-sm text-muted-foreground" role="status">
               {progress < 1 ? `Uploading… ${Math.round(progress * 100)}%` : "Posting…"}
             </p>
           )}
           {error && <ErrorMessage>{error}</ErrorMessage>}
-          <Button disabled={posting || !ready}>{mode === "video" && error ? "Try again" : "Post"}</Button>
+          <PostSettings
+            key={settingsKey}
+            notify={notify}
+            onNotify={setNotify}
+            reactions={reactions}
+            onReactions={setReactions}
+            disabled={posting}
+          >
+            <Button disabled={posting || !ready}>{mode === "video" && error ? "Try again" : "Post"}</Button>
+          </PostSettings>
         </form>
       </CardContent>
     </Card>
@@ -281,7 +291,7 @@ function UpdateItem(props: {
   update: Update;
   canEdit: boolean;
   photos: PhotoMode;
-  onEdit: (content: unknown) => Promise<boolean>;
+  onEdit: (content: unknown, reactions: string[]) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
   slug: string;
@@ -296,18 +306,20 @@ function UpdateItem(props: {
   // While editing: the document to save, or null while the editor is empty.
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<unknown>(null);
+  const [reactions, setReactions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function save() {
     if (draft === null) return;
     setSaving(true);
-    if (await props.onEdit(draft)) setEditing(false);
+    if (await props.onEdit(draft, reactions)) setEditing(false);
     setSaving(false);
   }
 
   function startEditing() {
     setDraft(update.content);
+    setReactions(update.reactions.allowed);
     setEditing(true);
   }
 
@@ -336,14 +348,16 @@ function UpdateItem(props: {
         </CardContent>
         <CardFooter className="flex flex-wrap items-center gap-2">
           {editing ? (
-            <>
-              <Button onClick={save} disabled={saving || draft === null}>
-                Save
-              </Button>
-              <Button variant="outline" onClick={() => setEditing(false)}>
-                Cancel
-              </Button>
-            </>
+            <div className="w-full space-y-4">
+              <PostSettings reactions={reactions} onReactions={setReactions} disabled={saving}>
+                <Button onClick={save} disabled={saving || draft === null}>
+                  Save
+                </Button>
+                <Button variant="outline" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              </PostSettings>
+            </div>
           ) : confirmingDelete ? (
             <Confirm yes="Yes, delete" onYes={props.onDelete} onCancel={() => setConfirmingDelete(false)}>
               Delete this update{noteCount > 0 && ` and its ${noteCount === 1 ? "note" : `${noteCount} notes`}`}? This
