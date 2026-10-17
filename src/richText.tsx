@@ -14,29 +14,57 @@ type Obj = Record<string, unknown>;
 // Draws an update's document with React elements only: text is always a text child, never
 // HTML. Anything unexpected is skipped rather than thrown, so one bad update can't break
 // the feed, and a link the server should have refused is drawn as plain text.
-export function RichText({ doc, className }: { doc: unknown; className?: string }) {
+// trailing, such as a request's count, ends the last paragraph, or follows a final list or
+// quote in a paragraph of its own. Empty paragraphs at the end, which the editor leaves after
+// a list, are dropped first so it doesn't land on a blank line.
+export function RichText({ doc, className, trailing }: { doc: unknown; className?: string; trailing?: ReactNode }) {
   let content: ReactNode;
+  let last: unknown;
   try {
-    const total = isObj(doc) && Array.isArray(doc.content) ? doc.content.filter((c) => isObj(c) && c.type === "photo").length : 0;
-    content = isObj(doc) ? children(doc, 0, { n: 0, total }) : null;
+    let blocks: unknown[] = isObj(doc) && Array.isArray(doc.content) ? doc.content : [];
+    if (trailing !== undefined) blocks = blocks.slice(0, blocks.findLastIndex((b) => !isEmptyParagraph(b)) + 1);
+    const total = blocks.filter((c) => isObj(c) && c.type === "photo").length;
+    content = children({ content: blocks }, 0, { n: 0, total }, trailing);
+    last = blocks.at(-1);
   } catch {
     content = null;
   }
-  return <div className={`${DOC_CLASSES} ${className ?? ""}`}>{content}</div>;
+  const ownLine = trailing !== undefined && !(isObj(last) && last.type === "paragraph");
+  return (
+    <div className={`${DOC_CLASSES} ${className ?? ""}`}>
+      {content}
+      {/* Pulled up into the paragraph gap, so it sits just under the list or quote it follows. */}
+      {ownLine && <p className="mt-[calc(0.25rem-1lh)]">{trailing}</p>}
+    </div>
+  );
 }
 
 type Photos = { n: number; total: number };
 
-function children(parent: Obj, depth: number, photos: Photos): ReactNode {
-  if (!Array.isArray(parent.content) || depth > MAX_DEPTH) return null;
-  return parent.content.map((child, i) => (isObj(child) ? node(child, i, depth + 1, photos) : null));
+function isEmptyParagraph(block: unknown): boolean {
+  return isObj(block) && block.type === "paragraph" && !(Array.isArray(block.content) && block.content.length > 0);
 }
 
-function node(n: Obj, key: number, depth: number, photos: Photos): ReactNode {
+// trailing is passed only for the document's own children, and lands in the last one.
+function children(parent: Obj, depth: number, photos: Photos, trailing?: ReactNode): ReactNode {
+  if (!Array.isArray(parent.content) || depth > MAX_DEPTH) return null;
+  const lastIndex = parent.content.length - 1;
+  return parent.content.map((child, i) =>
+    isObj(child) ? node(child, i, depth + 1, photos, i === lastIndex ? trailing : undefined) : null,
+  );
+}
+
+function node(n: Obj, key: number, depth: number, photos: Photos, trailing?: ReactNode): ReactNode {
   switch (n.type) {
     case "paragraph": {
       const inner = children(n, depth, photos);
-      return <p key={key}>{Array.isArray(n.content) && n.content.length > 0 ? inner : <br />}</p>;
+      const empty = !(Array.isArray(n.content) && n.content.length > 0);
+      return (
+        <p key={key}>
+          {empty && trailing === undefined ? <br /> : inner}
+          {trailing}
+        </p>
+      );
     }
     case "bulletList":
       return <ul key={key}>{children(n, depth, photos)}</ul>;

@@ -8,7 +8,7 @@ import offerHandler from "../../api/f/[slug]/help/[id]/offer.js";
 import resolveHandler from "../../api/f/[slug]/help/[id]/resolve.js";
 import removeOfferHandler from "../../api/f/[slug]/help/[id]/offers/[offerId].js";
 import { getDb } from "../../server/db.js";
-import type { Person } from "../../server/generated/prisma/client.js";
+import { Prisma, type Person } from "../../server/generated/prisma/client.js";
 import {
   createHelp,
   deleteHelp,
@@ -102,6 +102,58 @@ describe("who can write a request", () => {
     expect(await db.helpRequest.count()).toBe(0);
     for (let i = 0; i < 100; i++) await add(ana, `Request ${i}`, null);
     await expect(add(ana, "One more", null)).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe("a request's formatted description", () => {
+  const text = (t: string, marks?: unknown[]) => ({ type: "text", text: t, ...(marks && { marks }) });
+  const p = (...content: unknown[]) => ({ type: "paragraph", content });
+  const doc = (...content: unknown[]) => ({ type: "doc", content });
+  const list = (...items: string[]) => ({ type: "bulletList", content: items.map((t) => ({ type: "listItem", content: [p(text(t))] })) });
+  const MEALS = doc(p(text("Dinner", [{ type: "bold" }]), text(" on Tuesday")), list("No nuts", "Drop off at six"));
+
+  it("stores a checked document and its plain text, and shows the document to everyone in the family", async () => {
+    const { ana, sam } = await setUp();
+    const request = await createHelp(db, ana, { ...DEFAULTS, content: MEALS, slots: 1 });
+    expect(request.content).toEqual(MEALS);
+    expect(request.body).toBe("Dinner on Tuesday\n\n- No nuts\n- Drop off at six");
+    expect((await listHelp(db, sam))[0]!.content).toEqual(MEALS);
+
+    const edited = doc(p(text("Lunch", [{ type: "italic" }])));
+    expect((await updateHelp(db, ana, request.id, { ...DEFAULTS, content: edited, slots: 1 })).content).toEqual(edited);
+    expect(await db.helpRequest.findUniqueOrThrow({ where: { id: request.id } })).toMatchObject({ content: edited, body: "Lunch" });
+  });
+
+  it("accepts plain text from pages loaded before formatting, and shows a request written before it", async () => {
+    const { ana } = await setUp();
+    const request = await add(ana, "  A ride\nhttps://example.com  ");
+    expect(request.content).toEqual(docFromText("A ride\nhttps://example.com"));
+    await db.helpRequest.update({ where: { id: request.id }, data: { content: Prisma.DbNull, body: "Old https://example.com" } });
+    expect((await listHelp(db, ana))[0]!.content).toEqual(docFromText("Old https://example.com"));
+  });
+
+  it("refuses a description that's too long, empty, has a photo, or has formatting the app doesn't support, and changes nothing", async () => {
+    const { ana } = await setUp();
+    const request = await createHelp(db, ana, { ...DEFAULTS, content: MEALS, slots: 1 });
+    const photo = { type: "photo", attrs: { caption: "", placeholder: true } };
+    const bad = [
+      doc(p(text("x".repeat(2001)))),
+      doc(p(text(" "))),
+      doc(p(text("Hi")), photo),
+      doc({ type: "heading", content: [text("x")] }),
+      doc(p(text("x", [{ type: "link", attrs: { href: "javascript:alert(1)" } }]))),
+      "Hi",
+      42,
+      null,
+    ];
+    for (const content of bad) {
+      await expect(createHelp(db, ana, { ...DEFAULTS, content, slots: 1 })).rejects.toMatchObject({ status: 400 });
+      await expect(updateHelp(db, ana, request.id, { ...DEFAULTS, content, slots: 1 })).rejects.toMatchObject({ status: 400 });
+    }
+    await expect(createHelp(db, ana, { ...DEFAULTS, content: bad[0], slots: 1 })).rejects.toThrow("A request can have at most 2,000 characters");
+    expect(await db.helpRequest.count()).toBe(1);
+    expect((await listHelp(db, ana))[0]!.content).toEqual(MEALS);
+    expect((await createHelp(db, ana, { ...DEFAULTS, content: doc(p(text("x".repeat(2000)))), slots: 1 })).body).toHaveLength(2000);
   });
 });
 

@@ -229,7 +229,9 @@ model VideoUpload {
 model HelpRequest {
   id        String   @id @default(cuid())
   familyId  String
+  // The plain text of content, kept beside it. Requests from before formatting have only this.
   body         String
+  content      Json?
   slots        Int?
   // Whether an offer needs a name, and an email when the person has none on their record.
   requireName  Boolean  @default(true)

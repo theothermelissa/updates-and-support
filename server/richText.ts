@@ -17,7 +17,7 @@ const MAX_CAPTION = 300;
 const LINK_EXTRAS = ["target", "rel", "class", "title"];
 
 // What validDoc calls the document in its errors, and how much text it may hold.
-export type DocLimits = { noun: "update" | "message"; maxText: number };
+export type DocLimits = { noun: "update" | "message" | "request"; maxText: number };
 const UPDATE_LIMITS: DocLimits = { noun: "update", maxText: MAX_TEXT };
 
 const unsupported = () => new RequestError(400, "This has formatting the app doesn't support");
@@ -285,9 +285,9 @@ function marks(input: unknown): Mark[] {
   });
 }
 
-// "An update" or "A message".
+// "An update", "A message", or "A request".
 function capitalized(noun: DocLimits["noun"]): string {
-  return noun === "update" ? "An update" : "A message";
+  return noun === "update" ? "An update" : `A ${noun}`;
 }
 
 function isObj(value: unknown): value is Obj {
