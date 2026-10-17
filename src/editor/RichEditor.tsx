@@ -1,5 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor, type JSONContent } from "@tiptap/react";
+import { Placeholder } from "@tiptap/extensions";
 import { BoldIcon, ImagePlusIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon, StrikethroughIcon, TextQuoteIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +23,12 @@ export default function RichEditor(props: {
   photos: "real" | "placeholder" | "off";
   slug: string;
   label?: string;
+  // Grey hint text shown while the editor is empty.
+  placeholder?: string;
   onChange: (doc: JSONContent | null) => void;
 }) {
   const editor = useEditor({
-    extensions,
+    extensions: props.placeholder ? [...extensions, Placeholder.configure({ placeholder: props.placeholder })] : extensions,
     content: (props.initial as JSONContent | undefined) ?? "",
     editorProps: {
       attributes: {

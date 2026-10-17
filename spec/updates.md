@@ -204,13 +204,19 @@ A request is past, by the clock of the device showing it, from the start of the 
 
 ### The family's message
 
-Above everything else on the page, the family can keep one message for everyone who opens it, such as what they'd rather people not send or do: "Thank you! Please don't send flowers or gift baskets, and please hold off on visits for now." It's formatted text of up to 2,000 characters, with the same formatting as an update except photos (see "An update"), in a shaded box with no heading of its own. A message written before it could be formatted shows as it always did, with line breaks kept and web addresses as links. With no message, there's no box.
+Above everything else on the page, the family can keep a message for everyone who opens it, in up to three parts, each optional:
 
-Any family member can write, change, or remove it. They see an **Edit** button at the top right of the box or, when there's no message, an **Add a message for supporters** button in its place. Either one turns that spot into the update editor, without **Add photo**, with **Save** and **Cancel**. Saving an empty box removes the message. If two family members edit at once, the last save wins.
+1. **An introduction**, as plain text on the page with no box or heading of its own, such as "Thank you for your care and support! We deeply appreciate it, and are so grateful for you all."
+2. **Do**, under the heading "Do:", in a shaded box: what helps, such as "Send a card" or "Drop off a meal."
+3. **Don't**, under the heading "Don't:", in a shaded box: what they'd rather people not send or do, such as "Please don't send flowers, and please hold off on visits for now."
+
+Each part is formatted text of up to 2,000 characters, with the same formatting as an update except photos (see "An update"). An empty part isn't shown, and with nothing written the page starts with the requests. A message written before the page had parts is the introduction, and one written before it could be formatted shows as it always did, with line breaks kept and web addresses as links.
+
+Any family member can write, change, or remove the message. They see an **Edit** button at the top right of the message or, when it's empty, an **Add a message for supporters** button in its place. Either one turns the whole message into three update editors, without **Add photo**, one under the other: the introduction's, whose empty box shows the grey hint "Thank you for your care and support! We deeply appreciate it, and are so grateful for you all.", then "Do:" and "Don't:" with an editor under each. One **Save** and **Cancel** below them cover all three. Saving a part empty removes it. If two family members edit at once, the last save wins.
 
 Everyone signed in to the family reads the message, the same as the requests. It never appears on the gate or in emails, and writing or changing it sends no emails or notifications. Others see a change when they next load the page.
 
-Supporters see "How to help" in the navigation bar once the family has a message or at least one request (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
+Supporters see "How to help" in the navigation bar once any part of the family's message is written or there is at least one request (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
 ### Offering to help
 

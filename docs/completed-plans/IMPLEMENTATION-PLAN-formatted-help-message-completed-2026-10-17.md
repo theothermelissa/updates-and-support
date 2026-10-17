@@ -42,6 +42,11 @@ Who can see or change the message does not change: family members write it, ever
   - a photo in the message is refused; over 2,000 characters is refused;
   - a supporter can't set the message (existing test, kept). Re-prove it fails with `requireFamilyMember` removed, since the function body changes.
 
+## Discoveries
+
+- Messages from before formatting, and lines typed with Shift+Enter, are one paragraph joined by line breaks, so Tiptap's quote took in the whole message. `src/editor/quote.ts` splits the cursor's line out at the surrounding line breaks before quoting, for the toolbar button and ⌘⇧B.
+- Tiptap keeps an empty paragraph after a quote at the end of a document, so there's somewhere to type below it.
+
 ## Cuts for speed
 
 - No live character counter in the message editor. Going over 2,000 characters shows the server's error on Save.
