@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
+import { MAX_PRIVACY_NOTICE, STANDARD_PRIVACY_NOTICE } from "../lib/privacyNotice.js";
 import { isUsual } from "../lib/reactionCatalog.js";
 import { followLink } from "../navigate.js";
 import type { FamilyPageProps } from "./FamilyFrame.js";
@@ -36,6 +37,7 @@ type People = {
   acceptedAnswers: string[];
   noteReactions: string[];
   allowNotesByDefault: boolean;
+  privacyNotice: string | null;
 };
 
 function date(iso: string) {
@@ -46,9 +48,9 @@ function devices(count: number) {
   return count === 1 ? "1 device" : `${count} devices`;
 }
 
-// Family members' page for family members, supporters, note reactions, notes on new updates, and the community question. The server
+// Family members' page for family members, supporters, note reactions, notes on new updates, the privacy banner, and the community question. The server
 // refuses the data to anyone else; this page only shows what it's given.
-export function People({ slug, home, me }: FamilyPageProps) {
+export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
   const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState("");
@@ -58,6 +60,9 @@ export function People({ slug, home, me }: FamilyPageProps) {
   const [allowNotesByDefault, setAllowNotesByDefault] = useState(true);
   // Shown beside the checkbox, since it saves on its own without a button.
   const [notesDefaultStatus, setNotesDefaultStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const [privacyNotice, setPrivacyNotice] = useState("");
+  // Shown beside the button, near the box, since the page's own message sits at the top.
+  const [privacyNoticeStatus, setPrivacyNoticeStatus] = useState<{ text: string; error: boolean } | null>(null);
 
   function load() {
     api<People>(slug, "people").then(({ status, data }) => {
@@ -68,6 +73,7 @@ export function People({ slug, home, me }: FamilyPageProps) {
         setNoteReactions(data.noteReactions);
         setChoosingNoteReactions(!isUsual(data.noteReactions));
         setAllowNotesByDefault(data.allowNotesByDefault);
+        setPrivacyNotice(data.privacyNotice ?? "");
       } else setPeople(status === 404 ? "not-found" : status === 403 ? "forbidden" : "signed-out");
     });
   }
@@ -160,6 +166,21 @@ export function People({ slug, home, me }: FamilyPageProps) {
       setAllowNotesByDefault(before);
       setNotesDefaultStatus({ text: data?.error ?? "Couldn't save. Please try again.", error: true });
     }
+  }
+
+  // Reloads who is signed in afterward, so the banner at the top shows the new wording at once.
+  async function savePrivacyNotice(e: FormEvent) {
+    e.preventDefault();
+    setPrivacyNoticeStatus(null);
+    const { status, data } = await api<{ privacyNotice?: string | null; error?: string }>(slug, "privacy-notice", {
+      method: "PUT",
+      body: { privacyNotice },
+    });
+    if (status === 200 && data?.privacyNotice !== undefined) {
+      setPrivacyNotice(data.privacyNotice ?? "");
+      setPrivacyNoticeStatus({ text: "Saved", error: false });
+      reloadMe();
+    } else setPrivacyNoticeStatus({ text: data?.error ?? "Couldn't save. Please try again.", error: true });
   }
 
   async function saveQuestion(e: FormEvent) {
@@ -284,6 +305,37 @@ export function People({ slug, home, me }: FamilyPageProps) {
                 {notesDefaultStatus.text}
               </span>
             )}
+          </CardContent>
+        </Card>
+      </Section>
+
+      <Section title="Privacy banner">
+        <p className="text-muted-foreground">
+          Shown across the top of every page to everyone signed in. Leave it empty to use the standard wording: “
+          {STANDARD_PRIVACY_NOTICE}”
+        </p>
+        <Card>
+          <CardContent>
+            <form onSubmit={savePrivacyNotice} className="space-y-4">
+              <Textarea
+                aria-label="Privacy banner"
+                value={privacyNotice}
+                onChange={(e) => setPrivacyNotice(e.target.value)}
+                maxLength={MAX_PRIVACY_NOTICE}
+                rows={3}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <Button>Save banner</Button>
+                {privacyNoticeStatus && (
+                  <span
+                    className={privacyNoticeStatus.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}
+                    role="status"
+                  >
+                    {privacyNoticeStatus.text}
+                  </span>
+                )}
+              </div>
+            </form>
           </CardContent>
         </Card>
       </Section>

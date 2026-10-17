@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { PrivacyBanner } from "@/components/privacyBanner";
 import { FamilyFrame } from "./pages/FamilyFrame.js";
 import { api } from "./api.js";
 import { usePath } from "./navigate.js";
@@ -17,11 +18,11 @@ export function App() {
   const rootSlug = useRootSlug(path === "/");
   if (path === "/") {
     if (rootSlug === undefined) return null;
-    if (rootSlug === null) return <NotFound />;
+    if (rootSlug === null) return withBanner(<NotFound />);
     return <FamilyPage slug={rootSlug} />;
   }
   const match = path.match(FAMILY_PATH);
-  if (!match) return <NotFound />;
+  if (!match) return withBanner(<NotFound />);
   const [, slug, page] = match as unknown as [string, string, string | undefined];
   return <FamilyPage slug={slug} page={page} />;
 }
@@ -65,12 +66,23 @@ function FamilyPage({ slug, page }: { slug: string; page?: string }) {
     // Only on a change of family: see above.
   }, [slug]);
   if (!family) return null;
-  if (page === "family") return <FamilySignIn slug={family.slug} />;
-  if (page === "sign-in") return <SignIn slug={family.slug} />;
-  if (page === "verify") return <Verify slug={family.slug} />;
-  if (page === "unsubscribe") return <Unsubscribe slug={family.slug} />;
+  if (page === "family") return withBanner(<FamilySignIn slug={family.slug} />);
+  if (page === "sign-in") return withBanner(<SignIn slug={family.slug} />);
+  if (page === "verify") return withBanner(<Verify slug={family.slug} />);
+  if (page === "unsubscribe") return withBanner(<Unsubscribe slug={family.slug} />);
   const shown = page === "people" ? "people" : page === "wall" ? "notes" : page === "help" ? "help" : "updates";
   return <FamilyFrame slug={family.slug} home={family.home} page={shown} />;
+}
+
+// A page shown with the standard privacy banner. FamilyFrame places its own, which shows the
+// family's wording once someone is signed in.
+function withBanner(page: ReactNode) {
+  return (
+    <>
+      <PrivacyBanner />
+      {page}
+    </>
+  );
 }
 
 function withoutTrailingSlash(path: string) {

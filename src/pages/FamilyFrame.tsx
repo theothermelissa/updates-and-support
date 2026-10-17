@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FamilyShell, type FamilyPage } from "@/components/familyShell";
+import { PrivacyBanner } from "@/components/privacyBanner";
 import { api, type Me } from "../api.js";
 import { navigate } from "../navigate.js";
 import { FamilyHome } from "./FamilyHome.js";
@@ -40,23 +41,41 @@ export function FamilyFrame({ slug, home, page }: { slug: string; home: string; 
   }, [me, page, home]);
 
   if (me === "loading") return null;
-  if (me === "not-found") return <NotFound />;
-  if (me === "signed-out") return page === "updates" ? <Gate slug={slug} onJoined={load} /> : null;
+  if (me === "not-found") {
+    return (
+      <>
+        <PrivacyBanner />
+        <NotFound />
+      </>
+    );
+  }
+  if (me === "signed-out") {
+    if (page !== "updates") return null;
+    return (
+      <>
+        <PrivacyBanner />
+        <Gate slug={slug} onJoined={load} />
+      </>
+    );
+  }
 
   const props: FamilyPageProps = { slug, home, me, setMe, reloadMe: load, onSignedOut: () => setMe("signed-out") };
   return (
-    <FamilyShell
-      slug={slug}
-      home={home}
-      me={me}
-      page={page}
-      column={page === "help" || page === "people"}
-      onPersonChanged={load}
-    >
-      {page === "updates" && <FamilyHome {...props} />}
-      {page === "help" && <Help {...props} />}
-      {page === "notes" && <Wall {...props} />}
-      {page === "people" && <People {...props} />}
-    </FamilyShell>
+    <>
+      <PrivacyBanner text={me.family.privacyNotice} />
+      <FamilyShell
+        slug={slug}
+        home={home}
+        me={me}
+        page={page}
+        column={page === "help" || page === "people"}
+        onPersonChanged={load}
+      >
+        {page === "updates" && <FamilyHome {...props} />}
+        {page === "help" && <Help {...props} />}
+        {page === "notes" && <Wall {...props} />}
+        {page === "people" && <People {...props} />}
+      </FamilyShell>
+    </>
   );
 }

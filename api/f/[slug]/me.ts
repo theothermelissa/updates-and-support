@@ -15,6 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       photos: photoMode(photoSettingsFromEnv()),
       hasHelpRequests: await hasHelpRequests(getDb(), ctx.family.id),
       hasHelpMessage: hasHelpMessage(await helpMessage(getDb(), ctx.person)),
+      privacyNotice: ctx.family.privacyNotice,
     },
     person: personView(ctx.person),
   });
