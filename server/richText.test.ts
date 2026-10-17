@@ -47,7 +47,7 @@ describe("validDoc", () => {
   });
 
   it("refuses nodes and marks the app doesn't allow", () => {
-    for (const type of ["heading", "image", "codeBlock", "blockquote", "horizontalRule", "photo", "table", "mystery"]) {
+    for (const type of ["heading", "image", "codeBlock", "horizontalRule", "photo", "table", "mystery"]) {
       refuses(doc({ type, content: [text("x")] }));
     }
     for (const type of ["code", "underline", "textStyle", "highlight"]) {
@@ -125,6 +125,26 @@ describe("validDoc", () => {
     refuses(doc(nest(4)));
   });
 
+  it("accepts quotes holding paragraphs, lists, and quotes, and refuses malformed ones", () => {
+    const quote = (...content: unknown[]) => ({ type: "blockquote", content });
+    const input = doc(quote(p(text("Said")), ul(li(p(text("a")))), quote(p(text("inner")))), ul(li(p(text("b")), quote(p(text("c"))))));
+    expect(validDoc(input)).toEqual(input);
+    refuses(doc(quote()));
+    refuses(doc({ type: "blockquote" }));
+    refuses(doc({ ...quote(p(text("x"))), attrs: {} }));
+    refuses(doc(quote(text("bare text"))));
+    refuses(doc(quote(p())));
+  });
+
+  it("applies a message's limit and wording when given", () => {
+    const limits = { noun: "message", maxText: 2_000 } as const;
+    expect(() => validDoc(doc(p(text("x".repeat(2_000)))), undefined, undefined, limits)).not.toThrow();
+    expect(() => validDoc(doc(p(text("x".repeat(2_001)))), undefined, undefined, limits)).toThrow(
+      "A message can have at most 2,000 characters",
+    );
+    expect(() => validDoc(doc(p()), undefined, undefined, limits)).toThrow("A message can't be empty");
+  });
+
   it("refuses an empty document", () => {
     refuses(doc(p()));
     refuses(doc(p(text("   ")), p({ type: "hardBreak" })));
@@ -169,6 +189,12 @@ describe("docFromText and textOf", () => {
   it("writes lists as lines, indented when nested", () => {
     const d = validDoc(doc(p(text("Intro")), ul(li(p(text("a")), ol({ start: 2 }, li(p(text("b"))), li(p(text("c"))))), li(p(text("d"))))));
     expect(textOf(d)).toBe("Intro\n\n- a\n  2. b\n  3. c\n- d");
+  });
+
+  it("writes quotes with each line after \"> \"", () => {
+    const quote = (...content: unknown[]) => ({ type: "blockquote", content });
+    const d = validDoc(doc(quote(p(text("One"), { type: "hardBreak" }, text("two")), p(text("Three"))), ul(li(p(text("a")), quote(p(text("b")))))));
+    expect(textOf(d)).toBe("> One\n> two\n>\n> Three\n\n- a\n  > b");
   });
 });
 
@@ -231,6 +257,7 @@ describe("photos", () => {
     refusesWith(doc(ul(li(p(text("x")), grey()))));
     refusesWith(doc(ul(li(grey()))));
     refusesWith(doc(p(grey())));
+    refusesWith(doc({ type: "blockquote", content: [p(text("x")), grey()] }));
     for (const attrs of [
       { caption: "", placeholder: false },
       { caption: "", placeholder: "true" },
