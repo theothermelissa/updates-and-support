@@ -32,6 +32,7 @@ A person who is both a supporter and a family member of different families has a
 - Family members can turn off new notes on any update, and choose on the People page whether new updates allow notes by default. → [updates.md](updates.md#allowing-notes)
 - Family members post ways to help, each with an optional date and time and a choice of whether offers need a name or an email, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered, and a family member can mark any request resolved, which shows the same check and stops new offers while keeping the ones made. → [updates.md](updates.md#resolving-a-request)
 - Family members can keep a formatted message at the top of How to help, with an introduction and optional "Do" and "Don't" lists, for everyone signed in to read. → [updates.md](updates.md#the-familys-message)
+- A privacy banner across the top of every page asks readers not to copy or screenshot what they read; family members can reword it for their own family. → [access.md](access.md#the-privacy-banner)
 - Supporters can keep a phone number on their record for the family to reach them; only family members see it. → [access.md](access.md#your-phone-number)
 - Family members, and supporters with a verified email, get a notification email when a new update is posted; the family member who posted it doesn't. → [updates.md](updates.md#notifications)
 
@@ -64,10 +65,11 @@ The app follows the visual language of Vercel's Geist design system: the Geist S
 
 - **Light mode only.**
 - **Phone first.** Every page works at 360px wide without the page scrolling sideways. A wide table may scroll sideways within its own box.
+- **A privacy banner on every page.** A full-width strip across the very top of every page, above everything else, asks readers not to share what they read (see [access.md](access.md#the-privacy-banner)). It scrolls away with the page and can't be dismissed.
 - **One frame for a family's pages.** Every page signed in to a family (the feed, How to help, the wall, and People) shares the same centered container and, at its top, the family's navigation bar: the family's name on the left and, on the right, "Updates," "How to help," "Notes," and a menu button. The family's name is also a link to Updates. The current page's link is highlighted, and any link to the current page, including the family's name on Updates and People in the menu, does nothing when pressed. Moving between these pages keeps the bar in place: only the content below it changes, without reloading the page, and the browser's Back and Forward buttons move between them the same way. Opening a link in a new tab still works. The page always keeps room for a scrollbar, so the bar doesn't shift sideways between pages long enough to scroll and pages that aren't, or when a menu or dialog opens. Family members always see "How to help"; supporters see it once the family has a message there or at least one request. The menu shows who is signed in (when they've given a name), "Edit name" for anyone who has a name (see [access.md](access.md#changing-your-name)), a link to the People page for family members, and "Sign out." On a phone the links wrap below the name. Each page other than the feed starts with its own heading under the bar.
 - **Confirmations happen on the page.** A destructive action, such as deleting an update or removing a person, asks for confirmation with an inline "Yes / Cancel" step, never a browser dialog, because some in-app email browsers silently suppress dialogs.
 
 ## Area specs
 
-- [access.md](access.md): families, the community question, supporter and family member sign-in, sessions, names and phone numbers, and managing people.
+- [access.md](access.md): families, the community question, supporter and family member sign-in, sessions, names and phone numbers, managing people, and the privacy banner.
 - [updates.md](updates.md): posting, editing, and deleting updates, photos, video updates, the feed, reactions, notes, ways to help, and notifications.

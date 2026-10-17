@@ -1,3 +1,4 @@
+import { MAX_PRIVACY_NOTICE } from "../src/lib/privacyNotice.js";
 import { dropsAnAnswer } from "./answers.js";
 import { newSignInLink, newVerificationLink, signInLinkUrl } from "./auth.js";
 import type { Db } from "./db.js";
@@ -28,7 +29,8 @@ export function requireFamilyMember(person: Person) {
 
 // The People page: the family's members, its supporters with an email (active and removed,
 // newest first), how many devices are signed in without a verified email, the community
-// question, the family's note reactions, and whether new updates allow notes. Family members only; supporters never see each other.
+// question, the family's note reactions, whether new updates allow notes, and the family's privacy
+// banner wording (null for the standard wording). Family members only; supporters never see each other.
 export async function listPeople(db: Db, person: Person) {
   requireFamilyMember(person);
   const family = await db.family.findUniqueOrThrow({
@@ -50,6 +52,7 @@ export async function listPeople(db: Db, person: Person) {
     acceptedAnswers: family.acceptedAnswers,
     noteReactions: family.noteReactionKinds,
     allowNotesByDefault: family.allowNotesByDefault,
+    privacyNotice: family.privacyNotice,
   };
 }
 
@@ -235,6 +238,26 @@ export async function verifySupporter(db: Db, person: Person, id: string, verifi
 async function endAccess(tx: Prisma.TransactionClient, personId: string) {
   await tx.session.deleteMany({ where: { personId } });
   await tx.magicLink.deleteMany({ where: { personId, usedAt: null } });
+}
+
+// A family member rewords the privacy banner for everyone signed in to the family. It's kept on
+// one line; an empty wording returns the family to the standard one.
+export async function setPrivacyNotice(
+  db: Db,
+  person: Person,
+  input: { privacyNotice?: unknown },
+): Promise<{ privacyNotice: string | null }> {
+  requireFamilyMember(person);
+  if (typeof input.privacyNotice !== "string") throw new RequestError(400, "Expected privacyNotice as text.");
+  const text = input.privacyNotice.replace(/\s+/g, " ").trim();
+  if (text.length > MAX_PRIVACY_NOTICE) {
+    throw new RequestError(400, `The banner can be up to ${MAX_PRIVACY_NOTICE} characters.`);
+  }
+  return db.family.update({
+    where: { id: person.familyId },
+    data: { privacyNotice: text || null },
+    select: { privacyNotice: true },
+  });
 }
 
 // Changes the question and accepted answers. When an answer that worked stops working, every

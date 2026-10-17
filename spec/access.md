@@ -208,6 +208,22 @@ The checkbox saves as soon as it's changed, and says "Saved" beside it. If savin
 
 Only a family member of that family can change it; the server refuses anyone else. Supporters never see it.
 
+## The privacy banner
+
+Every page starts with a full-width banner asking readers not to share what they read. Its standard wording is:
+
+> Please do not copy or screenshot content from this page to share on social media. The content here is private health information that the family is sharing only with their community of supporters.
+
+A family can replace that wording with its own, for example to name the person the updates are about. People signed in to the family see the family's wording on every page signed in to it. Every other page, including the gate, sign-in, and confirmation pages, shows the standard wording, so nothing a family writes is shown to someone who hasn't answered the question or signed in.
+
+The People page has a **Privacy banner** section, after "Notes on new updates," with a text box holding the family's wording and a **Save banner** button. It explains: "Shown across the top of every page to everyone signed in. Leave it empty to use the standard wording," followed by the standard wording. The box starts empty when the family uses the standard wording. The wording is plain text of up to 300 characters, on one line (line breaks are saved as spaces); saving an empty box returns the family to the standard wording. A saved change shows in the banner at once for the family member who saved it, and for everyone else when they next load a page. When two family members save at about the same time, the later save wins.
+
+The banner is always shown; a family can reword it but not turn it off. It is a request, not a protection: nothing stops a reader from taking a screenshot.
+
+To back the request up, the Updates, How to help, and Notes pages discourage copying. Their text can't be selected, and copying, right-clicking, long-pressing for the phone's menu, and dragging images out of the page do nothing. Text boxes and the update editor are exempt, so people can still select, copy, and paste in what they're writing. The People page is exempt as well: only family members see it, and they may need to copy a supporter's email or phone number. This only slows a reader down; a screenshot, the browser's reader mode, or its developer tools still get the text.
+
+Only a family member of that family can change the wording; the server refuses anyone else.
+
 ## Changing the community question
 
 The People page also shows the community question and its accepted answers, and a family member can change them at any time. A question must not be empty and needs at least one non-empty accepted answer; answers are entered one per line.
