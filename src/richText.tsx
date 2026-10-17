@@ -15,14 +15,17 @@ type Obj = Record<string, unknown>;
 // HTML. Anything unexpected is skipped rather than thrown, so one bad update can't break
 // the feed, and a link the server should have refused is drawn as plain text.
 // trailing, such as a request's count, ends the last paragraph, or follows a final list or
-// quote in a paragraph of its own.
+// quote in a paragraph of its own. Empty paragraphs at the end, which the editor leaves after
+// a list, are dropped first so it doesn't land on a blank line.
 export function RichText({ doc, className, trailing }: { doc: unknown; className?: string; trailing?: ReactNode }) {
   let content: ReactNode;
   let last: unknown;
   try {
-    const total = isObj(doc) && Array.isArray(doc.content) ? doc.content.filter((c) => isObj(c) && c.type === "photo").length : 0;
-    content = isObj(doc) ? children(doc, 0, { n: 0, total }, trailing) : null;
-    last = isObj(doc) && Array.isArray(doc.content) ? doc.content.at(-1) : undefined;
+    let blocks: unknown[] = isObj(doc) && Array.isArray(doc.content) ? doc.content : [];
+    if (trailing !== undefined) blocks = blocks.slice(0, blocks.findLastIndex((b) => !isEmptyParagraph(b)) + 1);
+    const total = blocks.filter((c) => isObj(c) && c.type === "photo").length;
+    content = children({ content: blocks }, 0, { n: 0, total }, trailing);
+    last = blocks.at(-1);
   } catch {
     content = null;
   }
@@ -37,6 +40,10 @@ export function RichText({ doc, className, trailing }: { doc: unknown; className
 }
 
 type Photos = { n: number; total: number };
+
+function isEmptyParagraph(block: unknown): boolean {
+  return isObj(block) && block.type === "paragraph" && !(Array.isArray(block.content) && block.content.length > 0);
+}
 
 // trailing is passed only for the document's own children, and lands in the last one.
 function children(parent: Obj, depth: number, photos: Photos, trailing?: ReactNode): ReactNode {
