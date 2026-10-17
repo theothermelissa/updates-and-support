@@ -87,7 +87,7 @@ The React button and the summary work the same way on an update and on a note.
 - **A React button.** It's round and shows a heart with a plus until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
 - **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
 
-On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the signature, with the time and **Delete** (see "Reacting to a note").
+On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the note, with **Delete** and either the author control or the time (see "Reacting to a note").
 
 **Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it, and a later change of name shows there too (see [access.md](access.md#changing-your-name)).
 
@@ -104,7 +104,7 @@ A note is either a written note or a video note. It has:
 - for a written note, a **body** of plain text, 1 to 1,000 characters. Line breaks are kept, and web addresses become links.
 - for a video note, a **video** of up to 60 seconds, with sound, and no text (see "Video notes").
 - a **color** from a fixed palette of six. A written note's card is filled with the color, and its text uses a darker shade of the same hue that meets WCAG AA contrast. A video note's card is framed in the color (see "Video notes").
-- its **author**, shown by name as a signature, such as "— Ana Rivera." A family member's note is also marked "Family," so a supporter can't pass as a family member by signing with their name.
+- its **author**. A video note shows the author's name as a signature, such as "— Ana Rivera." A written note doesn't, because people sign their written notes themselves; its author and when it was left are behind a small author control instead (see "The written note's author"). A family member's note is always marked "Family," on the card itself, so a supporter can't pass as a family member by signing a name in their text.
 - when it was **left**
 
 ### Leaving a note
@@ -127,7 +127,7 @@ The note dialog's "Video note" tab holds the recorder; "Written note" switches b
 
 **Uploading instead.** The recorder also offers "Upload a video instead" for anyone whose browser can't use the camera, such as when they've refused access or are in an email app's built-in browser. It picks a video file from the device, which goes to the same review step. A video longer than 60 seconds is refused with a message saying so. If the camera can't be used, the recorder says why and offers only the upload.
 
-**The card.** A video note's card shows a still from the video in a 16:9 landscape shape, filling the card edge to edge inside a thin frame in the note's color, with a play button over it. A video of another shape, such as one recorded upright on a phone, is shown whole and centered, and the space beside it is filled with a blurred, enlarged copy of its still, so nothing is cropped and there are no empty bars. While it plays, that blurred backdrop stays the still. Below the video, a strip in the note's color carries the signature and when it was left, as on a written note. Tapping the play button plays the video right there in the card, in the same shape, with sound and the browser's video controls, including full screen. Starting one video pauses any other that's playing. Videos never play on their own. If a video can't be shown, for example because the video host is misconfigured, its card says "This video can't be shown right now," and the rest of the page works as usual.
+**The card.** A video note's card shows a still from the video in a 16:9 landscape shape, filling the card edge to edge inside a thin frame in the note's color, with a play button over it. A video of another shape, such as one recorded upright on a phone, is shown whole and centered, and the space beside it is filled with a blurred, enlarged copy of its still, so nothing is cropped and there are no empty bars. While it plays, that blurred backdrop stays the still. Below the video, a strip in the note's color carries the signature, with a "Family" mark beside it for a family member's note, and when it was left. Tapping the play button plays the video right there in the card, in the same shape, with sound and the browser's video controls, including full screen. Starting one video pauses any other that's playing. Videos never play on their own. If a video can't be shown, for example because the video host is misconfigured, its card says "This video can't be shown right now," and the rest of the page works as usual.
 
 Video notes are stored and delivered by Cloudinary, which also converts them to a format every browser plays (see [access.md](access.md#stated-limits) for how links to them work).
 
@@ -139,11 +139,15 @@ On a wide screen, an update with no notes has a round "Leave a note" button besi
 
 ### The wall
 
-The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is headed "Notes of support." It shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note, its signature, and when it was left. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
+The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is headed "Notes of support." It shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note as described under "Notes": a video note with its signature and when it was left, a written note with its author control. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
 
 ### Reacting to a note
 
-The rules, the React button, the tray, and the summary are the ones under "Reactions." They sit under the signature, with the time and Delete on that row.
+The rules, the React button, the tray, and the summary are the ones under "Reactions." On a video note they sit under the signature, with the time and Delete on that row. On a written note they sit under the text, with the "Family" mark, the author control, and Delete on that row.
+
+### The written note's author
+
+A written note's card doesn't show its author's name or the time. Its bottom row has a small round author control showing a person icon. On a computer, resting the pointer on it shows the author's name and when the note was left, such as "Ana Rivera · Oct 17, 2026, 3:04 PM," in the same floating style as the list of who reacted. On a phone, tapping it shows the same line under that row, and tapping again hides it. Screen readers hear the author and time as the control's name. A family member's note keeps its "Family" mark on the card, beside the control.
 
 ### Deleting a note
 

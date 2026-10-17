@@ -1,19 +1,20 @@
 import { useState, type FormEvent } from "react";
-import { MessageSquareHeartIcon } from "lucide-react";
+import { MessageSquareHeartIcon, UserRoundIcon } from "lucide-react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { cn } from "cn";
 import { Confirm, ErrorMessage, Field, LinkedText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ReactionControls } from "@/components/reactions";
+import { ReactionControls, Reveal, type RevealState } from "@/components/reactions";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VideoCapture, VideoPlayer } from "@/components/video";
-import { COLORS, MAX_NOTE, PALETTE, randomColor, type Note, type NoteColor } from "../notes.js";
+import { COLORS, MAX_NOTE, PALETTE, noteTime, randomColor, type Note, type NoteColor } from "../notes.js";
 import { uploadVideo } from "../videos.js";
 
-// A note as a card in its color, signed by its author, with Delete for those allowed. A video
-// note's card is the video's still, edge to edge inside a thin frame in the note's color.
+// A note as a card in its color, with Delete for those allowed. A video note's card is the
+// video's still, edge to edge inside a thin frame in the note's color, signed by its author.
+// A written note is signed in its own text, so its author and time are behind a control.
 export function NoteCard(props: {
   note: Note;
   canDelete: boolean;
@@ -22,7 +23,15 @@ export function NoteCard(props: {
 }) {
   const { note } = props;
   const [confirming, setConfirming] = useState(false);
+  const [author, setAuthor] = useState<RevealState>("closed");
   const colors = PALETTE[note.color];
+  const byline = `${note.authorName} · ${noteTime(note)}`;
+  // Always on the card, so a supporter can't pass as family by signing a name in their text.
+  const family = note.authorIsFamily && (
+    <span className="rounded-full border px-2 py-0.5 text-xs" style={{ borderColor: `${colors.text}66` }}>
+      Family
+    </span>
+  );
   return (
     <Bubble
       color={note.color}
@@ -35,19 +44,37 @@ export function NoteCard(props: {
         <LinkedText text={note.body} className="font-medium [&_a]:text-inherit" />
       )}
       <div className={cn("space-y-3", note.video && "px-2.5")}>
-        <p className="text-sm">
-          — {note.authorName}
-          {note.authorIsFamily && (
-            <span className="ml-2 rounded-full border px-2 py-0.5 text-xs" style={{ borderColor: `${colors.text}66` }}>
-              Family
-            </span>
-          )}
-        </p>
-        <ReactionControls reactions={note.reactions} onReact={props.onReact}>
-          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs opacity-80">
-            <time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
+        {note.video && (
+          <p className="text-sm">
+            — {note.authorName} {family}
+          </p>
+        )}
+        <ReactionControls
+          reactions={note.reactions}
+          onReact={props.onReact}
+          below={author === "pinned" && <p className="text-sm">{byline}</p>}
+        >
+          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs">
+            {note.video ? (
+              <time className="opacity-80" dateTime={note.createdAt}>
+                {noteTime(note)}
+              </time>
+            ) : (
+              <>
+                {family}
+                <Reveal
+                  state={author}
+                  setState={setAuthor}
+                  className="flex size-11 items-center justify-center rounded-full border outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-black/5 [&_svg]:size-5"
+                  label={`Left by ${byline}`}
+                  style={{ borderColor: `${colors.text}33` }}
+                  trigger={<UserRoundIcon aria-hidden />}
+                  content={byline}
+                />
+              </>
+            )}
             {props.canDelete && !confirming && (
-              <button type="button" className="underline underline-offset-2" onClick={() => setConfirming(true)}>
+              <button type="button" className="underline underline-offset-2 opacity-80" onClick={() => setConfirming(true)}>
                 Delete
               </button>
             )}
