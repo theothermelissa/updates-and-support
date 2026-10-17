@@ -90,7 +90,15 @@ export async function addFamilyMember(
       }
       await tx.person.update({
         where: { id: existing.id },
-        data: { role: "family", name, phone: null, removedAt: null, magicLinks: { create: link.data } },
+        // Removing a supporter turned their notifications off; a family member gets them again.
+        data: {
+          role: "family",
+          name,
+          phone: null,
+          removedAt: null,
+          ...(existing.removedAt ? { notificationsOn: true } : {}),
+          magicLinks: { create: link.data },
+        },
       });
       await tx.session.deleteMany({ where: { personId: existing.id } });
       return existing.role === "supporter" ? "promoted" : "restored";

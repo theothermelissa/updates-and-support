@@ -10,7 +10,7 @@ import {
 } from "../../../server/http.js";
 import { setNotifications } from "../../../server/notifications.js";
 
-// A signed-in supporter turning their own notification emails on or off.
+// Anyone signed in turning their own notification emails on or off.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return methodNotAllowed(res);
   const body = jsonBody(req, res);

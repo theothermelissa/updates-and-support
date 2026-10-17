@@ -35,9 +35,9 @@ Pasting from another app or a website keeps only formatting the editor allows (p
 
 ## Posting
 
-A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when supporters will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none. Screen readers hear each icon's meaning, such as "Emails supporters" or "Chosen reactions." The settings apply to either tab:
+A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when everyone will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none. Screen readers hear each icon's meaning, such as "Emails everyone" or "Chosen reactions." The settings apply to either tab:
 
-- **"Notify supporters by email,"** checked by default, so a small follow-up can go out without emailing everyone.
+- **"Notify everyone by email,"** checked by default, so a small follow-up can go out without emailing everyone.
 - **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
 
 Posting resets both settings to their defaults.
@@ -247,10 +247,14 @@ Offering on a numbered request emails the family's other family members that som
 
 ## Notifications
 
-When an update is posted with "Notify supporters by email" checked, every supporter of the family who has a verified email, has notifications on, and has not been removed gets one email.
+When an update is posted with "Notify everyone by email" checked, one email goes to each person in the family who has notifications on and has not been removed, except the family member who posted it:
+
+- every family member, whether or not they have signed in yet, since family members are added on purpose by the operator or another family member;
+- every supporter with a verified email (see [access.md](access.md#getting-notification-emails)).
+
+Notifications are on when someone is added or gives an email, and anyone signed in with an email can turn them off or back on (see [access.md](access.md#signing-out-and-notifications)).
 
 - The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content. When the update has photos, the subject says how many, as in "Sam's Updates has a new update (2 photos)"; the photos themselves are never attached or linked. When the update is a video, the subject says so, as in "Sam's Updates has a new update (video)"; the video is never attached or linked.
 - Each email has an unsubscribe link to a page with a "Turn off notifications" button, which works without signing in. The button, rather than the link alone, keeps email security scanners that open links from unsubscribing people.
 - Each email also has `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so mail apps that offer their own "Unsubscribe" button can turn notifications off in one click. Scanners don't send that request.
-- Family members are not notified.
 - If the emails can't be sent, the update is still posted.

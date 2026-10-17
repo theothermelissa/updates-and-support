@@ -5,7 +5,7 @@ import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
 import { claimVideo, destroyVideos, lockUnusedVideo, noteReactionSet, noteSelect, noteView, shownVideo, visibleNotes, type NoteView } from "./notes.js";
-import { notifySupporters } from "./notifications.js";
+import { notifyNewUpdate } from "./notifications.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
 import { parseReactionSet, reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
@@ -63,7 +63,7 @@ export async function listUpdates(
   });
 }
 
-// With a sender, also emails supporters that there's a new update. The update is saved
+// With a sender, also emails the family's other people that there's a new update. The update is saved
 // first and stays posted even if the emails fail.
 export async function createUpdate(
   db: Db,
@@ -92,7 +92,7 @@ export async function createUpdate(
   );
   if (notifyWith) {
     try {
-      await notifySupporters(db, notifyWith, person.familyId, photoCount(content));
+      await notifyNewUpdate(db, notifyWith, person.familyId, person.id, photoCount(content));
     } catch (err) {
       console.error(`Notifications failed for family ${person.familyId}: ${(err as Error).message}`);
     }
@@ -137,7 +137,7 @@ async function createVideoUpdate(
   }
   if (notifyWith) {
     try {
-      await notifySupporters(db, notifyWith, person.familyId, 0, true);
+      await notifyNewUpdate(db, notifyWith, person.familyId, person.id, 0, true);
     } catch (err) {
       console.error(`Notifications failed for family ${person.familyId}: ${(err as Error).message}`);
     }

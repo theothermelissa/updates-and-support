@@ -37,7 +37,7 @@ export function PostSettings(props: {
         >
           <span className="font-medium text-foreground">Post settings</span>
           {props.onNotify && (
-            <SettingIcon label={props.notify ? "Emails supporters" : "No email"}>
+            <SettingIcon label={props.notify ? "Emails everyone" : "No email"}>
               {props.notify ? <BellCheckIcon /> : <BellMinusIcon />}
             </SettingIcon>
           )}
@@ -56,7 +56,7 @@ export function PostSettings(props: {
                 onCheckedChange={(checked) => props.onNotify!(checked === true)}
                 disabled={disabled}
               />
-              Notify supporters by email
+              Notify everyone by email
             </Label>
           )}
           <ReactionChooser
