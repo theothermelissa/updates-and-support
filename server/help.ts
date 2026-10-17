@@ -2,14 +2,16 @@ import type { Db } from "./db.js";
 import { appUrl, helpOfferEmail, type SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import { isValidEmail, normalizeEmail, validName } from "./families.js";
-import type { Person, Prisma } from "./generated/prisma/client.js";
+import { Prisma, type Person } from "./generated/prisma/client.js";
 import { requireFamilyMember } from "./people.js";
 import { validPhone } from "./phone.js";
+import { docFromText, shownContent, textOf, validDoc } from "./richText.js";
+import type { Doc } from "../src/lib/doc.js";
 
 const MAX_BODY = 2_000;
 const MAX_SLOTS = 99;
 const MAX_REQUESTS = 100;
-const MAX_MESSAGE = 2_000;
+const MESSAGE_LIMITS = { noun: "message", maxText: 2_000 } as const;
 
 // What a viewer sees of an offer. A supporter gets only their own offer, with no email or
 // phone. Family members get every offer, with the email when there is one, a supporter's
@@ -93,34 +95,42 @@ export async function hasHelpRequests(db: Db, familyId: string): Promise<boolean
   return count > 0;
 }
 
-// The message at the top of How to help, or null. Read by the person's own family rather than
-// the family loaded from the address, which a redirect can point elsewhere.
-export async function helpMessage(db: Db, person: Person): Promise<string | null> {
+// The message at the top of How to help as a document, or null. Read by the person's own
+// family rather than the family loaded from the address, which a redirect can point elsewhere.
+// A message written before formatting has only its text, which shownContent converts.
+export async function helpMessage(db: Db, person: Person): Promise<Doc | null> {
   const family = await db.family.findUniqueOrThrow({
     where: { id: person.familyId },
-    select: { helpMessage: true },
+    select: { helpMessage: true, helpMessageContent: true },
   });
-  return family.helpMessage;
+  return family.helpMessage === null ? null : shownContent(family.helpMessageContent, family.helpMessage);
 }
 
-// A family member writes or changes the message; an empty one removes it.
+// A family member writes or changes the message: { content } is a document, or null to remove
+// it. Pages loaded before formatting send { message } as plain text; an empty one removes it.
+// The plain text is stored beside the document, for the navigation bar's check.
 export async function setHelpMessage(
   db: Db,
   person: Person,
-  input: { message?: unknown },
-): Promise<{ message: string | null }> {
+  input: { content?: unknown; message?: unknown },
+): Promise<{ message: Doc | null }> {
   requireFamilyMember(person);
-  if (typeof input.message !== "string") throw new RequestError(400, "Expected message: text");
-  const clean = input.message.trim();
-  if (clean.length > MAX_MESSAGE) {
-    throw new RequestError(400, `A message can be at most ${MAX_MESSAGE.toLocaleString("en-US")} characters.`);
+  let content: Doc | null;
+  if (input.content !== undefined) {
+    content = input.content === null ? null : validDoc(input.content, undefined, undefined, MESSAGE_LIMITS);
+  } else if (typeof input.message === "string") {
+    const text = input.message.trim();
+    content = text ? validDoc(docFromText(text), undefined, undefined, MESSAGE_LIMITS) : null;
+  } else {
+    throw new RequestError(400, "Expected the message's content");
   }
-  const family = await db.family.update({
+  await db.family.update({
     where: { id: person.familyId },
-    data: { helpMessage: clean || null },
-    select: { helpMessage: true },
+    data: content
+      ? { helpMessage: textOf(content), helpMessageContent: content }
+      : { helpMessage: null, helpMessageContent: Prisma.DbNull },
   });
-  return { message: family.helpMessage };
+  return { message: content };
 }
 
 export async function listHelp(db: Db, person: Person): Promise<HelpRequestView[]> {
