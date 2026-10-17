@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { ChevronDownIcon } from "lucide-react";
+import { BellCheckIcon, BellMinusIcon, ChevronDownIcon, FaceSlightlySmilingIcon, FaceSlightlySmilingPlusIcon } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CATALOG, inCatalogOrder, isUsual, MAX_REACTIONS, USUAL_REACTIONS } from "../lib/reactionCatalog.js";
+import { TRAY } from "@/components/reactions";
+import { inCatalogOrder, isUsual, MAX_REACTIONS, reactionFor, REACTIONS, USUAL_REACTIONS } from "../lib/reactionCatalog.js";
 
-// A button showing a one-line summary of an update's settings, which opens them below it.
+// A button showing an update's settings as icons, which opens them below it.
 // Closed when it mounts; the form remounts it (with a new key) to start fresh. Without
 // onNotify, as when editing, it has only the reactions setting.
 export function PostSettings(props: {
@@ -23,10 +24,7 @@ export function PostSettings(props: {
   const [choosing, setChoosing] = useState(!isUsual(reactions));
   const full = reactions.length >= MAX_REACTIONS;
 
-  const parts = [
-    props.onNotify && (props.notify ? "Emails supporters" : "No email"),
-    reactionsSummary(reactions),
-  ].filter(Boolean);
+  const usual = !choosing;
 
   function toggle(kind: string) {
     onReactions(reactions.includes(kind) ? reactions.filter((k) => k !== kind) : inCatalogOrder([...reactions, kind]));
@@ -39,13 +37,19 @@ export function PostSettings(props: {
         <Button
           type="button"
           variant="ghost"
-          className="h-auto min-h-9 min-w-0 shrink text-left whitespace-normal text-muted-foreground"
+          className="text-muted-foreground"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
         >
-          <span>
-            <span className="font-medium text-foreground">Post settings</span> · {parts.join(" · ")}
-          </span>
+          <span className="font-medium text-foreground">Post settings</span>
+          {props.onNotify && (
+            <SettingIcon label={props.notify ? "Emails supporters" : "No email"}>
+              {props.notify ? <BellCheckIcon /> : <BellMinusIcon />}
+            </SettingIcon>
+          )}
+          <SettingIcon label={usual ? "Usual reactions" : "Chosen reactions"}>
+            {usual ? <FaceSlightlySmilingIcon /> : <FaceSlightlySmilingPlusIcon />}
+          </SettingIcon>
           <ChevronDownIcon aria-hidden className={cn("transition-transform", open && "rotate-180")} />
         </Button>
       </div>
@@ -74,32 +78,40 @@ export function PostSettings(props: {
           </Label>
           {choosing && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                {reactions.length} of {MAX_REACTIONS} chosen
-              </p>
-              {CATALOG.map((group) => (
-                <fieldset key={group.group}>
-                  <legend className="mb-1 text-xs font-medium text-muted-foreground">{group.group}</legend>
-                  <div className="flex flex-wrap gap-0.5">
-                    {group.reactions.map((x) => {
-                      const on = reactions.includes(x.kind);
-                      return (
-                        <button
-                          key={x.kind}
-                          type="button"
-                          className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40 disabled:hover:bg-transparent aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
-                          aria-label={x.name}
-                          aria-pressed={on}
-                          disabled={disabled || (full && !on)}
-                          onClick={() => toggle(x.kind)}
-                        >
-                          {x.emoji}
-                        </button>
-                      );
-                    })}
+              <div className="flex min-h-13 items-center">
+                <span className="sr-only" aria-live="polite">
+                  {reactions.length} of {MAX_REACTIONS} chosen
+                </span>
+                {reactions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No reactions</p>
+                ) : (
+                  <div className={TRAY} aria-hidden>
+                    {reactions.map((kind) => (
+                      <span key={kind} className="grid size-11 place-items-center text-[1.6rem]">
+                        {reactionFor(kind)?.emoji}
+                      </span>
+                    ))}
                   </div>
-                </fieldset>
-              ))}
+                )}
+              </div>
+              <div className="flex flex-wrap gap-0.5">
+                {REACTIONS.map((x) => {
+                  const on = reactions.includes(x.kind);
+                  return (
+                    <button
+                      key={x.kind}
+                      type="button"
+                      className="size-11 rounded-full text-[1.6rem] outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40 disabled:hover:bg-transparent aria-pressed:bg-muted aria-pressed:ring-2 aria-pressed:ring-foreground"
+                      aria-label={x.name}
+                      aria-pressed={on}
+                      disabled={disabled || (full && !on)}
+                      onClick={() => toggle(x.kind)}
+                    >
+                      {x.emoji}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -108,8 +120,12 @@ export function PostSettings(props: {
   );
 }
 
-function reactionsSummary(kinds: string[]): string {
-  if (isUsual(kinds)) return "Usual reactions";
-  if (kinds.length === 0) return "No reactions";
-  return kinds.length === 1 ? "1 reaction" : `${kinds.length} reactions`;
+// An icon that says what it means to screen readers, and on hover.
+function SettingIcon({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <span title={label} className="flex">
+      <span aria-hidden className="flex">{children}</span>
+      <span className="sr-only">{label}</span>
+    </span>
+  );
 }

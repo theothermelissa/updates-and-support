@@ -8,6 +8,9 @@ import { summary, summaryLabel, whoReacted, type Reactions as ReactionsData } fr
 
 const HOVER_DELAY = 300;
 
+// The tray's look, shared with its preview in Post settings.
+export const TRAY = "flex w-max gap-0.5 rounded-full border bg-popover p-1 text-popover-foreground shadow-md";
+
 // A React button that opens a tray of the emoji allowed here, and a summary ("❤️🤗👏") that shows who
 // reacted. With a mouse, hovering opens either one; on a phone, tapping does. The tray and the
 // hover list are drawn on the page, not inside the card, so the wall's columns can't clip them.
@@ -97,7 +100,7 @@ export function ReactionControls(props: {
               open={trayOpen}
               side="above"
               nodeRef={trayNode}
-              className="flex w-max gap-0.5 rounded-full border bg-popover p-1 text-popover-foreground shadow-md"
+              className={TRAY}
               role="group"
               aria-label="Pick a reaction"
               onPointerEnter={(e) => hoverTray(e, true)}

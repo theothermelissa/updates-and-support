@@ -35,10 +35,10 @@ Pasting from another app or a website keeps only formatting the editor allows (p
 
 ## Posting
 
-A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. While it's closed, the button shows a one-line summary of the settings, so what's about to happen is visible without opening it, such as "Emails supporters · Usual reactions" or "No email · 3 reactions" or "No email · No reactions". The settings apply to either tab:
+A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when supporters will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none. Screen readers hear each icon's meaning, such as "Emails supporters" or "Chosen reactions." The settings apply to either tab:
 
 - **"Notify supporters by email,"** checked by default, so a small follow-up can go out without emailing everyone.
-- **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the reaction catalog as a grid, grouped as in "Reactions," with the six usual ones already selected, and a count such as "4 of 6 chosen." Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
+- **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
 
 Posting resets both settings to their defaults.
 
@@ -85,7 +85,7 @@ Videos are stored and delivered the same way as video notes (see [access.md](acc
 
 Everyone signed in to the family can react to an update or a note: family members and supporters, including readers who haven't given a name or email. Reactions are shown only as emoji, with no labels.
 
-**The catalog.** Every reaction comes from a fixed catalog in the app, with no images or data from any other service. The **usual reactions** are ❤️ 🤗 💪 👏 🎉 😂. The catalog is grouped, and its order, group by group, is the order reactions appear everywhere:
+**The catalog.** Every reaction comes from a fixed catalog in the app, with no images or data from any other service. The **usual reactions** are ❤️ 🤗 💪 👏 🎉 😂. Its order, listed here in groups for reading, is the order reactions appear everywhere; the app shows it as one list:
 
 - **Love:** ❤️ 🧡 💛 💚 💙 💜 🤍 💖 ❤️‍🩹 🫶 🥰 😘
 - **Support:** 🤗 🫂 💪 🙏 🙌 👏 👍 🤝 🤞 🫡 🕯️ 🕊️
