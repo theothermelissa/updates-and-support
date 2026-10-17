@@ -32,6 +32,11 @@ export type Note = {
   reactions: Reactions;
 };
 
+// When a note was left, such as "Oct 17, 2026, 3:04 PM".
+export function noteTime(note: Note): string {
+  return new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
 export function randomColor(random = Math.random): NoteColor {
   return COLORS[Math.floor(random() * COLORS.length)]!;
 }

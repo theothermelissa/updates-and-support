@@ -18,10 +18,11 @@ export function ReactionControls(props: {
   reactions: ReactionsData;
   onReact: (kind: string | null) => Promise<boolean>;
   children?: ReactNode;
+  below?: ReactNode;
 }) {
   const r = props.reactions;
   const [trayOpen, setTray] = useState(false);
-  const [names, setNames] = useState<"closed" | "hover" | "pinned">("closed");
+  const [names, setNames] = useState<RevealState>("closed");
   const [pending, setPending] = useState(false);
   const area = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -125,49 +126,74 @@ export function ReactionControls(props: {
         {props.children}
       </div>
       {names === "pinned" && <NameList r={r} className="text-sm text-muted-foreground" />}
+      {props.below}
     </div>
   );
 }
 
-function Summary(props: {
-  r: ReactionsData;
-  names: "closed" | "hover" | "pinned";
-  setNames: (next: "closed" | "hover" | "pinned" | ((n: "closed" | "hover" | "pinned") => "closed" | "hover" | "pinned")) => void;
+export type RevealState = "closed" | "hover" | "pinned";
+
+// The reactor summary shown with its list of who reacted.
+function Summary(props: { r: ReactionsData; names: RevealState; setNames: (next: RevealState | ((n: RevealState) => RevealState)) => void }) {
+  const { r } = props;
+  return (
+    <Reveal
+      state={props.names}
+      setState={props.setNames}
+      className="rounded-sm py-2 text-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      label={summaryLabel(r)}
+      trigger={summary(r)}
+      content={<NameList r={r} className="" />}
+    />
+  );
+}
+
+// A button whose details float beside it while a mouse rests on it, and that a tap or click
+// pins open (the caller draws the pinned details, under its row) or closes again.
+export function Reveal(props: {
+  state: RevealState;
+  setState: (next: RevealState | ((n: RevealState) => RevealState)) => void;
+  className: string;
+  style?: React.CSSProperties;
+  label: string;
+  trigger: ReactNode;
+  content: ReactNode;
 }) {
   const anchor = useRef<HTMLSpanElement>(null);
   const list = useRef<HTMLSpanElement>(null);
-  const { r, names, setNames } = props;
+  const { state, setState } = props;
   function leave(e: PointerEvent) {
     const next = e.relatedTarget;
     if (next instanceof Node && (anchor.current?.contains(next) || list.current?.contains(next))) return;
-    setNames((n) => (n === "hover" ? "closed" : n));
+    setState((n) => (n === "hover" ? "closed" : n));
   }
   return (
     <span
       className="relative"
       ref={anchor}
-      onPointerEnter={(e) => e.pointerType === "mouse" && setNames((n) => (n === "pinned" ? n : "hover"))}
+      onPointerEnter={(e) => e.pointerType === "mouse" && setState((n) => (n === "pinned" ? n : "hover"))}
       onPointerLeave={leave}
     >
       <button
         type="button"
-        className="rounded-sm py-2 text-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        aria-label={summaryLabel(r)}
-        aria-expanded={names === "pinned"}
-        onClick={() => setNames((n) => (n === "pinned" ? "closed" : "pinned"))}
+        className={props.className}
+        style={props.style}
+        aria-label={props.label}
+        aria-expanded={state === "pinned"}
+        onClick={() => setState((n) => (n === "pinned" ? "closed" : "pinned"))}
       >
-        {summary(r)}
+        {props.trigger}
       </button>
       <Floating
         anchor={anchor.current}
-        open={names === "hover"}
+        open={state === "hover"}
         side="below"
         gap={0}
         nodeRef={list}
         className="rounded-md bg-foreground px-3 py-1.5 text-sm whitespace-nowrap text-background"
         onPointerLeave={leave}
       >
-        <NameList r={r} className="" />
+        {props.content}
       </Floating>
     </span>
   );
