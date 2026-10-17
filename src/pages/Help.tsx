@@ -30,7 +30,8 @@ type RequestFields = {
   time: string | null;
 };
 // A supporter's offers hold only their own; offered counts everyone's.
-type HelpRequest = RequestFields & { id: string; full: boolean; offered: number; offers: Offer[] };
+// resolvedAt is when a family member marked it resolved, as ISO; null while it's open.
+type HelpRequest = RequestFields & { id: string; full: boolean; resolvedAt: string | null; offered: number; offers: Offer[] };
 // The family's message: the introduction, and the "Do" and "Don't" parts. Null when not written.
 type MessageParts = { message: Doc | null; dos: Doc | null; donts: Doc | null };
 const NO_MESSAGE: MessageParts = { message: null, dos: null, donts: null };
@@ -103,6 +104,7 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
             needsPhone={request.requirePhone && me.person.role === "supporter" && me.person.phone === null}
             onSave={(fields) => change(`help/${request.id}`, "PATCH", fields).then((r) => r.ok)}
             onDelete={() => change(`help/${request.id}`, "DELETE").then((r) => r.ok)}
+            onResolve={(resolved) => change(`help/${request.id}/resolve`, "POST", { resolved })}
             onOffer={(helping, details) => change(`help/${request.id}/offer`, "POST", { helping, ...details }).then((r) => r.ok)}
             onRemove={(offerId) => change(`help/${request.id}/offers/${offerId}`, "DELETE").then((r) => r.ok)}
           />
@@ -225,6 +227,7 @@ function RequestCard(props: {
   needsPhone: boolean;
   onSave: (fields: RequestFields) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
+  onResolve: (resolved: boolean) => void;
   onOffer: (helping: boolean, details?: { name?: string; email?: string; phone?: string }) => Promise<boolean>;
   onRemove: (offerId: string) => Promise<boolean>;
 }) {
@@ -240,7 +243,9 @@ function RequestCard(props: {
   const [removing, setRemoving] = useState<string | null>(null);
   const mine = request.offers.some((offer) => offer.mine);
   const past = isPast(request.date, request.time, new Date());
-  const showButton = !request.full && !past && !mine;
+  const resolved = request.resolvedAt !== null;
+  const done = request.full || resolved;
+  const showButton = !done && !past && !mine;
   const needsDetails = props.needsName || props.needsEmail || props.needsPhone;
 
   async function offer(e: FormEvent) {
@@ -277,11 +282,13 @@ function RequestCard(props: {
         />
       ) : (
         <div className="flex items-start gap-2">
-          {request.full && <CheckIcon className="mt-0.5 size-5 shrink-0 text-green-800" role="img" aria-label="Covered" />}
-          {/* The count is inline-block, so the line through a covered or past request skips it. */}
+          {done && (
+            <CheckIcon className="mt-0.5 size-5 shrink-0 text-green-800" role="img" aria-label={resolved ? "Resolved" : "Covered"} />
+          )}
+          {/* The count is inline-block, so the line through a covered, resolved, or past request skips it. */}
           <div className="min-w-0 flex-1">
             {request.date && <p className="text-sm text-muted-foreground">{whenLabel(request.date, request.time)}</p>}
-            <LinkedText text={request.body} className={request.full || past ? "line-through" : ""}>
+            <LinkedText text={request.body} className={done || past ? "line-through" : ""}>
               {/* inline-block, so the parentheses wrap with what's inside them. A margin rather
                   than a space, so a covered request's line through stops at its text. */}
               <span className="ml-1 inline-block text-sm text-muted-foreground">
@@ -298,6 +305,9 @@ function RequestCard(props: {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => setEditing(true)}>Edit</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => props.onResolve(!resolved)}>
+                  {resolved ? "Reopen" : "Mark as resolved"}
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setConfirming(true)}>Delete</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

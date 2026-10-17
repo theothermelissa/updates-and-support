@@ -37,6 +37,8 @@ export type HelpRequestView = {
   date: string | null;
   time: string | null;
   full: boolean;
+  // When a family member marked it resolved, as ISO; null while it's open.
+  resolvedAt: string | null;
   // How many active offers there are, including any the viewer can't see.
   offered: number;
   offers: HelpOfferView[];
@@ -78,6 +80,7 @@ function view(request: LoadedRequest, viewer: Person): HelpRequestView {
     date: request.date,
     time: request.time,
     full: request.slots !== null && offers.length >= request.slots,
+    resolvedAt: request.resolvedAt?.toISOString() ?? null,
     offered: offers.length,
     offers: visible.map((offer) => ({
       id: family ? offer.id : null,
@@ -277,6 +280,25 @@ export async function deleteHelp(db: Db, person: Person, id: string): Promise<vo
   if (count === 0) throw new RequestError(404, "Request not found");
 }
 
+// A family member marks a request resolved, or reopens it. Offers stay either way.
+export async function resolveHelp(
+  db: Db,
+  person: Person,
+  id: string,
+  input: { resolved?: unknown },
+): Promise<HelpRequestView> {
+  requireFamilyMember(person);
+  const resolved = validFlag(input.resolved, "resolved");
+  const { count } = await db.helpRequest.updateMany({
+    where: { id, familyId: person.familyId },
+    data: { resolvedAt: resolved ? new Date() : null },
+  });
+  if (count === 0) throw new RequestError(404, "Request not found");
+  const request = await loadOne(db, person, id);
+  if (!request) throw new RequestError(404, "Request not found");
+  return request;
+}
+
 // A family member removes someone else's offer, or their own. Another family's offer
 // behaves like one that doesn't exist.
 export async function removeOffer(db: Db, person: Person, requestId: string, offerId: string): Promise<void> {
@@ -292,7 +314,8 @@ export async function removeOffer(db: Db, person: Person, requestId: string, off
 // person has none; an email only when the request requires one and the person has none on
 // their record, and it's kept on the offer alone; a phone only on a new offer, when the request
 // requires one and the person is a supporter with none, and it goes on their record. All are
-// checked before anything is written.
+// checked before anything is written. A resolved request takes no new offers, though anyone
+// who already offered can withdraw.
 // A new offer on a numbered request emails the other family members, with no request text;
 // a failed email leaves the offer in place.
 export async function offerHelp(
@@ -305,9 +328,16 @@ export async function offerHelp(
   if (typeof input.helping !== "boolean") throw new RequestError(400, "Expected helping: true or false");
   const outcome = await db.$transaction(async (tx) => {
     const [request] = await tx.$queryRaw<
-      { id: string; slots: number | null; requireName: boolean; requireEmail: boolean; requirePhone: boolean }[]
+      {
+        id: string;
+        slots: number | null;
+        requireName: boolean;
+        requireEmail: boolean;
+        requirePhone: boolean;
+        resolvedAt: Date | null;
+      }[]
     >`
-      SELECT id, slots, "requireName", "requireEmail", "requirePhone" FROM "HelpRequest"
+      SELECT id, slots, "requireName", "requireEmail", "requirePhone", "resolvedAt" FROM "HelpRequest"
       WHERE id = ${requestId} AND "familyId" = ${person.familyId}
       FOR UPDATE`;
     if (!request) throw new RequestError(404, "Request not found");
@@ -328,6 +358,7 @@ export async function offerHelp(
     const already = await tx.helpOffer.findUnique({
       where: { requestId_personId: { requestId, personId: person.id } },
     });
+    if (!already && request.resolvedAt) throw new RequestError(409, "This request has been resolved.");
     if (!already && request.slots !== null) {
       const taken = await tx.helpOffer.count({
         where: { requestId, person: { familyId: person.familyId, removedAt: null } },
