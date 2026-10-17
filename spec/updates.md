@@ -194,14 +194,14 @@ The page at `/f/<slug>/help`, headed "How to Help" under the navigation bar, sta
 
 A request has:
 
-- a **body** of plain text, 1 to 2,000 characters. Line breaks are kept, and web addresses become links.
-- how many people can take it: **1**, a **number up to 99**, or **many** (the form's "Everyone can help with this" checkbox). Right after the body's last word, in smaller, lighter text, the page shows the count in parentheses, kept together on one line (see "Who has offered").
+- a **description**: formatted text of up to 2,000 characters, with the same formatting as an update except photos (see "An update"). It can't be empty. A request written before descriptions could be formatted shows as it always did, with line breaks kept and web addresses as links.
+- how many people can take it: **1**, a **number up to 99**, or **many** (the form's "Everyone can help with this" checkbox). In smaller, lighter text, the page shows the count in parentheses, kept together on one line (see "Who has offered"). When the description ends in a paragraph, the count follows that paragraph's last word; when it ends in a list or quote, the count goes on its own line below it.
 - whether an offer needs a name: the form's **Require name** checkbox, checked by default. Unchecked suits requests like prayers or "be kind to a stranger," where anyone can offer without saying who they are.
 - whether an offer needs an email: the form's **Require email** checkbox, unchecked by default, for when the family needs a way to reach whoever helps.
 - whether an offer needs a phone number: the form's **Require phone** checkbox, unchecked by default, for when the family needs to call or text whoever helps.
 - an optional **date**, and an optional **time** that can be given only with a date. Both are kept exactly as typed, with no time zone, because the need happens where the family is. They show above the body in smaller, lighter text, such as "Sat, Oct 17" or "Sat, Oct 17 · 5:30 PM."
 
-Family members add, edit, and delete requests. Only they see the form for adding one, below the family's message under the heading "What Would Help," with the requests below it under "All Requests." The form starts with an unlabeled box for the description, then the date and time, then "Who Can Help," with "Everyone can help with this," "How many people are needed?", Require name, Require email, and Require phone. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Editing can change anything, including the checkboxes, date, and time; offers already made stay as they are. Deleting asks for confirmation on the page and removes every offer on that request. A family can have at most 100.
+Family members add, edit, and delete requests. Only they see the form for adding one, below the family's message under the heading "What Would Help," with the requests below it under "All Requests." The form starts with the update editor, without **Add photo**, for the description, then the date and time, then "Who Can Help," with "Everyone can help with this," "How many people are needed?", Require name, Require email, and Require phone. Edit and Delete are in a ⋮ menu at the top right of each request, shown only to family members. Editing can change anything, including the checkboxes, date, and time; offers already made stay as they are. Deleting asks for confirmation on the page and removes every offer on that request. A family can have at most 100.
 
 Requests are shown in this order:
 
