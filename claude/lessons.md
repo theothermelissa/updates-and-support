@@ -20,6 +20,14 @@ When a PR's preview has built, run `npm run preview:seed` and `npm run preview` 
 
 **How to apply:** the scripts are described in README → Deployment. `npm run preview` prints the branch's stable address, which always shows the latest push; send that one, not a push's own address. To sign the browser pane in as the family member, run `npm run preview:sign-in` and navigate the pane to the printed link, then press Sign in; the pane stays signed in on that address for the whole PR. The pane must be signed in to Vercel first. Never put a sign-in link in a PR description or commit. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
 
+### Stop the local dev server when its PR merges
+
+When a PR merges, stop any local dev server started for it (`preview_stop`), without being asked.
+
+**Why:** Melissa asked for this after a merged PR's server was left running on port 3000.
+
+**How to apply:** make stopping it part of concluding the PR, right after the merge.
+
 ## Technical
 
 ### Keep git repos out of synced folders
@@ -46,6 +54,7 @@ Some routine commands refuse to run or error out from an agent, which can look l
 
 **How to apply:**
 - Write the migration SQL by hand in a new `prisma/migrations/<timestamp>_<name>/` folder, named to sort after the newest existing one (their timestamps can be ahead of today). To confirm there's no drift, create a scratch database with the test database's credentials, `prisma migrate deploy` to it, and run `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` with `DATABASE_URL` and `DATABASE_URL_UNPOOLED` pointed at it; `--from-migrations` needs a shadow database this config doesn't set.
+- Never rename a migration after pushing it: its PR's preview has already applied it under the old name, so the renamed copy fails and blocks every preview build. Before pushing a migration, check that `origin/main` has no migration with the same or a later timestamp. If a rename is unavoidable, the preview's `_prisma_migrations` row needs renaming and the failed attempt deleting, which changes a shared database and needs Melissa's OK.
 - If a commit lands on the wrong branch (another session switched this folder), point the right branch at it with `git branch -f <branch> <sha>`, then ask Melissa to reset the wrong branch, since auto mode blocks `git reset` on `main`.
 - Edit a PR body with `gh api -X PATCH repos/theothermelissa/updates-and-support/pulls/<n> -F body=@file`.
 
@@ -110,7 +119,7 @@ With a custom viewport size set, the pane's screenshots can show a stale frame f
 
 **Why:** while checking the wall's filter, screenshots showed the unfiltered page while the DOM had already updated. That nearly passed as a bug.
 
-**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane's `hover` action doesn't trigger CSS `:hover`, so check hover-only controls by keyboard focus there and ask Melissa to hover in her own browser. The pane can't type into native date and time inputs; set them with `form_input` on the input's ref. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it. Clicking several React-controlled buttons in one synchronous `javascript_tool` script keeps only the last toggle, because each click sees the same pre-render state; await a short delay between clicks.
+**How to apply:** confirm state with `javascript_tool` or `read_page`, front the tab with `tabs_select`, and clear the emulation before taking the screenshot you share. The pane's `hover` action doesn't trigger CSS `:hover`, so check hover-only controls by keyboard focus there and ask Melissa to hover in her own browser. The pane can't type into native date and time inputs; set them with `form_input` on the input's ref. The pane also doesn't let pages go full screen, so a video's full-screen button doing nothing there is the pane, not the app; check in a real browser before debugging it. Clicking several React-controlled buttons in one synchronous `javascript_tool` script keeps only the last toggle, because each click sees the same pre-render state; await a short delay between clicks. Melissa may be using the pane at the same time: if an editor's content changes under you (text you didn't type appears, yours vanishes), stop driving the page and hand it to her rather than saving.
 
 ### Testing video notes in the browser pane
 

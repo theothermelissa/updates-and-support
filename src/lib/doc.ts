@@ -8,8 +8,9 @@ export type Paragraph = { type: "paragraph"; content?: (Text | HardBreak)[] };
 export type ListItem = { type: "listItem"; content: Block[] };
 export type BulletList = { type: "bulletList"; content: ListItem[] };
 export type OrderedList = { type: "orderedList"; attrs: { start: number; type: null }; content: ListItem[] };
-export type Block = Paragraph | BulletList | OrderedList;
-// A photo sits directly in the document, never in a list. A placeholder has no file. A real
+export type Blockquote = { type: "blockquote"; content: Block[] };
+export type Block = Paragraph | BulletList | OrderedList | Blockquote;
+// A photo sits directly in the document, never in a list or quote. A placeholder has no file. A real
 // photo names the Cloudinary id the server issued. The feed adds url; it is never stored.
 export type Photo =
   | { type: "photo"; attrs: { caption: string; placeholder: true; url?: string | null } }

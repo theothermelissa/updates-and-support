@@ -4,7 +4,7 @@ import { allowedHref } from "./lib/links.js";
 // Shared by the renderer and the editor, so an update looks the same while it's written.
 // Paragraphs are a line apart, so a blank line in an older update looks as it always has.
 export const DOC_CLASSES =
-  "space-y-[1lh] break-words whitespace-pre-wrap [&_li]:mt-1 [&_li>*+*]:mt-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_s]:line-through [&_ul]:list-disc [&_ul]:pl-6";
+  "space-y-[1lh] break-words whitespace-pre-wrap [&_li]:mt-1 [&_li>*+*]:mt-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_s]:line-through [&_ul]:list-disc [&_ul]:pl-6 [&_blockquote]:border-l-4 [&_blockquote]:border-foreground/20 [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground [&_blockquote>*+*]:mt-[1lh]";
 
 // Deep enough for any document the server accepts.
 const MAX_DEPTH = 20;
@@ -48,6 +48,8 @@ function node(n: Obj, key: number, depth: number, photos: Photos): ReactNode {
         </ol>
       );
     }
+    case "blockquote":
+      return <blockquote key={key}>{children(n, depth, photos)}</blockquote>;
     case "listItem":
       return <li key={key}>{children(n, depth, photos)}</li>;
     case "hardBreak":

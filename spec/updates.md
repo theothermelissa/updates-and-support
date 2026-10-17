@@ -11,40 +11,42 @@ An update is either formatted text, with optional photos, or a video (see "Video
   - **bold**, *italic*, and ~~strikethrough~~
   - links, to web addresses (`http:` or `https:`) and email addresses (`mailto:`)
   - bulleted and numbered lists, which can be nested
+  - block quotes, which can hold paragraphs and lists, shown indented behind a grey line on the left in muted text
   - photos, each with an optional **caption** of plain text up to 300 characters (see "Photos")
 - its **author**, a family member, shown by the name on their record (see [access.md](access.md#changing-your-name))
 - when it was **posted**, and when it was last **edited**, if ever
 
-There are no headings, colors, fonts, tables, code, quotes, or images from other websites. A text update can't be empty, and it has at most 20,000 characters of text, at most six photos, and lists nested at most three levels deep.
+There are no headings, colors, fonts, tables, code, or images from other websites. A text update can't be empty, and it has at most 20,000 characters of text, at most six photos, and lists nested at most three levels deep.
 
 ## The feed
 
-The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Text appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. A video update shows its video instead (see "Video updates"). Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
+The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Text appears as written: formatted text, lists, quotes, and each photo at the full width of the feed with its caption, if any, beneath it. A video update shows its video instead (see "Video updates"). Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
 The feed, like every page signed in to a family, sits under the family's navigation bar (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
-Each update has a footer of actions in one row: **React** (unless the update allows no reactions; see "Reactions") and **Leave a note** for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
+Each update has a footer of actions in one row: **React** (unless the update allows no reactions; see "Reactions") and **Leave a note** (unless the update doesn't allow notes; see "Allowing notes") for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
 **The feed stays current without a refresh.** While the page is open and visible, it checks for changes every 30 seconds, and immediately when the reader returns to the tab. A hidden tab doesn't check, so a forgotten tab costs nothing. Changes to updates already on screen (edits, reactions, notes, and deletions) appear in place. New updates don't appear on their own, because inserting one at the top would move whatever the reader is in the middle of; instead a "1 new update" (or "3 new updates") button appears at the top of the screen, and pressing it shows them and scrolls to the top. A family member's own post appears at once. A failed check shows nothing and simply tries again at the next one. If the reader has been signed out, for example because they were removed or the community question's answer changed, the next check takes them to the gate. The wall doesn't update itself; it's current each time it's opened.
 
 ## Writing an update
 
-Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
+Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, **Numbered list**, and **Quote**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. **Quote** quotes the line the cursor is on (or the selected lines), splitting it from the lines around it. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link, and typing `> ` at the start of a line makes it a quote.
 
-Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, strikethrough, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
+Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, strikethrough, links, lists, and quotes) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
 
 ## Posting
 
-A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when everyone will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none. Screen readers hear each icon's meaning, such as "Emails everyone" or "Chosen reactions." The settings apply to either tab:
+A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when everyone will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none; then a speech bubble when the update will allow notes, or the same bubble crossed out when it won't. Screen readers hear each icon's meaning, such as "Emails everyone," "Chosen reactions," or "No notes." The settings apply to either tab:
 
 - **"Notify everyone by email,"** checked by default, so a small follow-up can go out without emailing everyone.
 - **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
+- **"Allow notes,"** which starts checked or unchecked according to the family's default (see "Allowing notes").
 
-Posting resets both settings to their defaults.
+Posting resets the settings to their defaults.
 
 ## Editing
 
-A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with only the reactions setting, showing the update's current reactions: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"). A video update can't be edited, so its reactions stay as they were posted.
+A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with the reactions and "Allow notes" settings, showing the update's current ones: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"), and changing "Allow notes" keeps the notes already left (see "Allowing notes"). A video update can't be edited, so its reactions and "Allow notes" stay as they were posted.
 
 ## Deleting
 
@@ -136,7 +138,15 @@ Each update's footer has a round "Leave a note" button showing a speech bubble w
 
 A note needs a name. The dialog shows "Your name", filled in with the name on their record, or empty if they haven't given one, and they can change it. Leaving the note saves that name on their record (see [access.md](access.md#changing-your-name)). Cancelling, or a note that isn't saved, leaves the name as it was. The dialog never asks for an email.
 
-A person can leave any number of notes on an update, up to 20 notes an hour across the family, written and video notes together, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
+A person can leave any number of notes on an update that allows notes, up to 20 notes an hour across the family, written and video notes together, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
+
+### Allowing notes
+
+Each update either allows notes or doesn't, set by "Allow notes" in Post settings when it's posted and changeable by editing a text update (see "Posting" and "Editing"). On an update that doesn't allow notes, no one can leave a new one: its footer has no "Leave a note" button, it has no "Leave a note" button beside it (see "Notes beside an update"), and the server refuses a new note on it, so posting from a note dialog opened before notes were turned off says "Notes are turned off for this update". The notes already on it stay: they're shown beside the update and on the wall, and anyone can still react to them, and their authors and family members can still delete them. Turning notes back on brings back "Leave a note."
+
+**The family's default.** The People page has a "New updates allow notes" setting (see [access.md](access.md#notes-on-new-updates)). It decides only whether "Allow notes" starts checked in Post settings. Changing it never changes an update already posted. It's on unless the family turned it off, and updates posted before it existed allow notes.
+
+Only family members can set "Allow notes" on an update or change the family's default; the server refuses anyone else.
 
 ### Video notes
 
@@ -158,7 +168,7 @@ Video notes are stored and delivered by Cloudinary, which also converts them to 
 
 An update's notes are always shown, newest first, as colored cards: beside the update's card on a wide screen, and below it on a phone. Up to six are shown; when there are more, a "See all 14 notes" link opens the wall showing only that update's notes.
 
-On a wide screen, an update with no notes has a round "Leave a note" button beside it instead, at the top, filled with the palette's Oak color. It opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an extra button under every note-less update would crowd the feed; the footer's button serves instead. The button goes away when the update's first note appears, including when that note arrives through the feed's regular check.
+On a wide screen, an update with no notes that allows notes has a round "Leave a note" button beside it instead, at the top, filled with the palette's Oak color. It opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an extra button under every note-less update would crowd the feed; the footer's button serves instead. The button goes away when the update's first note appears, including when that note arrives through the feed's regular check, and when the update stops allowing notes.
 
 ### The wall
 
@@ -203,13 +213,19 @@ A request is past, by the clock of the device showing it, from the start of the 
 
 ### The family's message
 
-Above everything else on the page, the family can keep one message for everyone who opens it, such as what they'd rather people not send or do: "Thank you! Please don't send flowers or gift baskets, and please hold off on visits for now." It's plain text of up to 2,000 characters, with line breaks kept and web addresses as links, in a shaded box with no heading of its own. With no message, there's no box.
+Above everything else on the page, the family can keep a message for everyone who opens it, in up to three parts, each optional:
 
-Any family member can write, change, or remove it. They see an **Edit** button at the top right of the box or, when there's no message, an **Add a message for supporters** button in its place. Either one turns that spot into a text box with **Save** and **Cancel**. Saving an empty box removes the message. If two family members edit at once, the last save wins.
+1. **An introduction**, as plain text on the page with no box or heading of its own, such as "Thank you for your care and support! We deeply appreciate it, and are so grateful for you all."
+2. **Do**, under the heading "Do:", in a shaded box: what helps, such as "Send a card" or "Drop off a meal."
+3. **Don't**, under the heading "Don't:", in a shaded box: what they'd rather people not send or do, such as "Please don't send flowers, and please hold off on visits for now."
+
+Each part is formatted text of up to 2,000 characters, with the same formatting as an update except photos (see "An update"). An empty part isn't shown, and with nothing written the page starts with the requests. A message written before the page had parts is the introduction, and one written before it could be formatted shows as it always did, with line breaks kept and web addresses as links.
+
+Any family member can write, change, or remove the message. They see an **Edit** button at the top right of the message or, when it's empty, an **Add a message for supporters** button in its place. Either one turns the whole message into three update editors, without **Add photo**, one under the other: the introduction's, whose empty box shows the grey hint "Thank you for your care and support! We deeply appreciate it, and are so grateful for you all.", then "Do:" and "Don't:" with an editor under each. One **Save** and **Cancel** below them cover all three. Saving a part empty removes it. If two family members edit at once, the last save wins.
 
 Everyone signed in to the family reads the message, the same as the requests. It never appears on the gate or in emails, and writing or changing it sends no emails or notifications. Others see a change when they next load the page.
 
-Supporters see "How to help" in the navigation bar once the family has a message or at least one request (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
+Supporters see "How to help" in the navigation bar once any part of the family's message is written or there is at least one request (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
 ### Offering to help
 

@@ -12,6 +12,7 @@ import {
   createHelp,
   deleteHelp,
   hasHelpRequests,
+  hasHelpMessage,
   helpMessage,
   listHelp,
   offerHelp,
@@ -21,6 +22,7 @@ import {
   type HelpRequestView,
 } from "../../server/help.js";
 import { setRemoved } from "../../server/people.js";
+import { docFromText } from "../../server/richText.js";
 import { hashToken, newToken } from "../../server/tokens.js";
 import { createTestDb } from "./db.js";
 import { answerCorrectly, fakeMailer, joinWithEmail, makeFamily, queuedOrDone, resetDb } from "./fixtures.js";
@@ -412,43 +414,87 @@ describe("emails", () => {
 });
 
 describe("the family's message", () => {
-  const MESSAGE = "Please don't send flowers.\n- No visits for now";
+  const text = (t: string) => ({ type: "text", text: t });
+  const p = (t: string) => ({ type: "paragraph", content: [text(t)] });
+  const doc = (...content: unknown[]) => ({ type: "doc", content });
+  const MESSAGE = doc(p("Thank you for everything."), { type: "blockquote", content: [p("We feel your support")] });
+  const DOS = doc({ type: "bulletList", content: [{ type: "listItem", content: [p("Send a card")] }] });
+  const DONTS = doc(p("Please don't send flowers."));
+  const NONE = { message: null, dos: null, donts: null };
+  const ALL = { message: MESSAGE, dos: DOS, donts: DONTS };
 
   it("is read by everyone signed in to the family, and by no other family", async () => {
     const { ana, luis, sam, chidi, olu } = await setUp();
-    expect(await setHelpMessage(db, ana, { message: `  ${MESSAGE}\n ` })).toEqual({ message: MESSAGE });
-    for (const person of [ana, luis, sam]) expect(await helpMessage(db, person)).toBe(MESSAGE);
-    for (const person of [chidi, olu.person]) expect(await helpMessage(db, person)).toBeNull();
+    expect(await setHelpMessage(db, ana, { content: MESSAGE, dos: DOS, donts: DONTS })).toEqual(ALL);
+    for (const person of [ana, luis, sam]) expect(await helpMessage(db, person)).toEqual(ALL);
+    for (const person of [chidi, olu.person]) expect(await helpMessage(db, person)).toEqual(NONE);
+    // The introduction's plain text is stored beside it.
+    const family = await db.family.findUniqueOrThrow({ where: { id: ana.familyId } });
+    expect(family.helpMessage).toBe("Thank you for everything.\n\n> We feel your support");
+  });
 
-    await setHelpMessage(db, luis, { message: "Meals are welcome." });
-    expect(await helpMessage(db, sam)).toBe("Meals are welcome.");
-    expect(await setHelpMessage(db, ana, { message: " \n " })).toEqual({ message: null });
-    expect(await helpMessage(db, sam)).toBeNull();
+  it("keeps a part that's left out, and removes one sent as null", async () => {
+    const { ana, luis, sam } = await setUp();
+    await setHelpMessage(db, ana, { content: MESSAGE, dos: DOS, donts: DONTS });
+    expect(await setHelpMessage(db, luis, { dos: doc(p("Meals are welcome.")) })).toEqual({ ...ALL, dos: doc(p("Meals are welcome.")) });
+    expect(await setHelpMessage(db, ana, { content: null, donts: null })).toEqual({ ...NONE, dos: doc(p("Meals are welcome.")) });
+    expect(hasHelpMessage(await helpMessage(db, sam))).toBe(true);
+    expect(await db.family.findUniqueOrThrow({ where: { id: ana.familyId } })).toMatchObject({
+      helpMessage: null,
+      helpMessageContent: null,
+      helpDont: null,
+    });
+    expect(await setHelpMessage(db, ana, { dos: null })).toEqual(NONE);
+    expect(hasHelpMessage(await helpMessage(db, sam))).toBe(false);
+  });
+
+  it("accepts plain text from pages loaded before formatting, and shows an introduction written before it", async () => {
+    const { ana, sam } = await setUp();
+    await setHelpMessage(db, ana, { dos: DOS, donts: DONTS });
+    expect(await setHelpMessage(db, ana, { message: "  No visits\nfor now \n" })).toEqual({
+      message: docFromText("No visits\nfor now"),
+      dos: DOS,
+      donts: DONTS,
+    });
+    expect(await setHelpMessage(db, ana, { message: " \n " })).toEqual({ ...NONE, dos: DOS, donts: DONTS });
+
+    await db.family.update({ where: { id: ana.familyId }, data: { helpMessage: "Old message https://example.com" } });
+    expect((await helpMessage(db, sam)).message).toEqual(docFromText("Old message https://example.com"));
   });
 
   it("refuses a supporter, and keeps the message as it was", async () => {
     const { ana, sam } = await setUp();
-    await setHelpMessage(db, ana, { message: MESSAGE });
-    await expect(setHelpMessage(db, sam, { message: "Send flowers!" })).rejects.toMatchObject({ status: 403 });
-    await expect(setHelpMessage(db, sam, { message: "" })).rejects.toMatchObject({ status: 403 });
-    expect(await helpMessage(db, ana)).toBe(MESSAGE);
+    await setHelpMessage(db, ana, { content: MESSAGE, dos: DOS, donts: DONTS });
+    for (const input of [{ content: doc(p("Send flowers!")) }, { dos: doc(p("Send flowers!")) }, { donts: null }, { content: null }, { message: "" }]) {
+      await expect(setHelpMessage(db, sam, input)).rejects.toMatchObject({ status: 403 });
+    }
+    expect(await helpMessage(db, ana)).toEqual(ALL);
   });
 
   it("lets a family member write only their own family's message", async () => {
     const { ana, chidi, olu } = await setUp();
-    await setHelpMessage(db, ana, { message: MESSAGE });
-    await setHelpMessage(db, chidi, { message: "Okafor message" });
-    expect(await helpMessage(db, ana)).toBe(MESSAGE);
-    expect(await helpMessage(db, olu.person)).toBe("Okafor message");
+    await setHelpMessage(db, ana, { content: MESSAGE, dos: DOS, donts: DONTS });
+    await setHelpMessage(db, chidi, { content: doc(p("Okafor message")), donts: doc(p("Okafor don'ts")) });
+    expect(await helpMessage(db, ana)).toEqual(ALL);
+    expect(await helpMessage(db, olu.person)).toEqual({ message: doc(p("Okafor message")), dos: null, donts: doc(p("Okafor don'ts")) });
   });
 
-  it("rejects a message that's too long or isn't text", async () => {
+  it("rejects a part that's too long, has a photo, or isn't a document, and then saves no part", async () => {
     const { ana } = await setUp();
+    const photo = { type: "photo", attrs: { caption: "", placeholder: true } };
+    const bad = [doc(p("x".repeat(2001))), doc(p("Hi"), photo), doc(p(" ")), 42, "Hi", doc({ type: "heading", content: [text("x")] })];
+    for (const part of ["content", "dos", "donts"]) {
+      for (const value of bad) {
+        await expect(setHelpMessage(db, ana, { content: MESSAGE, dos: DOS, donts: DONTS, [part]: value })).rejects.toMatchObject({ status: 400 });
+      }
+    }
     for (const message of ["x".repeat(2001), 42, null, undefined]) {
       await expect(setHelpMessage(db, ana, { message })).rejects.toMatchObject({ status: 400 });
     }
-    expect(await helpMessage(db, ana)).toBeNull();
-    expect(await setHelpMessage(db, ana, { message: "x".repeat(2000) })).toEqual({ message: "x".repeat(2000) });
+    await expect(setHelpMessage(db, ana, { dos: doc(p("x".repeat(2001))) })).rejects.toThrow("A message can have at most 2,000 characters");
+    expect(await helpMessage(db, ana)).toEqual(NONE);
+    const long = doc(p("x".repeat(2000)));
+    expect(await setHelpMessage(db, ana, { content: long, dos: long, donts: long })).toEqual({ message: long, dos: long, donts: long });
   });
 });
 
@@ -528,17 +574,19 @@ describe("the help endpoints", () => {
     for (const cookies of [{}, oluCookie]) {
       expect(await call(helpMessageHandler, "PUT", { slug }, cookies, { message: "Send flowers!" })).toBe(401);
     }
-    expect(await call(helpMessageHandler, "PUT", { slug }, samCookie, { message: "Send flowers!" })).toBe(403);
+    expect(await call(helpMessageHandler, "PUT", { slug }, samCookie, { dos: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Send flowers!" }] }] } })).toBe(403);
     expect(await call(helpMessageHandler, "GET", { slug }, anaCookie)).toBe(405);
-    expect(await helpMessage(db, ana)).toBeNull();
+    expect(hasHelpMessage(await helpMessage(db, ana))).toBe(false);
 
-    expect(await send(helpMessageHandler, "PUT", { slug }, anaCookie, { message: "No visits for now" })).toEqual({
+    const content = docFromText("No visits for now");
+    const dos = docFromText("Send a card");
+    expect(await send(helpMessageHandler, "PUT", { slug }, anaCookie, { content, dos, donts: null })).toEqual({
       status: 200,
-      body: { message: "No visits for now" },
+      body: { message: content, dos, donts: null },
     });
     expect(await send(helpHandler, "GET", { slug }, samCookie)).toMatchObject({
       status: 200,
-      body: { message: "No visits for now" },
+      body: { message: content, dos, donts: null },
     });
     // Signed out, or signed in to another family: neither the help list nor the gate sends it.
     for (const [handler, cookies] of [
@@ -548,6 +596,7 @@ describe("the help endpoints", () => {
     ] as const) {
       const { body } = await send(handler, "GET", { slug }, cookies);
       expect(JSON.stringify(body)).not.toContain("No visits");
+      expect(JSON.stringify(body)).not.toContain("Send a card");
     }
     expect((await send(gateHandler, "GET", { slug }, {})).status).toBe(200);
   });

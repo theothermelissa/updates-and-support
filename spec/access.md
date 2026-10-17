@@ -200,6 +200,14 @@ The control is the one from Post settings: a **"Use the usual reactions"** check
 
 Only a family member of that family can change the set; the server refuses anyone else, and accepts only up to six distinct emoji from the catalog. Supporters see the set only as the emoji offered when they react to a note.
 
+## Notes on new updates
+
+The People page has a **Notes on new updates** section, beside "Reactions on notes," with one checkbox: **"New updates allow notes,"** checked unless the family turned it off. It explains: "Whether new updates start out allowing notes. You can still change it for each update in Post settings." It decides only that starting point (see [updates.md](updates.md#allowing-notes)); updates already posted keep their own setting.
+
+The checkbox saves as soon as it's changed, and says "Saved" beside it. If saving fails, it returns to the saved value and says so. When two family members change it at about the same time, the later change wins.
+
+Only a family member of that family can change it; the server refuses anyone else. Supporters never see it.
+
 ## Changing the community question
 
 The People page also shows the community question and its accepted answers, and a family member can change them at any time. A question must not be empty and needs at least one non-empty accepted answer; answers are entered one per line.

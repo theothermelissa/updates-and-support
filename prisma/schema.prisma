@@ -17,10 +17,17 @@ model Family {
   displayName     String
   question        String
   acceptedAnswers String[]
-  // The message at the top of How to help, trimmed; null when there is none.
+  // The introduction of the message at the top of How to help, as plain text; null when there is none.
   helpMessage     String?
+  // The same message as a checked document. Null for messages written before formatting.
+  helpMessageContent Json?
+  // The message's "Do" and "Don't" parts, as checked documents; null when not written.
+  helpDo          Json?
+  helpDont        Json?
   // The emoji anyone may react with on any of the family's notes, in catalog order; empty allows none.
   noteReactionKinds String[] @default(["heart", "hug", "strong", "clap", "party", "laugh"])
+  // Where a new update's "Allow notes" starts in Post settings. Never changes posted updates.
+  allowNotesByDefault Boolean @default(true)
   createdAt       DateTime @default(now())
 
   people       Person[]
@@ -117,6 +124,8 @@ model Update {
   // The reactions anyone may pick on this update, as catalog kinds in catalog order (see
   // src/lib/reactionCatalog.ts), at most six. Empty allows none.
   reactionKinds String[] @default(["heart", "hug", "strong", "clap", "party", "laugh"])
+  // False stops new notes; the notes already on it stay.
+  allowNotes Boolean  @default(true)
   createdAt DateTime  @default(now())
   editedAt  DateTime?
 

@@ -2,14 +2,16 @@ import type { Db } from "./db.js";
 import { appUrl, helpOfferEmail, type SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
 import { isValidEmail, normalizeEmail, validName } from "./families.js";
-import type { Person, Prisma } from "./generated/prisma/client.js";
+import { Prisma, type Person } from "./generated/prisma/client.js";
 import { requireFamilyMember } from "./people.js";
 import { validPhone } from "./phone.js";
+import { docFromText, shownContent, textOf, validDoc } from "./richText.js";
+import type { Doc } from "../src/lib/doc.js";
 
 const MAX_BODY = 2_000;
 const MAX_SLOTS = 99;
 const MAX_REQUESTS = 100;
-const MAX_MESSAGE = 2_000;
+const MESSAGE_LIMITS = { noun: "message", maxText: 2_000 } as const;
 
 // What a viewer sees of an offer. A supporter gets only their own offer, with no email or
 // phone. Family members get every offer, with the email when there is one, a supporter's
@@ -93,34 +95,63 @@ export async function hasHelpRequests(db: Db, familyId: string): Promise<boolean
   return count > 0;
 }
 
-// The message at the top of How to help, or null. Read by the person's own family rather than
-// the family loaded from the address, which a redirect can point elsewhere.
-export async function helpMessage(db: Db, person: Person): Promise<string | null> {
+// The family's message at the top of How to help: the introduction (message), and the "Do"
+// and "Don't" parts, each a document or null. Read by the person's own family rather than the
+// family loaded from the address, which a redirect can point elsewhere. An introduction written
+// before formatting has only its text, which shownContent converts.
+export type HelpMessage = { message: Doc | null; dos: Doc | null; donts: Doc | null };
+
+export async function helpMessage(db: Db, person: Person): Promise<HelpMessage> {
   const family = await db.family.findUniqueOrThrow({
     where: { id: person.familyId },
-    select: { helpMessage: true },
+    select: { helpMessage: true, helpMessageContent: true, helpDo: true, helpDont: true },
   });
-  return family.helpMessage;
+  return {
+    message: family.helpMessage === null ? null : shownContent(family.helpMessageContent, family.helpMessage),
+    dos: (family.helpDo as Doc | null) ?? null,
+    donts: (family.helpDont as Doc | null) ?? null,
+  };
 }
 
-// A family member writes or changes the message; an empty one removes it.
+export function hasHelpMessage(message: HelpMessage): boolean {
+  return message.message !== null || message.dos !== null || message.donts !== null;
+}
+
+// A family member writes or changes the message. Each of content (the introduction), dos, and
+// donts is a document, null to remove that part, or left out to keep it as it is. Pages loaded
+// before formatting send { message } as plain text for the introduction; empty removes it.
+// Every part is checked before any is saved. The introduction's plain text is stored beside it.
 export async function setHelpMessage(
   db: Db,
   person: Person,
-  input: { message?: unknown },
-): Promise<{ message: string | null }> {
+  input: { content?: unknown; dos?: unknown; donts?: unknown; message?: unknown },
+): Promise<HelpMessage> {
   requireFamilyMember(person);
-  if (typeof input.message !== "string") throw new RequestError(400, "Expected message: text");
-  const clean = input.message.trim();
-  if (clean.length > MAX_MESSAGE) {
-    throw new RequestError(400, `A message can be at most ${MAX_MESSAGE.toLocaleString("en-US")} characters.`);
+  let intro = messagePart(input.content);
+  if (input.content === undefined && typeof input.message === "string") {
+    const text = input.message.trim();
+    intro = text ? messagePart(docFromText(text)) : null;
   }
-  const family = await db.family.update({
-    where: { id: person.familyId },
-    data: { helpMessage: clean || null },
-    select: { helpMessage: true },
-  });
-  return { message: family.helpMessage };
+  const dos = messagePart(input.dos);
+  const donts = messagePart(input.donts);
+  if (intro === undefined && dos === undefined && donts === undefined) {
+    throw new RequestError(400, "Expected the message's content");
+  }
+  const data: Prisma.FamilyUpdateInput = {};
+  if (intro !== undefined) {
+    data.helpMessage = intro ? textOf(intro) : null;
+    data.helpMessageContent = intro ?? Prisma.DbNull;
+  }
+  if (dos !== undefined) data.helpDo = dos ?? Prisma.DbNull;
+  if (donts !== undefined) data.helpDont = donts ?? Prisma.DbNull;
+  await db.family.update({ where: { id: person.familyId }, data });
+  return helpMessage(db, person);
+}
+
+// One part as sent: undefined to keep it, null to remove it, or a checked document.
+function messagePart(input: unknown): Doc | null | undefined {
+  if (input === undefined || input === null) return input;
+  return validDoc(input, undefined, undefined, MESSAGE_LIMITS);
 }
 
 export async function listHelp(db: Db, person: Person): Promise<HelpRequestView[]> {

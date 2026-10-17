@@ -18,10 +18,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 ## Features and fixes
 
-- **2026-10-17** — Add "Allow notes," per update and family-wide.
-  The last step after per-update and family-wide note reactions: a per-update checkbox in Post settings (default on) and a family-wide switch on the People page (default on). Turning notes off keeps existing notes visible and deletable and removes only "Leave a note." Still to decide: whether the family-wide switch overrides the per-update one or only sets its default.
 - **2026-10-17** — Let a family member change a video update's post settings.
-  Video updates can't be edited, so their reactions stay as posted (and, once "Allow notes" exists, so will that). A settings-only edit would fix a regretted choice.
+  Video updates can't be edited, so their reactions and "Allow notes" stay as posted. A settings-only edit would fix a regretted choice.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
   A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
 - **2026-10-16** — Warn before leaving a page with an unposted update or note.
@@ -36,6 +34,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. Toasts (shadcn's `sonner`) are the natural fix.
 - **2026-10-16** — Restore scroll position on Back, and show a light loading state under the nav bar.
   Back lands at the top of the feed rather than where the reader was, and the content area is briefly empty while a page fetches.
+- **2026-10-17** — Tidy the How to Help message editor.
+  Editing shows three editors, each with its own full toolbar, and nothing warns before a part passes 2,000 characters until Save fails. A shared toolbar and a character count (Tiptap's CharacterCount, already in `@tiptap/extensions`) would fix both.
 - **2026-10-16** — Let authors edit their notes.
   Today they delete and leave another. Also in the spec's Later list.
 - **2026-10-12** — Give `/` a simple page.

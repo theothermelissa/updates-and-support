@@ -1,5 +1,5 @@
 import { CheckIcon, EllipsisVerticalIcon, XIcon } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { PageTitle } from "@/components/familyShell";
 import { Confirm, EmailInput, ErrorMessage, Field, LinkedText, PhoneLink } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
+import type { Doc } from "../lib/doc.js";
+import { RichText } from "../richText.js";
 import { capacityLabel, isPast, sortRequests, whenLabel } from "../help.js";
 import type { FamilyPageProps } from "./FamilyFrame.js";
+
+const RichEditor = lazy(() => import("../editor/RichEditor.js"));
 
 // A null name is an offer made without one.
 type Offer = { id: string | null; name: string | null; mine: boolean; email: string | null; phone: string | null };
@@ -27,17 +31,20 @@ type RequestFields = {
 };
 // A supporter's offers hold only their own; offered counts everyone's.
 type HelpRequest = RequestFields & { id: string; full: boolean; offered: number; offers: Offer[] };
+// The family's message: the introduction, and the "Do" and "Don't" parts. Null when not written.
+type MessageParts = { message: Doc | null; dos: Doc | null; donts: Doc | null };
+const NO_MESSAGE: MessageParts = { message: null, dos: null, donts: null };
 
 export function Help({ slug, me, reloadMe }: FamilyPageProps) {
   const [requests, setRequests] = useState<HelpRequest[] | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<MessageParts>(NO_MESSAGE);
   const [error, setError] = useState("");
 
   async function load() {
-    const list = await api<{ message: string | null; requests: HelpRequest[] }>(slug, "help");
+    const list = await api<MessageParts & { requests: HelpRequest[] }>(slug, "help");
     if (list.status === 401) return location.replace(`/f/${slug}`);
     if (list.status !== 200) return setError("Couldn't load ways to help. Please refresh the page.");
-    setMessage(list.data.message ?? null);
+    setMessage({ message: list.data.message ?? null, dos: list.data.dos ?? null, donts: list.data.donts ?? null });
     setRequests(list.data.requests);
   }
 
@@ -69,9 +76,12 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
       <PageTitle>How to Help</PageTitle>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       <HelpMessage
+        slug={slug}
         message={message}
         family={family}
-        onSave={(text) => change("help-message", "PUT", { message: text }).then((r) => r.ok)}
+        onSave={(parts) =>
+          change("help-message", "PUT", { content: parts.message, dos: parts.dos, donts: parts.donts }).then((r) => r.ok)
+        }
       />
       {family && <h3 className="text-lg font-semibold tracking-tight">What Would Help</h3>}
       {family && (
@@ -102,38 +112,53 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
   );
 }
 
-// The family's message at the top of the page, in a shaded box. Family members write, change,
-// or remove it here; saving an empty box removes it, so the box isn't required.
-function HelpMessage(props: { message: string | null; family: boolean; onSave: (message: string) => Promise<boolean> }) {
+// The family's message at the top of the page: an introduction, then "Do:" and "Don't:" parts in
+// shaded boxes, each shown only when written. Family members write, change, or remove all three
+// at once here with the update editor, without photos; saving a part empty removes it.
+function HelpMessage(props: {
+  slug: string;
+  message: MessageParts;
+  family: boolean;
+  onSave: (parts: MessageParts) => Promise<boolean>;
+}) {
   const [editing, setEditing] = useState(false);
-  const [text, setText] = useState("");
+  const [draft, setDraft] = useState<MessageParts>(props.message);
   const [busy, setBusy] = useState(false);
+  const { message, dos, donts } = props.message;
 
   function edit() {
-    setText(props.message ?? "");
+    setDraft(props.message);
     setEditing(true);
   }
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const ok = await props.onSave(text);
+    const ok = await props.onSave(draft);
     setBusy(false);
     if (ok) setEditing(false);
   }
 
   if (editing) {
-    return (
-      <form onSubmit={save} className="space-y-3">
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={2000}
-          rows={4}
-          autoFocus
-          aria-label="Message for supporters"
-          placeholder="For example: Thank you! Please don't send flowers or gift baskets, and please hold off on visits for now."
+    const editor = (part: keyof MessageParts, label: string, placeholder?: string) => (
+      <Suspense fallback={<div className="h-[12.5rem] rounded-lg border border-input" aria-busy="true" />}>
+        <RichEditor
+          initial={props.message[part] ?? undefined}
+          slug={props.slug}
+          photos="off"
+          label={label}
+          placeholder={placeholder}
+          onChange={(doc) => setDraft((d) => ({ ...d, [part]: doc as Doc | null }))}
         />
+      </Suspense>
+    );
+    return (
+      <form onSubmit={save} className="space-y-4">
+        {editor("message", "Introduction", INTRO_HINT)}
+        <MessageHeading>Do:</MessageHeading>
+        {editor("dos", "Do")}
+        <MessageHeading>Don't:</MessageHeading>
+        {editor("donts", "Don't")}
         <div className="flex gap-2">
           <Button disabled={busy}>Save</Button>
           <Button type="button" variant="outline" onClick={() => setEditing(false)}>
@@ -143,7 +168,7 @@ function HelpMessage(props: { message: string | null; family: boolean; onSave: (
       </form>
     );
   }
-  if (props.message === null) {
+  if (message === null && dos === null && donts === null) {
     return props.family ? (
       <div>
         <Button type="button" variant="outline" onClick={edit}>
@@ -152,15 +177,43 @@ function HelpMessage(props: { message: string | null; family: boolean; onSave: (
       </div>
     ) : null;
   }
+  // Edit sits at the top right of whichever part comes first.
+  const editButton = props.family ? (
+    <Button type="button" variant="ghost" size="sm" className="-mr-2" onClick={edit}>
+      Edit
+    </Button>
+  ) : null;
   return (
-    <div className="flex items-start gap-2 rounded-xl bg-muted p-4">
-      <LinkedText text={props.message} className="min-w-0 flex-1" />
-      {props.family && (
-        <Button type="button" variant="ghost" size="sm" className="-mt-1 -mr-2" onClick={edit}>
-          Edit
-        </Button>
+    <div className="space-y-4">
+      {message && (
+        <div className="flex items-start gap-2">
+          <RichText doc={message} className="min-w-0 flex-1" />
+          {editButton}
+        </div>
       )}
+      {dos && <MessageBox heading="Do:" doc={dos} action={message ? null : editButton} />}
+      {donts && <MessageBox heading="Don't:" doc={donts} action={message || dos ? null : editButton} />}
     </div>
+  );
+}
+
+const INTRO_HINT = "Thank you for your care and support! We deeply appreciate it, and are so grateful for you all.";
+
+function MessageHeading({ children }: { children: ReactNode }) {
+  return <h3 className="text-lg font-semibold tracking-tight">{children}</h3>;
+}
+
+function MessageBox(props: { heading: string; doc: Doc; action: ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <MessageHeading>{props.heading}</MessageHeading>
+        {props.action}
+      </div>
+      <div className="rounded-xl bg-muted p-4">
+        <RichText doc={props.doc} />
+      </div>
+    </section>
   );
 }
 

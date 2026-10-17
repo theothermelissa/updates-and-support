@@ -9,7 +9,7 @@ import {
 } from "../../../../server/http.js";
 import { sendEmails } from "../../../../server/email.js";
 import { photoSettingsFromEnv } from "../../../../server/photoSettings.js";
-import { createUpdate, listUpdates } from "../../../../server/updates.js";
+import { createUpdate, listUpdates, newUpdateDefaults } from "../../../../server/updates.js";
 
 // Supporters are emailed only when the post form's checkbox asked for it.
 function notifyWith(body: Record<string, unknown>) {
@@ -23,7 +23,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!ctx.person) return unauthorized(res);
 
   if (req.method === "GET") {
-    return res.status(200).json({ updates: await listUpdates(getDb(), ctx.person, undefined, photoSettingsFromEnv()) });
+    return res.status(200).json({
+      updates: await listUpdates(getDb(), ctx.person, undefined, photoSettingsFromEnv()),
+      defaults: await newUpdateDefaults(getDb(), ctx.person),
+    });
   }
   const body = jsonBody(req, res);
   if (!body) return;
