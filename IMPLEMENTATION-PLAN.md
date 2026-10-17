@@ -49,3 +49,14 @@ Integration tests go in `tests/integration/privacyNotice.test.ts`, with the Rive
 
 - No preview of the banner inside the People page section; the real banner at the top shows the result once saved.
 - Other readers see changed wording on their next page load. Nothing pushes the change live to them.
+
+## Results
+
+- All steps built as planned. The 403 test failed with `requireFamilyMember` removed and passed with it restored. The full suite (374 tests) passes, and `prisma migrate diff` shows no drift.
+- Checked on the PR preview, signed in as the family member:
+  - The gate and the sign-in page show the standard banner.
+  - Updates shows exactly one banner, its text can't be selected, and right-click is cancelled.
+  - The update editor stays selectable, and right-click works in it.
+  - People is selectable, and saving wording there updates the banner at once, with line breaks collapsed.
+  - At 360px wide there's no sideways scroll.
+- Not checkable in the browser pane: the iOS long-press menu and image dragging. They need a real phone and a desktop browser.
