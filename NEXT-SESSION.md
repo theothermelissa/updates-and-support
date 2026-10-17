@@ -30,6 +30,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   A nameless reader who signs notes isn't on the People page, so the only remedies for a flood are deleting notes one by one (capped at 20 an hour per person) or changing the answer.
 - **2026-10-16** — Show and edit supporters' phone numbers on the People page.
   The People page lists only supporters with an email, so a phone number given without one shows only beside that supporter's offers. And only the supporter can set their number, though a family member may hear it in person. Both change the same People page table, so they ship together.
+- **2026-10-17** — Show family members' notification status on the People page.
+  Family members now get new-update emails and can turn them off, but the People page shows notification status only for supporters, so the family can't see that one of them opted out. Cut for speed when family members started getting emails.
 - **2026-10-14** — Show People page messages next to the form that caused them.
   "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. Toasts (shadcn's `sonner`) are the natural fix.
 - **2026-10-16** — Restore scroll position on Back, and show a light loading state under the nav bar.
