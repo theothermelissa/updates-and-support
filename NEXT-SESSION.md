@@ -34,6 +34,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. Toasts (shadcn's `sonner`) are the natural fix.
 - **2026-10-16** — Restore scroll position on Back, and show a light loading state under the nav bar.
   Back lands at the top of the feed rather than where the reader was, and the content area is briefly empty while a page fetches.
+- **2026-10-17** — Tidy the How to Help message editor.
+  Editing shows three editors, each with its own full toolbar, and nothing warns before a part passes 2,000 characters until Save fails. A shared toolbar and a character count (Tiptap's CharacterCount, already in `@tiptap/extensions`) would fix both.
 - **2026-10-16** — Let authors edit their notes.
   Today they delete and leave another. Also in the spec's Later list.
 - **2026-10-12** — Give `/` a simple page.

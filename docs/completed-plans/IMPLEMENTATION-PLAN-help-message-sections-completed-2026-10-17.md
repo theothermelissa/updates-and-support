@@ -38,6 +38,10 @@ The message on How to help becomes an introduction (plain, no box), a "Do:" part
   - a supporter can't set any part (existing test extended to `dos`/`donts`); re-prove it fails with `requireFamilyMember` removed;
   - the endpoints: GET sends all three to this family only; `me` reports `hasHelpMessage` when only Do is written.
 
+## Discoveries
+
+- Checked on the preview: the existing message became the introduction unchanged, saving Do and Don't works, and the introduction's empty editor shows its hint (the pane's screenshot lagged; the DOM confirmed it).
+
 ## Cuts for speed
 
 - Each editor keeps its own full toolbar, so editing shows three toolbars. A shared toolbar would be tidier but needs focus tracking across editors.
