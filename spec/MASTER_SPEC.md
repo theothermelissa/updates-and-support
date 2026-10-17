@@ -33,7 +33,7 @@ A person who is both a supporter and a family member of different families has a
 - Family members post ways to help, each with an optional date and time and a choice of whether offers need a name or an email, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered. → [updates.md](updates.md#how-to-help)
 - Family members can keep a formatted message at the top of How to help, with an introduction and optional "Do" and "Don't" lists, for everyone signed in to read. → [updates.md](updates.md#the-familys-message)
 - Supporters can keep a phone number on their record for the family to reach them; only family members see it. → [access.md](access.md#your-phone-number)
-- Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
+- Family members, and supporters with a verified email, get a notification email when a new update is posted; the family member who posted it doesn't. → [updates.md](updates.md#notifications)
 
 ### Later
 

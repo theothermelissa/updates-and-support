@@ -95,7 +95,7 @@ Answering the question on a new device gets a supporter reading there at once, a
 
 ### Signing out and notifications
 
-A signed-in supporter can sign out on the current device. Once they've given an email, they can turn notification emails off or back on. Every notification email lets them turn notifications off without signing in (see [updates.md](updates.md#notifications)).
+A signed-in supporter can sign out on the current device. Once they've given an email, they can turn notification emails off or back on, with "Email me when there's a new update" above the feed. Family members have the same checkbox. Every notification email lets its recipient, supporter or family member, turn notifications off without signing in (see [updates.md](updates.md#notifications)).
 
 ## Family members
 
@@ -104,6 +104,8 @@ A signed-in supporter can sign out on the current device. Once they've given an 
 Family members always sign in by magic link. The family's gate offers "Family sign-in," which asks for an email. If the email belongs to anyone in that family who hasn't been removed, a magic link is sent (see "Magic links"). The page says "Check your email" whether or not the email is known.
 
 A family member never needs to answer the community question.
+
+Family members get notification emails for updates other family members post, from the moment they're added, without verifying their email (see [updates.md](updates.md#notifications)). A promoted supporter keeps the notification setting they had, unless they had been removed: removal turned their notifications off, so being added as a family member turns them back on. A restored family member keeps the setting they had before removal.
 
 ### Adding family members
 
@@ -239,6 +241,8 @@ Only family members see who offered to help, under the name each person gave, wh
 A photo's link keeps working for anyone who has it until the photo is deleted, like a photo-sharing link. Someone who saves or forwards a link from the feed can show that photo to others, and a supporter who is later removed, or signed out by a change to the answer, can still open links they saved. Deleting the photo, or the update it's on, ends every link to it within a few minutes. If Cloudinary can't be reached when a photo is deleted, the photo disappears from the app, but links saved earlier keep working until it's deleted from Cloudinary by hand. Browsers also keep copies of photos they've shown, so on a shared device, photos can stay in the browser's cache after signing out. The operator's Cloudinary account can see every family's stored photos, which are the shrunk copies without embedded details.
 
 Giving an email reveals whether it already belongs to the family: a new email goes on the supporter's record, while a known one gets a sign-in link. Someone who knows the answer could use that to learn whether a particular person follows this family. Each check leaves a trace, since a new email appears in the supporter list and a known one receives an email. Hiding it would mean holding every new email until it's verified, which isn't worth the complexity for most families.
+
+A family member's email isn't verified before notification emails go to it. If it's mistyped and belongs to a real person, that person already gets the email with a sign-in link that adding a family member sends, and now also an email for each new update. Those carry no update content and let them turn the emails off. The fix is to remove that family member and add the right email.
 
 A supporter added by a family member is only as safe as the email typed in. If the address is mistyped and belongs to a real person, that person can sign in by email and read the updates. They appear in the supporter list under the name the family gave, so the family can spot and remove them. Likewise, whoever receives a forwarded welcome email and knows the answer signs in as that supporter rather than under their own name.
 

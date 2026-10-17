@@ -17,11 +17,13 @@ beforeEach(() => resetDb(db));
 
 const SECRET = "Biopsy results came back on Tuesday";
 
-async function supporter(familyId: string, name: string, options: { verified?: boolean; on?: boolean; removed?: boolean } = {}) {
+type Options = { verified?: boolean; on?: boolean; removed?: boolean };
+
+async function person(familyId: string, role: "family" | "supporter", name: string, options: Options = {}) {
   return db.person.create({
     data: {
       familyId,
-      role: "supporter",
+      role,
       name,
       email: `${name.toLowerCase()}@example.com`,
       emailVerifiedAt: options.verified === false ? null : new Date(),
@@ -31,14 +33,23 @@ async function supporter(familyId: string, name: string, options: { verified?: b
   });
 }
 
-// The Rivera family with one supporter of each kind, plus an Okafor supporter. Ana, the
-// family member, is verified, as family members are once they've signed in.
+const supporter = (familyId: string, name: string, options: Options = {}) => person(familyId, "supporter", name, options);
+const familyMember = (familyId: string, name: string, options: Options = {}) => person(familyId, "family", name, options);
+
+// The Rivera family with one family member and one supporter of each kind, plus the Okafor
+// family's people. Ana, the family member who posts, is verified, as family members are once
+// they've signed in; Ben has never signed in.
 async function setUp() {
   const { family, people: [created] } = await makeFamily(db, "Rivera");
   const ana = await db.person.update({ where: { id: created!.id }, data: { emailVerifiedAt: new Date() } });
-  const { family: okafor } = await makeFamily(db, "Okafor", ["Chidi"]);
+  const { family: okafor, people: [chidi] } = await makeFamily(db, "Okafor", ["Chidi"]);
   const people = {
     ana: ana!,
+    ben: await familyMember(family.id, "Ben", { verified: false }),
+    fay: await familyMember(family.id, "Fay", { on: false }),
+    // Removed, but opted in, so only the removed check keeps them out.
+    rue: await familyMember(family.id, "Rue", { removed: true }),
+    chidi: chidi!,
     sam: await supporter(family.id, "Sam"),
     una: await supporter(family.id, "Una", { verified: false }),
     otto: await supporter(family.id, "Otto", { on: false }),
@@ -55,18 +66,18 @@ async function notificationsOn(person: Person) {
   return (await db.person.findUniqueOrThrow({ where: { id: person.id } })).notificationsOn;
 }
 
-it("emails only this family's verified, opted-in, active supporters", async () => {
+it("emails this family's opted-in, active family members but the author, and its verified, opted-in, active supporters", async () => {
   const { ana } = await setUp();
   const mail = fakeMailer();
   await createUpdate(db, ana, { body: SECRET }, mail.sendMany);
-  expect(mail.sent.map((e) => e.to)).toEqual(["sam@example.com"]);
+  expect(mail.sent.map((e) => e.to).sort()).toEqual(["ben@example.com", "sam@example.com"]);
 });
 
 it("names the family and carries the recipient's own unsubscribe links, never the update's text", async () => {
   const { family, ana, sam } = await setUp();
   const mail = fakeMailer();
   await createUpdate(db, ana, { body: SECRET }, mail.sendMany);
-  const [email] = mail.sent;
+  const email = mail.sent.find((e) => e.to === sam.email);
 
   expect(email!.subject).toBe("The Rivera Family has a new update");
   expect(email!.text).toContain(`/f/${family.slug}`);
@@ -135,8 +146,8 @@ it("keeps the update when the emails fail", async () => {
   expect(await db.update.count()).toBe(1);
 });
 
-it("unsubscribes only the token's own supporter, only at their family's address", async () => {
-  const { family, okafor, sam, olu, otto } = await setUp();
+it("unsubscribes only the token's own person, only at their family's address", async () => {
+  const { family, okafor, sam, ben, olu, otto } = await setUp();
   await db.person.update({ where: { id: otto.id }, data: { notificationsOn: true } });
 
   await unsubscribe(db, okafor.slug, sam.unsubscribeToken);
@@ -146,6 +157,11 @@ it("unsubscribes only the token's own supporter, only at their family's address"
   expect(await notificationsOn(sam)).toBe(false);
   expect(await notificationsOn(otto)).toBe(true);
   expect(await notificationsOn(olu)).toBe(true);
+
+  await unsubscribe(db, okafor.slug, ben.unsubscribeToken);
+  expect(await notificationsOn(ben)).toBe(true);
+  await unsubscribe(db, family.slug, ben.unsubscribeToken);
+  expect(await notificationsOn(ben)).toBe(false);
 });
 
 it("ignores a malformed unsubscribe token without erroring", async () => {
@@ -154,13 +170,14 @@ it("ignores a malformed unsubscribe token without erroring", async () => {
   expect(await notificationsOn(sam)).toBe(true);
 });
 
-it("lets a supporter turn their own notifications off and on, but not a family member", async () => {
+it("lets supporters and family members turn their own notifications off and on", async () => {
   const { ana, sam } = await setUp();
-  await setNotifications(db, sam, false);
-  expect(await notificationsOn(sam)).toBe(false);
-  await setNotifications(db, sam, true);
-  expect(await notificationsOn(sam)).toBe(true);
-  await expect(setNotifications(db, ana, false)).rejects.toMatchObject({ status: 403 });
+  for (const p of [sam, ana]) {
+    await setNotifications(db, p, false);
+    expect(await notificationsOn(p)).toBe(false);
+    await setNotifications(db, p, true);
+    expect(await notificationsOn(p)).toBe(true);
+  }
 });
 
 it("sends one-time verification emails only to unverified, active supporters with an email", async () => {

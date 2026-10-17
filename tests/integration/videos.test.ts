@@ -401,12 +401,17 @@ describe("video updates", () => {
   });
 
   it("says the email is a video, and never names the video", async () => {
-    const { ana, sam, videos } = await setUp();
+    const { family, ana, sam, videos } = await setUp();
     await db.person.update({ where: { id: sam.id }, data: { emailVerifiedAt: new Date() } });
+    await db.person.create({ data: { familyId: family.id, role: "family", name: "Ben", email: "ben@example.com" } });
     const publicId = await upload(videos, ana);
     const mail = fakeMailer();
     await createUpdate(db, ana, { video: publicId }, mail.sendMany, undefined, videos.store);
-    expect(mail.sent.map((e) => e.subject)).toEqual(["The Rivera Family has a new update (video)"]);
+    expect(mail.sent.map((e) => e.to).sort()).toEqual(["ben@example.com", sam.email].sort());
+    expect(mail.sent.map((e) => e.subject)).toEqual([
+      "The Rivera Family has a new update (video)",
+      "The Rivera Family has a new update (video)",
+    ]);
     for (const part of [mail.sent[0]!.subject, mail.sent[0]!.text]) {
       expect(part).not.toContain(publicId);
       expect(part).not.toContain("videos.example");

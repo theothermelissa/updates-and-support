@@ -7,18 +7,25 @@ import type { Person } from "./generated/prisma/client.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Emails every verified, opted-in, active supporter of the family that there's a new update,
-// with how many photos it has. Family members, supporters without an email, and unverified,
-// opted-out, or removed supporters get nothing.
-export async function notifySupporters(db: Db, send: SendEmails, familyId: string, photos = 0, video = false): Promise<void> {
+// Emails everyone in the family that there's a new update, with how many photos it has: every
+// opted-in, active family member but its author, and every verified, opted-in, active supporter.
+// Family members aren't verified first, since they're added on purpose.
+export async function notifyNewUpdate(
+  db: Db,
+  send: SendEmails,
+  familyId: string,
+  authorId: string,
+  photos = 0,
+  video = false,
+): Promise<void> {
   const family = await db.family.findUniqueOrThrow({
     where: { id: familyId },
     include: {
       people: {
         where: {
-          role: "supporter",
+          id: { not: authorId },
           email: { not: null },
-          emailVerifiedAt: { not: null },
+          OR: [{ role: "family" }, { emailVerifiedAt: { not: null } }],
           notificationsOn: true,
           removedAt: null,
         },
@@ -48,20 +55,19 @@ export async function notifySupporters(db: Db, send: SendEmails, familyId: strin
   );
 }
 
-// Turns off notifications for the supporter with this token, only at their own
+// Turns off notifications for the person with this token, only at their own
 // family's address. Returns nothing either way, so tokens can't be probed.
 export async function unsubscribe(db: Db, slug: string, token: string): Promise<void> {
   // Postgres raises an error comparing a non-UUID to a UUID column, so turn those away first.
   if (!UUID.test(token)) return;
   await db.person.updateMany({
-    where: { unsubscribeToken: token, role: "supporter", family: { slug } },
+    where: { unsubscribeToken: token, family: { slug } },
     data: { notificationsOn: false },
   });
 }
 
-// A signed-in supporter turning their own notifications on or off.
+// Anyone signed in turning their own notifications on or off.
 export async function setNotifications(db: Db, person: Person, on: unknown): Promise<Person> {
-  if (person.role !== "supporter") throw new RequestError(403, "Only supporters get notification emails");
   if (typeof on !== "boolean") throw new RequestError(400, "Expected on: true or false");
   return db.person.update({ where: { id: person.id }, data: { notificationsOn: on } });
 }

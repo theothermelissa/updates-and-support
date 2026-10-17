@@ -23,7 +23,7 @@ export function FamilyHome({ slug, me, setMe, reloadMe, onSignedOut }: FamilyPag
       {me.person.role === "supporter" && !me.person.email && (
         <EmailPrompt slug={slug} reload={reloadMe} storedName={me.person.name} />
       )}
-      {me.person.role === "supporter" && me.person.email && (
+      {me.person.email && (
         <div className="space-y-2 lg:w-[42rem]">
           <Label>
             <Checkbox
@@ -32,7 +32,7 @@ export function FamilyHome({ slug, me, setMe, reloadMe, onSignedOut }: FamilyPag
             />
             Email me when there's a new update
           </Label>
-          {me.person.notificationsOn && !me.person.emailVerified && (
+          {me.person.role === "supporter" && me.person.notificationsOn && !me.person.emailVerified && (
             <p className="text-sm text-muted-foreground">
               Emails start once you confirm {me.person.email}: look for a "Confirm your email" message, or sign in
               by email once.

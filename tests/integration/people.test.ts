@@ -10,7 +10,7 @@ import {
   setRemoved,
   verifySupporter,
 } from "../../server/people.js";
-import { notifySupporters } from "../../server/notifications.js";
+import { notifyNewUpdate } from "../../server/notifications.js";
 import { hashToken, newToken } from "../../server/tokens.js";
 import { createTestDb } from "./db.js";
 import {
@@ -370,6 +370,19 @@ describe("adding family members", () => {
     expect(await active(sam.person.id)).toMatchObject({ role: "family" });
   });
 
+  it("turns notifications back on for a removed supporter added as a family member, and keeps an opted-out one's choice", async () => {
+    const { family, ana, sam } = await setUp();
+    const otto = await join(family, "Otto");
+    await db.person.update({ where: { id: otto.person.id }, data: { notificationsOn: false } });
+    await setRemoved(db, ana, sam.person.id, true);
+
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Otto", email: otto.email });
+
+    expect(await db.person.findUniqueOrThrow({ where: { id: sam.person.id } })).toMatchObject({ notificationsOn: true });
+    expect(await db.person.findUniqueOrThrow({ where: { id: otto.person.id } })).toMatchObject({ notificationsOn: false });
+  });
+
   it("refuses a current family member's email, sending and changing nothing", async () => {
     const { ana } = await setUp();
     const links = await db.magicLink.count();
@@ -501,11 +514,11 @@ describe("adding supporters", () => {
     await addSupporter(db, mail.send, ana, { name: "Tess", email: "tess@example.com" });
 
     const notified = fakeMailer();
-    await notifySupporters(db, notified.sendMany, family.id);
+    await notifyNewUpdate(db, notified.sendMany, family.id, ana.id);
     expect(notified.sent.map((e) => e.to)).not.toContain("tess@example.com");
 
     await verifyEmail(db, family.slug, tokenFrom(mail.sent[0]!));
-    await notifySupporters(db, notified.sendMany, family.id);
+    await notifyNewUpdate(db, notified.sendMany, family.id, ana.id);
     expect(notified.sent.map((e) => e.to)).toContain("tess@example.com");
   });
 });
