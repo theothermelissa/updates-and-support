@@ -8,8 +8,9 @@ import { claimVideo, destroyVideos, lockUnusedVideo, noteSelect, noteView, shown
 import { notifySupporters } from "./notifications.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
-import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
+import { parseReactionSet, reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
 import { contentFrom, photoCount, shownContent, type PhotoCheck } from "./richText.js";
+import { USUAL_REACTIONS } from "../src/lib/reactionCatalog.js";
 import { cloudinaryStore, MAX_VIDEO_BYTES, type VideoStore } from "./videos.js";
 
 export type UpdateView = {
@@ -55,7 +56,7 @@ export async function listUpdates(
     return {
       ...shown,
       content: withPhotoLinks(shown.content, person.familyId, new Set(u.photos.map((p) => p.publicId)), settings.cloudinary ?? null),
-      ...reactionsView(u.reactions, person.id),
+      ...reactionsView(u.reactions, person.id, u.reactionKinds),
       notes: u.notes.map((n) => noteView(n, person.id, store)),
     };
   });
@@ -66,19 +67,20 @@ export async function listUpdates(
 export async function createUpdate(
   db: Db,
   person: Person,
-  input: { content?: unknown; body?: unknown; video?: unknown },
+  input: { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown },
   notifyWith?: SendEmails,
   settings: PhotoSettings = NO_PHOTOS,
   store: VideoStore = cloudinaryStore,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
-  if (input.video !== undefined) return createVideoUpdate(db, person, input, notifyWith, store);
+  const reactionKinds = reactionSetFrom(input);
+  if (input.video !== undefined) return createVideoUpdate(db, person, input, reactionKinds, notifyWith, store);
   const { content, body } = contentFrom(input, settings, { familyId: person.familyId });
   const ids = [...publicIdsIn(content)];
   const update = await savePhoto(async () =>
     db.$transaction(async (tx) => {
       const created = await tx.update.create({
-        data: { familyId: person.familyId, authorId: person.id, content, body },
+        data: { familyId: person.familyId, authorId: person.id, content, body, reactionKinds },
         include: { author: { select: { name: true } } },
       });
       if (ids.length > 0) {
@@ -102,7 +104,8 @@ export async function createUpdate(
 async function createVideoUpdate(
   db: Db,
   person: Person,
-  input: { content?: unknown; body?: unknown; video?: unknown },
+  input: { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown },
+  reactionKinds: string[],
   notifyWith: SendEmails | undefined,
   store: VideoStore,
 ): Promise<UpdateView> {
@@ -122,7 +125,7 @@ async function createVideoUpdate(
       }
       await lockUnusedVideo(tx, person.id, videoId);
       return tx.update.create({
-        data: { familyId: person.familyId, authorId: person.id, body: "[Video]", videoId },
+        data: { familyId: person.familyId, authorId: person.id, body: "[Video]", videoId, reactionKinds },
         include: { author: { select: { name: true } } },
       });
     });
@@ -147,12 +150,14 @@ export async function editUpdate(
   db: Db,
   person: Person,
   id: string,
-  input: { content?: unknown; body?: unknown; video?: unknown },
+  input: { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown },
   settings: PhotoSettings = NO_PHOTOS,
   store: VideoStore = cloudinaryStore,
 ): Promise<UpdateView> {
   requireFamilyMember(person);
   if (input.video !== undefined) throw new RequestError(400, "A video update can't be edited");
+  // Absent leaves the update's set as it is.
+  const reactionKinds = input.reactions === undefined ? undefined : parseReactionSet(input.reactions);
   const { update, dropped } = await savePhoto(() =>
     db.$transaction(async (tx) => {
       const [row] = await tx.$queryRaw<{ id: string; videoId: string | null }[]>`
@@ -172,7 +177,7 @@ export async function editUpdate(
       }
       const updated = await tx.update.update({
         where: { id },
-        data: { content, body, editedAt: new Date() },
+        data: { content, body, reactionKinds, editedAt: new Date() },
         include: { author: { select: { name: true } } },
       });
       return { update: updated, dropped: removed };
@@ -216,6 +221,11 @@ export async function deleteUpdate(
     { timeout: 30_000 },
   );
   await forgetPhotos(settings, photoIds, id);
+}
+
+// A new update's reactions: the usual six unless the request chooses a set.
+function reactionSetFrom(input: { reactions?: unknown }): string[] {
+  return input.reactions === undefined ? [...USUAL_REACTIONS] : parseReactionSet(input.reactions);
 }
 
 // A photo already stored for another update hits the unique public id. Nothing is saved.

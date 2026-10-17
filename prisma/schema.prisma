@@ -112,6 +112,9 @@ model Update {
   // A video update's Cloudinary public ID, from an upload ticket its author was given.
   // Null for a text update. Unique, so one upload is on at most one update.
   videoId   String?   @unique
+  // The reactions anyone may pick on this update, as catalog kinds in catalog order (see
+  // src/lib/reactionCatalog.ts), at most six. Empty allows none.
+  reactionKinds String[] @default(["heart", "hug", "strong", "clap", "party", "laugh"])
   createdAt DateTime  @default(now())
   editedAt  DateTime?
 
@@ -136,24 +139,14 @@ model Photo {
   @@index([updateId])
 }
 
-// The fixed set of reactions, in tray order; the UI gives each its emoji and label.
-// Ties between equally used emoji follow this order.
-enum ReactionKind {
-  heart
-  hug
-  strong
-  clap
-  party
-  laugh
-}
-
-// A person's one reaction to an update; picking another replaces it.
+// A person's one reaction to an update; picking another replaces it. `kind` is a catalog
+// kind (see src/lib/reactionCatalog.ts), checked by the server.
 model Reaction {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   updateId  String
   personId  String
-  kind      ReactionKind
-  createdAt DateTime     @default(now())
+  kind      String
+  createdAt DateTime @default(now())
 
   update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -192,13 +185,13 @@ model Note {
   @@index([authorId, createdAt])
 }
 
-// A person's one reaction to a note; picking another replaces it.
+// A person's one reaction to a note; picking another replaces it. `kind` is a catalog kind.
 model NoteReaction {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   noteId    String
   personId  String
-  kind      ReactionKind
-  createdAt DateTime     @default(now())
+  kind      String
+  createdAt DateTime @default(now())
 
   note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)

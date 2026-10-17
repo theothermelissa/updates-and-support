@@ -280,6 +280,14 @@ function postVideo(videos: Videos, person: Person, video: string, extra: Record<
 }
 
 describe("video updates", () => {
+  it("posts with a chosen set of reactions, which can't be edited later", async () => {
+    const { ana, videos } = await setUp();
+    const update = await postVideo(videos, ana, await upload(videos, ana), { reactions: ["candle", "heart"] });
+    expect(await db.update.findUniqueOrThrow({ where: { id: update.id } })).toMatchObject({ reactionKinds: ["heart", "candle"] });
+    await expect(editUpdate(db, ana, update.id, { reactions: ["skull"] })).rejects.toMatchObject({ status: 400 });
+    await expect(postVideo(videos, ana, await upload(videos, ana), { reactions: ["nope"] })).rejects.toMatchObject({ status: 400 });
+  });
+
   it("posts a video of any length, and only this family sees its links", async () => {
     const { ana, sam, olu, videos } = await setUp();
     const publicId = await upload(videos, ana, 600);

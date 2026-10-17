@@ -3,6 +3,7 @@ import { RequestError } from "./errors.js";
 import { validName } from "./families.js";
 import { NoteColor, type Person, type Prisma } from "./generated/prisma/client.js";
 import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
+import { USUAL_REACTIONS } from "../src/lib/reactionCatalog.js";
 import { cloudinaryStore, newPublicId, type VideoStore } from "./videos.js";
 
 const COLORS = Object.values(NoteColor);
@@ -73,7 +74,7 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore):
     authorIsFamily: note.author.role === "family",
     createdAt: note.createdAt,
     mine: note.authorId === viewerId,
-    ...reactionsView(note.reactions, viewerId),
+    ...reactionsView(note.reactions, viewerId, USUAL_REACTIONS),
   };
 }
 

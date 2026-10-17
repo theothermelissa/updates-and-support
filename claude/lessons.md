@@ -45,7 +45,7 @@ Some routine commands refuse to run or error out from an agent, which can look l
 **Why:** on the reactions PR, `prisma migrate dev --create-only` refused to run without an interactive terminal, and `gh pr edit` failed on a GitHub Projects (classic) deprecation error.
 
 **How to apply:**
-- Write the migration SQL by hand in a new `prisma/migrations/<timestamp>_<name>/` folder, then confirm `prisma migrate diff` shows no drift from the schema.
+- Write the migration SQL by hand in a new `prisma/migrations/<timestamp>_<name>/` folder, named to sort after the newest existing one (their timestamps can be ahead of today). To confirm there's no drift, create a scratch database with the test database's credentials, `prisma migrate deploy` to it, and run `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` with `DATABASE_URL` and `DATABASE_URL_UNPOOLED` pointed at it; `--from-migrations` needs a shadow database this config doesn't set.
 - If a commit lands on the wrong branch (another session switched this folder), point the right branch at it with `git branch -f <branch> <sha>`, then ask Melissa to reset the wrong branch, since auto mode blocks `git reset` on `main`.
 - Edit a PR body with `gh api -X PATCH repos/theothermelissa/updates-and-support/pulls/<n> -F body=@file`.
 
