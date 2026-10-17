@@ -2,7 +2,7 @@
 
 Spec: `spec/updates.md` → "Notes" (the author bullet), "Reacting to a note", and "The written note's author".
 
-A written note's card stops showing "— Name" and the time. Its bottom row gets a quiet "···" author control. Hovering it with a mouse floats "Ana Rivera · Oct 17, 2026, 3:04 PM" in the same style as the reactor list; tapping it shows that line under the row until tapped again. The "Family" pill stays on the card, in that row. Video notes don't change.
+A written note's card stops showing "— Name" and the time. Its bottom row gets a quiet "···" author control. Hovering it with a mouse floats "Ana Rivera · Oct 17, 2026, 3:04 PM" in the same style as the reactor list; tapping it shows that line under the row until tapped again. Delete, for those allowed, moves into that hover and pinned line, so the row ends with just the "···". The "Family" pill stays on the card, in that row. Video notes don't change.
 
 This changes no data and no permissions: the server already sends the author's name and time to everyone who can see the note, and still does. It's a display change only.
 
@@ -12,7 +12,7 @@ This changes no data and no permissions: the server already sends the author's n
 2. **Let `ReactionControls` take a `below` slot**, drawn under the row after the pinned reactor list, so a note can put its pinned author line there.
 3. **Update `NoteCard`** in `src/components/notes.tsx`:
    - Video note: unchanged (signature with Family pill, then the row with the time and Delete).
-   - Written note: no signature line. The row's right side holds the Family pill (family notes only), the author control, and Delete. The author control is a borderless, muted `Ellipsis` icon in a 44px tap target, named for screen readers as "Left by Ana Rivera, Oct 17, 2026, 3:04 PM". It shows the same text floating on hover and pinned under the row on tap.
+   - Written note: no signature line. The row's right side holds the Family pill (family notes only) and the author control. Delete moves into the control's hover and pinned line; pressing it closes that line and opens the usual inline confirmation. The author control is a borderless, muted `Ellipsis` icon in a 44px tap target, named for screen readers as "Left by Ana Rivera, Oct 17, 2026, 3:04 PM". It shows the same text floating on hover and pinned under the row on tap.
 4. **Format the date once.** Move the existing `toLocaleString(…)` call into a small `noteTime(note)` helper in `src/notes.ts` so the video note's time and the author line match.
 
 ## Tests

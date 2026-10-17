@@ -87,7 +87,7 @@ The React button and the summary work the same way on an update and on a note.
 - **A React button.** It's round and shows a heart with a plus until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the six emoji, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers.
 - **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, a little smaller than the button's emoji. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
 
-On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the note, with **Delete** and either the author control or the time (see "Reacting to a note").
+On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the note, with either **Delete** and the time, or the author control holding **Delete** (see "Reacting to a note").
 
 **Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it, and a later change of name shows there too (see [access.md](access.md#changing-your-name)).
 
@@ -143,11 +143,11 @@ The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is 
 
 ### Reacting to a note
 
-The rules, the React button, the tray, and the summary are the ones under "Reactions." On a video note they sit under the signature, with the time and Delete on that row. On a written note they sit under the text, with the "Family" mark, the author control, and Delete on that row.
+The rules, the React button, the tray, and the summary are the ones under "Reactions." On a video note they sit under the signature, with the time and Delete on that row. On a written note they sit under the text, with the "Family" mark and the author control on that row; Delete is behind the author control.
 
 ### The written note's author
 
-A written note's card doesn't show its author's name or the time. Its bottom row has a quiet "···" author control, as muted as Delete beside it, with a full-size tap area. On a computer, resting the pointer on it shows the author's name and when the note was left, such as "Ana Rivera · Oct 17, 2026, 3:04 PM," in the same floating style as the list of who reacted. On a phone, tapping it shows the same line under that row, and tapping again hides it. Screen readers hear the author and time as the control's name. A family member's note keeps its "Family" mark on the card, beside the control.
+A written note's card doesn't show its author's name or the time. Its bottom row ends in a quiet "···" author control, small and muted but with a full-size tap area. On a computer, resting the pointer on it shows the author's name and when the note was left, such as "Ana Rivera · Oct 17, 2026, 3:04 PM," in the same floating style as the list of who reacted, followed by Delete for those who may delete the note; the pointer can move onto it to press Delete. On a phone, tapping it shows the same line, with Delete, under that row, and tapping again hides it. Screen readers hear the author and time as the control's name. A family member's note keeps its "Family" mark on the card, beside the control.
 
 ### Deleting a note
 

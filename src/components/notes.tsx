@@ -26,6 +26,24 @@ export function NoteCard(props: {
   const [author, setAuthor] = useState<RevealState>("closed");
   const colors = PALETTE[note.color];
   const byline = `${note.authorName} · ${noteTime(note)}`;
+  // A written note's author, time, and Delete, behind its "···".
+  const details = (
+    <span className="flex flex-wrap items-center gap-x-3">
+      {byline}
+      {props.canDelete && !confirming && (
+        <button
+          type="button"
+          className="underline underline-offset-2"
+          onClick={() => {
+            setAuthor("closed");
+            setConfirming(true);
+          }}
+        >
+          Delete
+        </button>
+      )}
+    </span>
+  );
   // Always on the card, so a supporter can't pass as family by signing a name in their text.
   const family = note.authorIsFamily && (
     <span className="rounded-full border px-2 py-0.5 text-xs" style={{ borderColor: `${colors.text}66` }}>
@@ -52,7 +70,7 @@ export function NoteCard(props: {
         <ReactionControls
           reactions={note.reactions}
           onReact={props.onReact}
-          below={author === "pinned" && <p className="text-sm">{byline}</p>}
+          below={author === "pinned" && <div className="text-sm">{details}</div>}
         >
           <div className="ml-auto flex flex-wrap items-center gap-2 text-xs">
             {note.video ? (
@@ -68,11 +86,11 @@ export function NoteCard(props: {
                   className="flex size-11 items-center justify-center rounded-full opacity-80 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-black/5 [&_svg]:size-5"
                   label={`Left by ${byline}`}
                   trigger={<EllipsisIcon aria-hidden />}
-                  content={byline}
+                  content={details}
                 />
               </>
             )}
-            {props.canDelete && !confirming && (
+            {note.video && props.canDelete && !confirming && (
               <button type="button" className="underline underline-offset-2 opacity-80" onClick={() => setConfirming(true)}>
                 Delete
               </button>
