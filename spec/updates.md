@@ -30,7 +30,7 @@ Each update has a footer of actions in one row: **React** (unless the update all
 
 ## Writing an update
 
-Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, **Numbered list**, and **Quote**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link, and typing `> ` at the start of a line makes it a quote.
+Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, **Numbered list**, and **Quote**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. **Quote** quotes the line the cursor is on (or the selected lines), splitting it from the lines around it. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link, and typing `> ` at the start of a line makes it a quote.
 
 Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, strikethrough, links, lists, and quotes) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
 

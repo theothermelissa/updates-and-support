@@ -8,6 +8,7 @@ import { DOC_CLASSES } from "../richText.js";
 import { photoSizeMessage, uploadPhoto } from "../photos.js";
 import { cleanDoc, extensions } from "./extensions.js";
 import { MAX_PHOTOS, setPhotoAttrs } from "./photo.js";
+import { toggleQuote } from "./quote.js";
 
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const EMAIL = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
@@ -182,7 +183,7 @@ function Toolbar({ editor, photos, slug }: { editor: Editor; photos: "real" | "p
         >
           <ListOrderedIcon />
         </Tool>
-        <Tool label="Quote" pressed={active.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+        <Tool label="Quote" pressed={active.blockquote} onClick={() => toggleQuote(editor)}>
           <TextQuoteIcon />
         </Tool>
         {photos !== "off" && (

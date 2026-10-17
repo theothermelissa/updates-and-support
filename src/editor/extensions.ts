@@ -2,6 +2,7 @@ import StarterKit from "@tiptap/starter-kit";
 import type { JSONContent } from "@tiptap/react";
 import { allowedHref } from "../lib/links.js";
 import { Document, Photo } from "./photo.js";
+import { Quote } from "./quote.js";
 
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
@@ -10,6 +11,7 @@ const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 export const extensions = [
   Document,
   Photo,
+  Quote,
   StarterKit.configure({
     document: false,
     heading: false,

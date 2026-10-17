@@ -3,6 +3,7 @@ import { Editor } from "@tiptap/react";
 import { afterEach, expect, it } from "vitest";
 import { validDoc } from "../../server/richText.js";
 import { cleanDoc, extensions } from "./extensions.js";
+import { toggleQuote } from "./quote.js";
 
 let editor: Editor | undefined;
 afterEach(() => editor?.destroy());
@@ -103,4 +104,21 @@ it("sends a link the server would refuse as plain text", () => {
     type: "doc",
     content: [{ type: "paragraph", content: [{ type: "text", text: "x", marks: [{ type: "bold" }] }] }],
   });
+});
+
+it("quotes only the line the cursor is on, splitting it out of a paragraph with line breaks", () => {
+  editor = new Editor({ extensions, element: document.createElement("div"), content: "<p>one<br>two<br>three</p>" });
+  // Inside "two": the document starts at 0, the paragraph's text at 1, "one" and the break fill 1–4.
+  editor.commands.setTextSelection(6);
+  toggleQuote(editor);
+  const p = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
+  expect(editor.getJSON().content).toEqual([p("one"), { type: "blockquote", content: [p("two")] }, p("three")]);
+  toggleQuote(editor);
+  expect(editor.getJSON().content).toEqual([p("one"), p("two"), p("three")]);
+
+  editor.commands.setContent("<p>alone</p>");
+  editor.commands.setTextSelection(2);
+  toggleQuote(editor);
+  // Tiptap keeps an empty paragraph after a quote at the end, so there's somewhere to type.
+  expect(editor.getJSON().content).toEqual([{ type: "blockquote", content: [p("alone")] }, { type: "paragraph" }]);
 });
