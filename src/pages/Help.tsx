@@ -1,5 +1,5 @@
 import { CheckIcon, EllipsisVerticalIcon, XIcon } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import { PageTitle } from "@/components/familyShell";
 import { Confirm, EmailInput, ErrorMessage, Field, LinkedText, PhoneLink } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
+import type { Doc } from "../lib/doc.js";
+import { RichText } from "../richText.js";
 import { capacityLabel, isPast, sortRequests, whenLabel } from "../help.js";
 import type { FamilyPageProps } from "./FamilyFrame.js";
+
+const RichEditor = lazy(() => import("../editor/RichEditor.js"));
 
 // A null name is an offer made without one.
 type Offer = { id: string | null; name: string | null; mine: boolean; email: string | null; phone: string | null };
@@ -30,11 +34,11 @@ type HelpRequest = RequestFields & { id: string; full: boolean; offered: number;
 
 export function Help({ slug, me, reloadMe }: FamilyPageProps) {
   const [requests, setRequests] = useState<HelpRequest[] | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<Doc | null>(null);
   const [error, setError] = useState("");
 
   async function load() {
-    const list = await api<{ message: string | null; requests: HelpRequest[] }>(slug, "help");
+    const list = await api<{ message: Doc | null; requests: HelpRequest[] }>(slug, "help");
     if (list.status === 401) return location.replace(`/f/${slug}`);
     if (list.status !== 200) return setError("Couldn't load ways to help. Please refresh the page.");
     setMessage(list.data.message ?? null);
@@ -69,9 +73,10 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
       <PageTitle>How to Help</PageTitle>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       <HelpMessage
+        slug={slug}
         message={message}
         family={family}
-        onSave={(text) => change("help-message", "PUT", { message: text }).then((r) => r.ok)}
+        onSave={(content) => change("help-message", "PUT", { content }).then((r) => r.ok)}
       />
       {family && <h3 className="text-lg font-semibold tracking-tight">What Would Help</h3>}
       {family && (
@@ -103,21 +108,26 @@ export function Help({ slug, me, reloadMe }: FamilyPageProps) {
 }
 
 // The family's message at the top of the page, in a shaded box. Family members write, change,
-// or remove it here; saving an empty box removes it, so the box isn't required.
-function HelpMessage(props: { message: string | null; family: boolean; onSave: (message: string) => Promise<boolean> }) {
+// or remove it here with the update editor, without photos; saving it empty removes it.
+function HelpMessage(props: {
+  slug: string;
+  message: Doc | null;
+  family: boolean;
+  onSave: (content: unknown) => Promise<boolean>;
+}) {
   const [editing, setEditing] = useState(false);
-  const [text, setText] = useState("");
+  const [draft, setDraft] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
   function edit() {
-    setText(props.message ?? "");
+    setDraft(props.message);
     setEditing(true);
   }
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const ok = await props.onSave(text);
+    const ok = await props.onSave(draft);
     setBusy(false);
     if (ok) setEditing(false);
   }
@@ -125,15 +135,15 @@ function HelpMessage(props: { message: string | null; family: boolean; onSave: (
   if (editing) {
     return (
       <form onSubmit={save} className="space-y-3">
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={2000}
-          rows={4}
-          autoFocus
-          aria-label="Message for supporters"
-          placeholder="For example: Thank you! Please don't send flowers or gift baskets, and please hold off on visits for now."
-        />
+        <Suspense fallback={<div className="h-[12.5rem] rounded-lg border border-input" aria-busy="true" />}>
+          <RichEditor
+            initial={props.message ?? undefined}
+            slug={props.slug}
+            photos="off"
+            label="Message for supporters"
+            onChange={setDraft}
+          />
+        </Suspense>
         <div className="flex gap-2">
           <Button disabled={busy}>Save</Button>
           <Button type="button" variant="outline" onClick={() => setEditing(false)}>
@@ -154,7 +164,7 @@ function HelpMessage(props: { message: string | null; family: boolean; onSave: (
   }
   return (
     <div className="flex items-start gap-2 rounded-xl bg-muted p-4">
-      <LinkedText text={props.message} className="min-w-0 flex-1" />
+      <RichText doc={props.message} className="min-w-0 flex-1" />
       {props.family && (
         <Button type="button" variant="ghost" size="sm" className="-mt-1 -mr-2" onClick={edit}>
           Edit

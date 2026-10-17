@@ -17,8 +17,10 @@ model Family {
   displayName     String
   question        String
   acceptedAnswers String[]
-  // The message at the top of How to help, trimmed; null when there is none.
+  // The message at the top of How to help as plain text; null when there is none.
   helpMessage     String?
+  // The same message as a checked document. Null for messages written before formatting.
+  helpMessageContent Json?
   // The emoji anyone may react with on any of the family's notes, in catalog order; empty allows none.
   noteReactionKinds String[] @default(["heart", "hug", "strong", "clap", "party", "laugh"])
   createdAt       DateTime @default(now())

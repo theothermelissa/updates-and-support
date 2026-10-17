@@ -16,7 +16,11 @@ const MAX_CAPTION = 300;
 // Attributes Tiptap writes on every link. They're accepted and dropped; only href is kept.
 const LINK_EXTRAS = ["target", "rel", "class", "title"];
 
-const unsupported = () => new RequestError(400, "This update has formatting the app doesn't support");
+// What validDoc calls the document in its errors, and how much text it may hold.
+export type DocLimits = { noun: "update" | "message"; maxText: number };
+const UPDATE_LIMITS: DocLimits = { noun: "update", maxText: MAX_TEXT };
+
+const unsupported = () => new RequestError(400, "This has formatting the app doesn't support");
 
 // familyId checks a real photo's id. kept is the ids already on the update being edited:
 // those stay valid after Cloudinary is turned off.
@@ -30,17 +34,23 @@ type Walk = {
   settings: PhotoSettings;
   check?: PhotoCheck;
   seen: Set<string>;
+  limits: DocLimits;
 };
 type Obj = Record<string, unknown>;
 
 // Checks a document sent by the editor and returns a new one built only from the fields it
 // checked, so nothing unexpected can reach the database. Anything not allowed is a 400.
-export function validDoc(input: unknown, settings: PhotoSettings = NO_PHOTOS, check?: PhotoCheck): Doc {
-  const walk: Walk = { nodes: 0, chars: 0, visible: false, photos: 0, settings, check, seen: new Set() };
+export function validDoc(
+  input: unknown,
+  settings: PhotoSettings = NO_PHOTOS,
+  check?: PhotoCheck,
+  limits: DocLimits = UPDATE_LIMITS,
+): Doc {
+  const walk: Walk = { nodes: 0, chars: 0, visible: false, photos: 0, settings, check, seen: new Set(), limits };
   const doc = node(input, 1, walk, ["content"]);
   if (doc.type !== "doc") throw unsupported();
   const content = children(doc, 1, walk, topLevel, true);
-  if (!walk.visible) throw new RequestError(400, "An update can't be empty");
+  if (!walk.visible) throw new RequestError(400, `${capitalized(walk.limits.noun)} can't be empty`);
   return { type: "doc", content };
 }
 
@@ -94,7 +104,7 @@ export function docFromText(text: string): Doc {
 
 // A document as plain text, for the body column, the wall, and code from before formatting:
 // paragraphs separated by blank lines, list items as "- " or "1. " lines, indented when nested,
-// and photos as "[Photo]" or "[Photo: caption]".
+// quotes with each line after "> ", and photos as "[Photo]" or "[Photo: caption]".
 export function textOf(doc: Doc): string {
   return blocksText(doc.content, "\n\n", "");
 }
@@ -108,6 +118,12 @@ function blocksText(blocks: (Block | Photo)[], separator: string, indent: string
     .map((b) => {
       if (b.type === "photo") return b.attrs.caption ? `[Photo: ${b.attrs.caption}]` : "[Photo]";
       if (b.type === "paragraph") return indent + paragraphText(b);
+      if (b.type === "blockquote") {
+        return blocksText(b.content, "\n\n", "")
+          .split("\n")
+          .map((line) => indent + (line ? `> ${line}` : ">"))
+          .join("\n");
+      }
       return b.content
         .map((item, i) => {
           const marker = b.type === "orderedList" ? `${b.attrs.start + i}. ` : "- ";
@@ -126,8 +142,8 @@ function paragraphText(p: Paragraph): string {
 
 // Counts the node against the limits and checks it has only "type" and the given keys.
 function node(input: unknown, depth: number, walk: Walk, keys: string[]): Obj {
-  if (++walk.nodes > MAX_NODES) throw new RequestError(400, "This update is too long");
-  if (depth > MAX_DEPTH) throw new RequestError(400, "This update's lists are nested too deeply");
+  if (++walk.nodes > MAX_NODES) throw new RequestError(400, `This ${walk.limits.noun} is too long`);
+  if (depth > MAX_DEPTH) throw new RequestError(400, `This ${walk.limits.noun}'s lists and quotes are nested too deeply`);
   if (!isObj(input) || typeof input.type !== "string") throw unsupported();
   onlyKeys(input, ["type", ...keys]);
   return input;
@@ -200,6 +216,10 @@ function block(input: unknown, depth: number, walk: Walk): Block {
     if (n.attrs !== undefined) throw unsupported();
     return { type: "bulletList", content: children(n, depth, walk, listItem, true) };
   }
+  if (n.type === "blockquote") {
+    if (n.attrs !== undefined) throw unsupported();
+    return { type: "blockquote", content: children(n, depth, walk, block, true) };
+  }
   if (n.type === "orderedList") {
     // Pasted lists bring their source's numbering and style, so these are normalized, not refused.
     let start = MIN_START;
@@ -235,8 +255,9 @@ function inline(input: unknown, depth: number, walk: Walk): Text | HardBreak {
   const { text } = n;
   if (typeof text !== "string" || text.length === 0 || /[\r\n]/.test(text)) throw unsupported();
   walk.chars += text.length;
-  if (walk.chars > MAX_TEXT) {
-    throw new RequestError(400, `An update can have at most ${MAX_TEXT.toLocaleString("en-US")} characters`);
+  if (walk.chars > walk.limits.maxText) {
+    const { noun, maxText } = walk.limits;
+    throw new RequestError(400, `${capitalized(noun)} can have at most ${maxText.toLocaleString("en-US")} characters`);
   }
   if (text.trim()) walk.visible = true;
   if (n.marks === undefined) return { type: "text", text };
@@ -262,6 +283,11 @@ function marks(input: unknown): Mark[] {
     if (!allowedHref(href)) throw new RequestError(400, "Links must start with https://, http://, or mailto:");
     return { type: "link", attrs: { href } };
   });
+}
+
+// "An update" or "A message".
+function capitalized(noun: DocLimits["noun"]): string {
+  return noun === "update" ? "An update" : "A message";
 }
 
 function isObj(value: unknown): value is Obj {

@@ -33,10 +33,11 @@ it("keeps only allowed formatting from pasted HTML, and the server accepts the r
   for (const word of ["Big news", "Colored", "bold", "italic", "under", "struck", "code", "Quoted", "Cell", "Bad link", "FTP link", "Good link", "Preformatted"]) {
     expect(json).toContain(word);
   }
-  for (const bad of ["heading", "blockquote", "table", "image", "tracker", "script", "javascript", "ftp:", "color", "font", "codeBlock", "horizontalRule", "underline"]) {
+  for (const bad of ["heading", "table", "image", "tracker", "script", "javascript", "ftp:", "color", "font", "codeBlock", "horizontalRule", "underline"]) {
     expect(json).not.toContain(bad);
   }
   expect(json).toContain('"type":"strike"');
+  expect(json).toContain('{"type":"blockquote","content":[{"type":"paragraph","content":[{"type":"text","text":"Quoted"}]}]}');
   const checked = validDoc(sent);
   expect(JSON.stringify(checked)).toContain('{"type":"link","attrs":{"href":"https://example.com/ok"}}');
 });

@@ -11,15 +11,16 @@ An update is either formatted text, with optional photos, or a video (see "Video
   - **bold**, *italic*, and ~~strikethrough~~
   - links, to web addresses (`http:` or `https:`) and email addresses (`mailto:`)
   - bulleted and numbered lists, which can be nested
+  - block quotes, which can hold paragraphs and lists, shown indented behind a grey line on the left in muted text
   - photos, each with an optional **caption** of plain text up to 300 characters (see "Photos")
 - its **author**, a family member, shown by the name on their record (see [access.md](access.md#changing-your-name))
 - when it was **posted**, and when it was last **edited**, if ever
 
-There are no headings, colors, fonts, tables, code, quotes, or images from other websites. A text update can't be empty, and it has at most 20,000 characters of text, at most six photos, and lists nested at most three levels deep.
+There are no headings, colors, fonts, tables, code, or images from other websites. A text update can't be empty, and it has at most 20,000 characters of text, at most six photos, and lists nested at most three levels deep.
 
 ## The feed
 
-The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Text appears as written: formatted text, lists, and each photo at the full width of the feed with its caption, if any, beneath it. A video update shows its video instead (see "Video updates"). Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
+The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Text appears as written: formatted text, lists, quotes, and each photo at the full width of the feed with its caption, if any, beneath it. A video update shows its video instead (see "Video updates"). Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
 The feed, like every page signed in to a family, sits under the family's navigation bar (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
@@ -29,9 +30,9 @@ Each update has a footer of actions in one row: **React** (unless the update all
 
 ## Writing an update
 
-Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, and **Numbered list**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link.
+Posting and editing use the same editor: a text box with a toolbar of **Bold**, *Italic*, ~~Strikethrough~~, **Link**, **Bulleted list**, **Numbered list**, and **Quote**, and, once photos are on, **Add photo**. Toolbar buttons are large enough to tap easily and show which formatting is on where the cursor is. The usual keyboard shortcuts work, such as Ctrl or ⌘ with B for bold, and with Shift and S for strikethrough. "Link" opens a small field under the toolbar for the address, with "Remove link" when the cursor is on one. Typing or pasting a web address makes it a link, and typing `> ` at the start of a line makes it a quote.
 
-Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, strikethrough, links, and lists) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
+Pasting from another app or a website keeps only formatting the editor allows (paragraphs, line breaks, bold, italic, strikethrough, links, lists, and quotes) and drops everything else, keeping the text. Pasted images are dropped; photos are added with "Add photo."
 
 ## Posting
 
@@ -203,9 +204,9 @@ A request is past, by the clock of the device showing it, from the start of the 
 
 ### The family's message
 
-Above everything else on the page, the family can keep one message for everyone who opens it, such as what they'd rather people not send or do: "Thank you! Please don't send flowers or gift baskets, and please hold off on visits for now." It's plain text of up to 2,000 characters, with line breaks kept and web addresses as links, in a shaded box with no heading of its own. With no message, there's no box.
+Above everything else on the page, the family can keep one message for everyone who opens it, such as what they'd rather people not send or do: "Thank you! Please don't send flowers or gift baskets, and please hold off on visits for now." It's formatted text of up to 2,000 characters, with the same formatting as an update except photos (see "An update"), in a shaded box with no heading of its own. A message written before it could be formatted shows as it always did, with line breaks kept and web addresses as links. With no message, there's no box.
 
-Any family member can write, change, or remove it. They see an **Edit** button at the top right of the box or, when there's no message, an **Add a message for supporters** button in its place. Either one turns that spot into a text box with **Save** and **Cancel**. Saving an empty box removes the message. If two family members edit at once, the last save wins.
+Any family member can write, change, or remove it. They see an **Edit** button at the top right of the box or, when there's no message, an **Add a message for supporters** button in its place. Either one turns that spot into the update editor, without **Add photo**, with **Save** and **Cancel**. Saving an empty box removes the message. If two family members edit at once, the last save wins.
 
 Everyone signed in to the family reads the message, the same as the requests. It never appears on the gate or in emails, and writing or changing it sends no emails or notifications. Others see a change when they next load the page.
 

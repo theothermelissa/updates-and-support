@@ -6,14 +6,13 @@ import { Document, Photo } from "./photo.js";
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
 // Only what an update allows: paragraphs, line breaks, bold, italic, strikethrough,
-// links, lists, and photos. Anything else pasted in keeps its text and loses its formatting.
+// links, lists, quotes, and photos. Anything else pasted in keeps its text and loses its formatting.
 export const extensions = [
   Document,
   Photo,
   StarterKit.configure({
     document: false,
     heading: false,
-    blockquote: false,
     codeBlock: false,
     code: false,
     horizontalRule: false,

@@ -24,13 +24,13 @@ A person who is both a supporter and a family member of different families has a
 - Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
 - Family members add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
-- Family members post, edit, and delete updates with simple formatting (bold, italic, strikethrough, links, and lists); everyone signed in to the family reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
+- Family members post, edit, and delete updates with simple formatting (bold, italic, strikethrough, links, lists, and quotes); everyone signed in to the family reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
 - Photos in updates, with optional captions, up to six per update, once the operator turns photos on; test sites can use grey placeholder photos instead. → [updates.md](updates.md#photos)
 - A family member posts an update as a video of any length, up to 100 MB, with the same recorder as a video note. A video update has no text and can't be edited. → [updates.md](updates.md#video-updates)
 - Everyone signed in to the family can give each update and each note one reaction, and sees who reacted. Each update allows up to six emoji from the app's catalog, chosen by the family when posting (the usual six by default, or none); notes share one set the family chooses on the People page, the usual six by default. → [updates.md](updates.md#reactions)
 - Everyone signed in to the family can leave colored notes of support on an update, written or as a video of up to 60 seconds, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)
 - Family members post ways to help, each with an optional date and time and a choice of whether offers need a name or an email, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered. → [updates.md](updates.md#how-to-help)
-- Family members can keep a message at the top of How to help, such as what they'd rather people not send or do, for everyone signed in to read. → [updates.md](updates.md#the-familys-message)
+- Family members can keep a formatted message at the top of How to help, such as what they'd rather people not send or do, for everyone signed in to read. → [updates.md](updates.md#the-familys-message)
 - Supporters can keep a phone number on their record for the family to reach them; only family members see it. → [access.md](access.md#your-phone-number)
 - Supporters with a verified email get a notification email when a new update is posted. → [updates.md](updates.md)
 
@@ -52,7 +52,7 @@ These apply to every page, endpoint, and feature.
 - **Families are isolated.** Being signed in to one family grants nothing in another, and no page or response reveals one family's data to another family's members or supporters.
 - **No third-party tracking.** No analytics, tracking pixels, ad scripts, or third-party embeds on any page. Videos play in the browser's own video player, never Cloudinary's.
 - **Everything is served from the app's own domain, except photos and videos.** Fonts, scripts, styles, and images are bundled with the app. The exceptions are photos in updates and videos, in updates and in notes, which Cloudinary stores and serves (see [updates.md](updates.md#photos), [updates.md](updates.md#video-updates), and [updates.md](updates.md#video-notes)); pages send it no referrer, so Cloudinary never learns which family's page a request came from.
-- **Content is never inserted as HTML.** Updates are stored as a checked document and drawn by the app's own code, so nothing a family member writes or pastes can run as code on a reader's page.
+- **Content is never inserted as HTML.** Updates and the family's message are stored as checked documents and drawn by the app's own code, so nothing a family member writes or pastes can run as code on a reader's page.
 - **Not indexable.** Every page sends `noindex`, and `robots.txt` disallows all crawling.
 - **Emails carry no update content.** Notification and sign-in emails name the family and contain a link, nothing more, because emails are forwarded and shown in lock-screen previews. The exceptions are how many photos a new update has, and that a new update is a video.
 - **Email is sent through Resend** from a subdomain of `orbul.com`, so deliverability problems cannot affect the root domain.

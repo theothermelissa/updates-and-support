@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor, type JSONContent } from "@tiptap/react";
-import { BoldIcon, ImagePlusIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon, StrikethroughIcon } from "lucide-react";
+import { BoldIcon, ImagePlusIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon, StrikethroughIcon, TextQuoteIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { allowedHref } from "../lib/links.js";
@@ -20,6 +20,7 @@ export default function RichEditor(props: {
   initial?: unknown;
   photos: "real" | "placeholder" | "off";
   slug: string;
+  label?: string;
   onChange: (doc: JSONContent | null) => void;
 }) {
   const editor = useEditor({
@@ -30,7 +31,7 @@ export default function RichEditor(props: {
         class: `${DOC_CLASSES} min-h-32 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50`,
         role: "textbox",
         "aria-multiline": "true",
-        "aria-label": "Update",
+        "aria-label": props.label ?? "Update",
       },
     },
     onUpdate: ({ editor }) => props.onChange(docToSend(editor)),
@@ -76,6 +77,7 @@ function Toolbar({ editor, photos, slug }: { editor: Editor; photos: "real" | "p
       link: editor.isActive("link"),
       bulletList: editor.isActive("bulletList"),
       orderedList: editor.isActive("orderedList"),
+      blockquote: editor.isActive("blockquote"),
       photos: photoCount(editor),
     }),
   });
@@ -179,6 +181,9 @@ function Toolbar({ editor, photos, slug }: { editor: Editor; photos: "real" | "p
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
           <ListOrderedIcon />
+        </Tool>
+        <Tool label="Quote" pressed={active.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+          <TextQuoteIcon />
         </Tool>
         {photos !== "off" && (
           <>
