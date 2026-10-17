@@ -54,6 +54,25 @@ describe("sortRequests", () => {
       "past-week",
     ]);
   });
+
+  it("puts resolved requests after undated ones and before past ones, most recently resolved first", () => {
+    const requests = [
+      { id: "past", date: "2026-10-09", time: null, resolvedAt: null },
+      { id: "resolved-past", date: "2026-10-09", time: null, resolvedAt: "2026-10-16T09:00:00.000Z" },
+      { id: "undated", date: null, time: null, resolvedAt: null },
+      { id: "resolved-undated", date: null, time: null, resolvedAt: "2026-10-14T09:00:00.000Z" },
+      { id: "resolved-upcoming", date: "2026-10-17", time: null, resolvedAt: "2026-10-15T09:00:00.000Z" },
+      { id: "upcoming", date: "2026-10-17", time: null, resolvedAt: null },
+    ];
+    expect(sortRequests(requests, now).map((r) => r.id)).toEqual([
+      "upcoming",
+      "undated",
+      "resolved-past",
+      "resolved-upcoming",
+      "resolved-undated",
+      "past",
+    ]);
+  });
 });
 
 describe("whenLabel", () => {
