@@ -54,6 +54,7 @@ Some routine commands refuse to run or error out from an agent, which can look l
 
 **How to apply:**
 - Write the migration SQL by hand in a new `prisma/migrations/<timestamp>_<name>/` folder, named to sort after the newest existing one (their timestamps can be ahead of today). To confirm there's no drift, create a scratch database with the test database's credentials, `prisma migrate deploy` to it, and run `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` with `DATABASE_URL` and `DATABASE_URL_UNPOOLED` pointed at it; `--from-migrations` needs a shadow database this config doesn't set.
+- Never rename a migration after pushing it: its PR's preview has already applied it under the old name, so the renamed copy fails and blocks every preview build. Before pushing a migration, check that `origin/main` has no migration with the same or a later timestamp. If a rename is unavoidable, the preview's `_prisma_migrations` row needs renaming and the failed attempt deleting, which changes a shared database and needs Melissa's OK.
 - If a commit lands on the wrong branch (another session switched this folder), point the right branch at it with `git branch -f <branch> <sha>`, then ask Melissa to reset the wrong branch, since auto mode blocks `git reset` on `main`.
 - Edit a PR body with `gh api -X PATCH repos/theothermelissa/updates-and-support/pulls/<n> -F body=@file`.
 

@@ -61,3 +61,15 @@ The UI is checked in the browser pane on the preview: the checkbox and icon, hid
 
 - Video updates can't change "Allow notes" after posting. This is already in `NEXT-SESSION.md` as "change a video update's post settings".
 - No live update of an open note dialog when notes are turned off. Posting is refused with the message, and the feed's next check removes the button.
+
+## Results
+
+- Typecheck and all 369 tests pass, including the 10 in `tests/integration/allowNotes.test.ts`. CI passes.
+- Each access test was proven to fail with its rule removed: the `allowNotes` check in `createNote`, `FOR SHARE` (the race test), `requireFamilyMember` in `setAllowNotesByDefault`, and `newUpdateDefaults` hiding the default from supporters.
+- On the preview, in the browser pane:
+  - Posting with "Allow notes" off gave an update with neither "Leave a note" button, and the form reset to "Allows notes".
+  - Turning off "New updates allow notes" on the People page showed "Saved", and going back to Updates without a reload started the form at "No notes".
+  - Editing the update to allow notes brought both buttons back.
+  - The family default was then set back to on.
+- **Discovery:** `main` gained a `20261024000000_help_message_content` migration while this was in progress, so this migration was renamed to `20261025000000_allow_notes`. The preview database had already applied it under the old name, so the next build failed. With Melissa's OK, the preview's `_prisma_migrations` row was renamed and the failed attempt deleted.
+- **Implementation note:** `setAllowNotesByDefault` lives in `server/notes.ts` beside `createNote`.
