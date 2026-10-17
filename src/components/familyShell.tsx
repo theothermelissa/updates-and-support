@@ -66,7 +66,8 @@ export function FamilyShell(props: {
         </h1>
         <nav className="-mr-2 flex items-center gap-1 text-sm">
           {link("updates", props.home, "Updates")}
-          {(me.person.role === "family" || me.family.hasHelpRequests) && link("help", `/f/${slug}/help`, "How to help")}
+          {(me.person.role === "family" || me.family.hasHelpRequests || me.family.hasHelpMessage) &&
+            link("help", `/f/${slug}/help`, "How to help")}
           {link("notes", `/f/${slug}/wall`, "Notes")}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

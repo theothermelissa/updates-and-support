@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../../../server/db.js";
-import { hasHelpRequests } from "../../../server/help.js";
+import { hasHelpRequests, helpMessage } from "../../../server/help.js";
 import { familyContext, methodNotAllowed, personView, unauthorized } from "../../../server/http.js";
 import { photoMode, photoSettingsFromEnv } from "../../../server/photoSettings.js";
 
@@ -14,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       displayName: ctx.family.displayName,
       photos: photoMode(photoSettingsFromEnv()),
       hasHelpRequests: await hasHelpRequests(getDb(), ctx.family.id),
+      hasHelpMessage: (await helpMessage(getDb(), ctx.person)) !== null,
     },
     person: personView(ctx.person),
   });

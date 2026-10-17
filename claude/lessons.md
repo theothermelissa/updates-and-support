@@ -71,9 +71,9 @@ A cloud session can run the tests and its pushes build Vercel previews, but it c
 
 **How to apply:**
 - Don't name a cause for a failed preview without its logs. Give Melissa `npx vercel inspect <deployment> --logs --scope theothermelissa-s-team`, and note whether a later push built.
-- The shell starts on Node 22: run `. /opt/nvm/nvm.sh && nvm install 24` and prefix `/opt/nvm/versions/node/<v24>/bin`. If there is no nvm v24, look under `~/.local/share/mise/installs/node/`.
+- The shell starts on Node 22: run `. /opt/nvm/nvm.sh && nvm install 24` and prefix `/opt/nvm/versions/node/<v24>/bin`. If there is no nvm v24, look under `~/.local/share/mise/installs/node/`. If `nvm install` exits silently with code 3, download `node-v24.<x>-linux-x64.tar.xz` from `nodejs.org/dist` and unpack it into `~/.local/node24`.
 - Postgres 16 is installed but stopped: `pg_ctlcluster 16 main start`, create a role with a password, and point a gitignored `.env` at local databases.
-- For browser checks, a small scratchpad server that runs the `api/` handlers behind Vite in middleware mode works with the Playwright install in `/opt/node-tools`. While a Radix menu is open, it hides the rest of the page from role queries, so measure the page before opening it. Radix moves focus on the tick after an arrow key, so wait briefly before checking focus.
+- For browser checks, a small scratchpad server that runs the `api/` handlers behind Vite in middleware mode works with the Playwright install in `/opt/node-tools` (launch with `executablePath: '/opt/pw-browsers/chromium'`). The scratchpad is outside the repo, so import Vite by its absolute path in `node_modules`. Set `VERCEL_ENV=development` so session cookies work over plain http, and sign a family member in by creating a session row and setting its `session_<slug>` cookie in the browser context. While a Radix menu is open, it hides the rest of the page from role queries, so measure the page before opening it. Radix moves focus on the tick after an arrow key, so wait briefly before checking focus.
 - Prisma refuses `migrate reset` from an agent without Melissa's explicit consent. After editing an unmerged migration, apply it to a fresh `createdb` database instead.
 
 ### Patterns that hide a removed access rule

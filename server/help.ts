@@ -9,6 +9,7 @@ import { validPhone } from "./phone.js";
 const MAX_BODY = 2_000;
 const MAX_SLOTS = 99;
 const MAX_REQUESTS = 100;
+const MAX_MESSAGE = 2_000;
 
 // What a viewer sees of an offer. A supporter gets only their own offer, with no email or
 // phone. Family members get every offer, with the email when there is one, a supporter's
@@ -90,6 +91,36 @@ function view(request: LoadedRequest, viewer: Person): HelpRequestView {
 export async function hasHelpRequests(db: Db, familyId: string): Promise<boolean> {
   const count = await db.helpRequest.count({ where: { familyId } });
   return count > 0;
+}
+
+// The message at the top of How to help, or null. Read by the person's own family rather than
+// the family loaded from the address, which a redirect can point elsewhere.
+export async function helpMessage(db: Db, person: Person): Promise<string | null> {
+  const family = await db.family.findUniqueOrThrow({
+    where: { id: person.familyId },
+    select: { helpMessage: true },
+  });
+  return family.helpMessage;
+}
+
+// A family member writes or changes the message; an empty one removes it.
+export async function setHelpMessage(
+  db: Db,
+  person: Person,
+  input: { message?: unknown },
+): Promise<{ message: string | null }> {
+  requireFamilyMember(person);
+  if (typeof input.message !== "string") throw new RequestError(400, "Expected message: text");
+  const clean = input.message.trim();
+  if (clean.length > MAX_MESSAGE) {
+    throw new RequestError(400, `A message can be at most ${MAX_MESSAGE.toLocaleString("en-US")} characters.`);
+  }
+  const family = await db.family.update({
+    where: { id: person.familyId },
+    data: { helpMessage: clean || null },
+    select: { helpMessage: true },
+  });
+  return { message: family.helpMessage };
 }
 
 export async function listHelp(db: Db, person: Person): Promise<HelpRequestView[]> {
