@@ -1,23 +1,33 @@
 import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
-import { ReactionKind, type Person } from "./generated/prisma/client.js";
+import type { Person } from "./generated/prisma/client.js";
 import { visibleNotes } from "./notes.js";
+import { inCatalogOrder, MAX_REACTIONS, reactionFor, USUAL_REACTIONS } from "../src/lib/reactionCatalog.js";
 
-const KINDS = Object.values(ReactionKind);
+// An update's set of reactions from a request: distinct catalog kinds, at most six, returned in
+// catalog order so the same set is always stored the same way. Empty allows none.
+export function parseReactionSet(input: unknown): string[] {
+  if (!Array.isArray(input)) throw new RequestError(400, "Reactions must be a list");
+  if (input.length > MAX_REACTIONS) throw new RequestError(400, `At most ${MAX_REACTIONS} reactions`);
+  if (!input.every((k) => typeof k === "string" && reactionFor(k))) throw new RequestError(400, "Unknown reaction");
+  if (new Set(input).size !== input.length) throw new RequestError(400, "A reaction is listed twice");
+  return inCatalogOrder(input);
+}
 
 // What a viewer sees of one update's or note's reactions: never other people's IDs or emails.
 // `named` lists the named people other than the viewer, oldest first; the viewer's own is
-// `mine`, and nameless readers are only counted.
+// `mine`, and nameless readers are only counted. `allowed` is what anyone may pick here.
 export type ReactionsView = {
   reactions: {
     count: number;
-    kinds: ReactionKind[];
-    mine: ReactionKind | null;
-    named: { name: string; kind: ReactionKind }[];
+    kinds: string[];
+    mine: string | null;
+    allowed: string[];
+    named: { name: string; kind: string }[];
   };
 };
 
-type LoadedReaction = { kind: ReactionKind; personId: string; person: { name: string | null } };
+type LoadedReaction = { kind: string; personId: string; person: { name: string | null } };
 
 // Reactions shown with an update or a note: this family's people who haven't been removed.
 // The read path applies it itself, rather than trusting how the reaction was written.
@@ -26,7 +36,9 @@ export function visibleReactors(familyId: string) {
 }
 
 // Sets the signed-in person's one reaction to an update or a note in their own family,
-// replacing any other, or clears it with kind: null. Exactly one target. Setting rather
+// replacing any other, or clears it with kind: null. Exactly one target. A new reaction must
+// be one the target allows: the update's own set, or the usual six on a note. Clearing is
+// always allowed, so anyone can take back a reaction the set no longer offers. Setting rather
 // than toggling, so a repeated request leaves the same state.
 export async function setReaction(
   db: Db,
@@ -40,17 +52,16 @@ export async function setReaction(
   if (hasUpdate === hasNote || (updateId !== undefined && !hasUpdate) || (noteId !== undefined && !hasNote)) {
     throw new RequestError(400, "Expected an updateId or a noteId");
   }
-  if (kind !== null && !KINDS.includes(kind as ReactionKind)) throw new RequestError(400, "Unknown reaction");
-
   // A plain read, so a removal can still land before the write; loading hides that reaction.
   const active = await db.person.findFirst({ where: { id: person.id, removedAt: null } });
   if (!active) throw new RequestError(403, "You can't react here");
 
-  const chosen = kind as ReactionKind | null;
+  const chosen = kind as string | null;
   if (hasUpdate) {
     // Another family's update behaves like one that doesn't exist.
     const update = await db.update.findFirst({ where: { id: updateId, familyId: person.familyId } });
     if (!update) throw new RequestError(404, "Update not found");
+    if (chosen !== null && !update.reactionKinds.includes(chosen)) throw notAllowed();
     const key = { updateId, personId: person.id };
     await write(
       () =>
@@ -71,6 +82,7 @@ export async function setReaction(
     where: { id: noteId as string, ...visibleNotes(person.familyId) },
   });
   if (!note) throw new RequestError(404, "Note not found");
+  if (chosen !== null && !USUAL_REACTIONS.includes(chosen)) throw notAllowed();
   const key = { noteId: noteId as string, personId: person.id };
   await write(
     () =>
@@ -83,6 +95,11 @@ export async function setReaction(
           }),
     "Note not found",
   );
+}
+
+// Includes a kind that isn't a string, or isn't in the catalog at all.
+function notAllowed() {
+  return new RequestError(400, "That reaction isn't available here");
 }
 
 // Runs a write, and retries once if a simultaneous request created the row first. The
@@ -100,14 +117,15 @@ async function write(run: () => Promise<unknown>, missing: string): Promise<void
 }
 
 // Shapes one update's or note's reactions, oldest first, for the viewer. The emoji used
-// are listed most-used first, ties in the fixed order.
-export function reactionsView(loaded: LoadedReaction[], viewerId: string): ReactionsView {
-  const used = (kind: ReactionKind) => loaded.filter((r) => r.kind === kind).length;
+// are listed most-used first, ties in catalog order. `allowed` is the target's set.
+export function reactionsView(loaded: LoadedReaction[], viewerId: string, allowed: readonly string[]): ReactionsView {
+  const used = (kind: string) => loaded.filter((r) => r.kind === kind).length;
   return {
     reactions: {
       count: loaded.length,
-      kinds: KINDS.filter((k) => used(k) > 0).sort((a, b) => used(b) - used(a)),
+      kinds: inCatalogOrder([...new Set(loaded.map((r) => r.kind))]).sort((a, b) => used(b) - used(a)),
       mine: loaded.find((r) => r.personId === viewerId)?.kind ?? null,
+      allowed: inCatalogOrder(allowed),
       named: loaded.flatMap((r) =>
         r.personId !== viewerId && r.person.name ? [{ name: r.person.name, kind: r.kind }] : [],
       ),
