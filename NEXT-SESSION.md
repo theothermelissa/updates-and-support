@@ -18,8 +18,10 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 ## Features and fixes
 
+- **2026-11-23** — Help group members get signed in by email.
+  Group membership follows a supporter's record, so someone who only answered the question on a device sees just "Everyone" updates there until they sign in by email. A "you've been added" email with a sign-in link, or a prompt on the feed, would save the family explaining it. Came up while speccing groups.
 - **2026-10-17** — Let a family member change a video update's post settings.
-  Video updates can't be edited, so their reactions and "Allow notes" stay as posted. A settings-only edit would fix a regretted choice.
+  Video updates can't be edited, so their reactions, "Allow notes," and audience stay as posted. A settings-only edit would fix a regretted choice without deleting and reposting, which loses notes and re-sends emails.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
   A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
 - **2026-10-16** — Warn before leaving a page with an unposted update or note.
