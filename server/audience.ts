@@ -111,7 +111,9 @@ export const audienceInclude = {
   groups: { select: { group: { select: { id: true, name: true } } } },
 } satisfies Prisma.UpdateInclude;
 
-export function audienceView(update: { audience: Audience; groups: { group: { id: string; name: string } }[] }): AudienceView {
+export type LoadedAudience = Prisma.UpdateGetPayload<{ include: typeof audienceInclude }>;
+
+export function audienceView(update: Pick<LoadedAudience, "audience" | "groups">): AudienceView {
   if (update.audience === "everyone") return "everyone";
   const groups = update.groups.map(({ group }) => ({ id: group.id, name: group.name }));
   return { groups: groups.sort((a, b) => a.name.localeCompare(b.name)) };

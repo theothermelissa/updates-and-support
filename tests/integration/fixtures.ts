@@ -2,6 +2,7 @@ import type { Db } from "../../server/db.js";
 import type { Email, SendEmail, SendEmails } from "../../server/email.js";
 import { createFamily } from "../../server/families.js";
 import { addEmail, answerGate, type Client } from "../../server/gate.js";
+import { verifySupporter } from "../../server/people.js";
 import type { Family } from "../../server/generated/prisma/client.js";
 import type { VideoStore } from "../../server/videos.js";
 
@@ -47,6 +48,24 @@ export async function joinWithEmail(db: Db, family: Family, name: string, send?:
   await addEmail(db, send ?? mail.send, family, reader.person, { name, email });
   const person = await db.person.findUniqueOrThrow({ where: { id: reader.person.id } });
   return { person, sessionToken: reader.sessionToken, email, sent: mail.sent };
+}
+
+// A reader who has given their name and email, such as "gia@example.com" for "Gia", and had it
+// verified by one of the family's family members. Group tests use these, since an unverified
+// member sees nothing of a group.
+export async function verifiedSupporter(db: Db, family: Family, name: string) {
+  const { person } = await joinWithEmail(db, family, name);
+  const member = await db.person.findFirstOrThrow({ where: { familyId: family.id, role: "family", removedAt: null } });
+  await verifySupporter(db, member, person.id, true);
+  return db.person.findUniqueOrThrow({ where: { id: person.id } });
+}
+
+// A group with these people in it, inserted directly: tests create groups without the
+// People page's checks.
+export async function makeGroup(db: Db, familyId: string, name: string, memberIds: string[] = []) {
+  return db.group.create({
+    data: { familyId, name, members: { create: memberIds.map((personId) => ({ personId })) } },
+  });
 }
 
 // Waits until a transaction is queued on an advisory lock, such as a family's gate lock, or

@@ -1,4 +1,5 @@
 import type { Doc, Photo } from "../src/lib/doc.js";
+import { audienceInclude, audienceView, visibleUpdates, type AudienceView, type LoadedAudience } from "./audience.js";
 import { destroyPhotos, isFamilyPhotoId, photoUrl, type CloudinaryConfig } from "./cloudinary.js";
 import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
@@ -27,12 +28,13 @@ export type UpdateView = {
   editedAt: Date | null;
 };
 
-export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[] };
+// `audience` only for family members: a supporter is never sent an update's audience.
+export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[]; audience?: AudienceView };
 
 type UpdateInput = { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown; allowNotes?: unknown };
 
-// Everyone signed in to the family reads every update, newest first, with its reactions and
-// its notes, newest first.
+// The updates the person may see (see visibleUpdates), newest first, with their reactions and
+// their notes, newest first. Family members also get each update's audience.
 // Reactions are filtered by family on their own, rather than trusting how they were written,
 // and a removed person's reactions are hidden until they're restored.
 export async function listUpdates(
@@ -41,10 +43,13 @@ export async function listUpdates(
   store: VideoStore = cloudinaryStore,
   settings: PhotoSettings = NO_PHOTOS,
 ): Promise<FeedUpdate[]> {
+  const isFamily = person.role === "family";
   const updates = await db.update.findMany({
-    where: { familyId: person.familyId },
+    where: visibleUpdates(person),
     orderBy: { createdAt: "desc" },
     include: {
+      // Only loaded for family members, so a supporter's response can't carry a group's name.
+      groups: isFamily ? audienceInclude.groups : false,
       author: { select: { name: true } },
       photos: { select: { publicId: true } },
       reactions: {
@@ -52,7 +57,7 @@ export async function listUpdates(
         orderBy: { createdAt: "asc" },
         select: { kind: true, personId: true, person: { select: { name: true } } },
       },
-      notes: { where: visibleNotes(person.familyId), orderBy: { createdAt: "desc" }, select: noteSelect(person.familyId) },
+      notes: { where: visibleNotes(person), orderBy: { createdAt: "desc" }, select: noteSelect(person.familyId) },
     },
   });
   const noteReactions = await noteReactionSet(db, person.familyId);
@@ -63,6 +68,8 @@ export async function listUpdates(
       content: withPhotoLinks(shown.content, person.familyId, new Set(u.photos.map((p) => p.publicId)), settings.cloudinary ?? null),
       ...reactionsView(u.reactions, person.id, u.reactionKinds),
       notes: u.notes.map((n) => noteView(n, person.id, store, noteReactions)),
+      // Prisma can't type an include that depends on the role; groups are loaded when isFamily.
+      ...(isFamily ? { audience: audienceView(u as typeof u & LoadedAudience) } : {}),
     };
   });
 }
