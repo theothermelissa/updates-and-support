@@ -6,10 +6,11 @@ An invite-only family has no community question. Its signed-out page offers only
 
 ## Decisions
 
-- **`Family.inviteOnly`**, a boolean set only by `family:create`. No script or page changes it, so nothing has to convert a family's existing readers or updates.
-- **No new access concept.** "Family members only" is the existing representation: `audience = groups` with no `UpdateGroup` rows. `visibleUpdates`, `canSeeUpdate`, and notifications already treat it as family members only. The only new thing is that an invite-only family may *choose* it, as the audience input `"family"`.
+- **`Family.inviteOnly`**, a boolean set only by `family:create`. No script or page changes it, so nothing has to convert a family's existing readers or updates. Because it never changes, reading it once per request, outside any lock, is enough.
+- **No new access concept.** "Family members only" is the existing representation: `audience = groups` with no `UpdateGroup` rows. `visibleUpdates`, `canSeeUpdate`, notes, reactions, the wall, and group deletion's `sharedOnlyWith` already treat it as family members only. The only new thing is that an invite-only family may *choose* it, as the audience input `"family"`.
+- **An invite-only family must always name the audience when posting.** A missing `audience` is a 400 there, not Everyone, so a front-end slip fails loudly instead of widening an update.
 - **Every refusal is an explicit `inviteOnly` check in `server/`**, not a side effect of an empty answer list, so each one can be tested and proven by removing it.
-- **The welcome link is a normal `sign_in` magic link with a 7-day lifetime.** `signInWithLink` already spends it once, starts a session, and marks the email verified; removal already deletes unused links.
+- **The welcome link is a normal `sign_in` magic link with a 7-day lifetime.** `signInWithLink` already spends it once, starts a session, and marks the email verified; removal already deletes unused links; `SignIn.tsx` spends a link only when its button is pressed, so email scanners can't use it up.
 
 ## Cut for speed
 
@@ -22,10 +23,12 @@ An invite-only family has no community question. Its signed-out page offers only
 - `GET /api/f/<slug>/gate` → `{ displayName, slug, home, inviteOnly: boolean, question?: string }`. `question` is absent when `inviteOnly`.
 - `POST /api/f/<slug>/gate` on an invite-only family → `403 { error: "This family is invite-only." }`. Nothing is recorded.
 - `POST /api/f/<slug>/question` on an invite-only family → `403 { error: "This family is invite-only." }`.
-- `POST /api/f/<slug>/auth/verify`: the confirm step's response `canSignIn` is `false` on an invite-only family, and the answer step returns `{ result: "invalid" }` there.
+- `POST /api/f/<slug>/auth/verify`: confirming is unchanged. The answer step on an invite-only family gives the existing `400 { error: "This link has expired or was already used." }`.
 - `GET /api/f/<slug>/me` → `family.inviteOnly: boolean` added.
-- `GET /api/f/<slug>/people` → `inviteOnly: boolean` added. Other fields unchanged.
-- `POST /api/f/<slug>/updates` and `PATCH /api/f/<slug>/updates/<id>`: `audience` also accepts `"family"`, only on an invite-only family. Elsewhere it's `400 { error: 'Expected audience to be "everyone" or { groups }' }`, as any unknown value is today. The feed's `audience` view for a family-only update stays `{ groups: [] }`.
+- `POST /api/f/<slug>/updates`:
+  - `audience` also accepts `"family"`, only on an invite-only family. Elsewhere it's `400 { error: 'Expected audience to be "everyone" or { groups }' }`, as any unknown value is today.
+  - On an invite-only family a missing `audience` is `400 { error: "Choose who can see this update." }`.
+- `PATCH /api/f/<slug>/updates/<id>` accepts `"family"` on the same terms. A missing `audience` still keeps the update's audience. The feed's `audience` view for a family-only update stays `{ groups: [] }`.
 
 ## Steps
 
@@ -33,63 +36,85 @@ An invite-only family has no community question. Its signed-out page offers only
 
 1. **Schema.** Add `inviteOnly Boolean @default(false)` to `Family`, with a comment. Hand-write the migration (`claude/lessons.md` → "Commands that fail in an agent's shell"), named to sort after the newest in `prisma/migrations/` and after `origin/main`'s.
 2. **`server/families.ts`.**
-   - `NewFamily` gains `inviteOnly: boolean`.
+   - `NewFamily` gains an optional `inviteOnly?: boolean`, default false, so existing callers and fixtures compile unchanged.
    - `createFamily` stores it. An invite-only family gets `question: ""` and `acceptedAnswers: []`, whatever is passed.
    - A family that isn't invite-only must have a non-empty question and at least one answer, or it throws.
 3. **`server/gate.ts`.**
    - `gateInfo` returns `inviteOnly`, and `question` only when the family isn't invite-only.
-   - `answerGate` throws `RequestError(403, "This family is invite-only.")` first thing for an invite-only family; the handler maps it with `sendRequestError`.
-   - `signInWithVerifyLink` returns `{ result: "invalid" }` for an invite-only family, before checking the link or answer.
-4. **`server/auth.ts`.**
-   - `verifyEmail` returns `canSignIn: false` when the link's family is invite-only. `findUsableLink` already loads the family; keep `inviteOnly` available to `verifyEmail` without widening the returned `person`.
-   - `newSignInLink(lifetime = LINK_LIFETIME)`, and export a `WELCOME_LINK_LIFETIME = 7 * DAY`.
+   - `answerGate` throws `RequestError(403, "This family is invite-only.")` first thing for an invite-only family.
+   - `signInWithVerifyLink` returns `{ result: "invalid" }` for an invite-only family as its first step, before checking the link or answer.
+4. **`server/auth.ts`.** `newSignInLink(lifetime = LINK_LIFETIME)`, and export `WELCOME_LINK_LIFETIME = 7 * DAY`. `verifyEmail` is unchanged: the confirmation page reads `inviteOnly` from `gate`.
 5. **`server/people.ts`.**
-   - `changeQuestion` throws 403 on an invite-only family. It loads the family first, under the existing lock.
-   - `addSupporter`, on an invite-only family, creates a `sign_in` link with `WELCOME_LINK_LIFETIME` instead of a verify link, and sends `invitedEmail` (below) with `signInLinkUrl(...)` and the family's home address. Otherwise it's unchanged.
-   - `listPeople` returns `inviteOnly`.
+   - `changeQuestion` reads the family first, before validating input, and throws `RequestError(403, "This family is invite-only.")` for an invite-only family.
+   - `addSupporter`, on an invite-only family, creates a `sign_in` link with `WELCOME_LINK_LIFETIME` instead of a verify link. It sends `invitedEmail` (below) with `signInLinkUrl(...)` and the family's home address (`appUrl()` + `familyHomePath(slug)`). Otherwise it's unchanged.
 6. **`server/email.ts`.** Add `invitedEmail(to, familyName, { signIn, site })`: "You've been added to {family}. Sign in here: {link}. The link works once and expires in 7 days. After that, you can sign in any time at {site} with your email. If you don't know this family, you can ignore this email." No update content.
 7. **`server/audience.ts`.**
    - `AudienceInput` gains `"family"`.
    - `parseAudience(input, { inviteOnly })` accepts `"family"` only when `inviteOnly`; otherwise `"family"` falls through to the existing 400.
    - `writeAudience` treats `"family"` as no groups: delete the rows, set `audience: "groups"`.
-   - `audienceColumn` in `server/updates.ts` maps `"family"` to `"groups"`.
-8. **`server/updates.ts`.** `createUpdate` and `editUpdate` (and the video path) load the family's `inviteOnly` and pass it to `parseAudience`. `"family"` takes the groups lock like a group audience does. Notifications need no change: `canSeeUpdate` with no group IDs is family members only. Confirm it, and confirm the poster is still excluded.
-9. **Handlers.** `api/f/[slug]/me.ts` adds `inviteOnly`. `gate.ts` and `question.ts` route the 403 through `sendRequestError`. Handlers stay thin.
+8. **`server/updates.ts`.**
+   - `createUpdate` and `editUpdate` read the family's `inviteOnly` and pass it to `parseAudience`.
+   - `createUpdate` refuses a missing audience on an invite-only family (400, above) instead of defaulting to Everyone.
+   - `audienceColumn` maps `"family"` to `"groups"`.
+   - The video path receives the already-parsed audience. The existing `audience !== "everyone"` checks already take the groups lock for `"family"`.
+   - Notifications need no change: `canSeeUpdate` with no group IDs is family members only, and the poster is excluded as before.
+9. **Handlers.** `api/f/[slug]/me.ts` adds `inviteOnly`. `api/f/[slug]/gate.ts` gets a try/catch with `sendRequestError` around `answerGate`; `question.ts` already routes `RequestError`s. Handlers stay thin.
 10. **Scripts.**
     - `scripts/create-family.ts` asks "Invite-only? (y/N)" first, and skips the question and answers when yes.
-    - `scripts/seed-preview.ts` also upserts a second fictional family, `testinvite-preview`, "The Okafor Family," invite-only, with `PREVIEW_FAMILY_EMAIL` as its family member. Its production guard allows both test slugs.
-    - `scripts/sign-in-preview.ts` and `scripts/preview.sh` accept an optional `--invite-only` that targets that family.
-    - Update README → Deployment for the flag.
+    - `scripts/seed-preview.ts` also upserts a second fictional family, `testinvite-preview`, "The Okafor Family," invite-only, with `PREVIEW_FAMILY_EMAIL` as its family member.
+    - Both production guards (`seed-preview.ts` and `sign-in-preview.ts`) allow both test slugs.
+    - `sign-in-preview.ts` and `scripts/preview.sh` accept an optional `--invite-only` that targets the Okafor family.
+    - Update README → Deployment.
+    - Older checkouts' `preview:sign-in` refuses once the preview database holds the second family, until they merge `main`. There are no other open PRs today; say so in the PR.
+    - `unverifiedSupporters` (`server/notifications.ts`, used by `scripts/send-verifications.ts`) skips invite-only families, whose supporters can't use a verify link.
 
 ### Frontend (builder B, worktree)
 
-11. **`src/pages/Gate.tsx`.** When `inviteOnly`, show the display name, "This site is private. If you've been invited, sign in with your email.", and an email box with "Send me a sign-in link," posting to the existing `auth/request-link`. It then shows "Check your email." There's no question, no "Family sign-in" split, and no "Already joined?" link.
-12. **`src/pages/Verify.tsx`.** Confirm that `canSignIn: false` already shows the "Sign in by email" route, and that it lands on the signed-out page for an invite-only family.
-13. **`src/components/postSettings.tsx`** (and the edit form). When `family.inviteOnly`:
+11. **`src/audience.ts`.**
+    - `audienceBody` returns `"family"` for `mode: "family"`, so a family-only choice is sent on create and on edit, through `changedAudience`.
+    - Update the `AudienceChoice` and `audienceBody` comments.
+    - On regular families, `"family"` is still only the current audience of an update whose group was deleted. Editing such an update without changing its audience sends nothing, as today, because `changedAudience` sees no change.
+    - Update the request body types in `src/pages/Feed.tsx` to match.
+12. **`src/pages/Gate.tsx`.** When `inviteOnly`, show the display name, "This site is private. If you've been invited, sign in with your email.", and an email box with "Send me a sign-in link," posting to the existing `auth/request-link`. It then shows "Check your email." There's no question, no "Family sign-in" split, and no "Already joined?" link.
+13. **`src/pages/Verify.tsx`.** When `gate` says `inviteOnly`, after confirming never show the question. Link to the family's signed-out page (`gate.home`) instead of `/f/<slug>/family`.
+14. **`src/components/postSettings.tsx`** (and the edit form). When `family.inviteOnly`:
     - "Who can see this" always shows, with Everyone (default), Family members only, and Only these groups (only when groups exist).
-    - Family members only sends `audience: "family"`, shows the padlock, is announced as "Family members only," and the email checkbox reads "Notify family members by email."
+    - Family members only shows the padlock, is announced as "Family members only," and the email checkbox reads "Notify family members by email."
     - Editing a family-only update preselects it.
     - Non-invite-only families render exactly as today.
-14. **`src/pages/People.tsx`.** When `inviteOnly`, hide the community-question section and the "Signed in without a verified email" line. The supporter removal confirmation drops the sentence about changing the answer. The add-supporter form's note says they'll get an email with a link to sign in.
+15. **`src/pages/People.tsx`.** When `me.family.inviteOnly`, hide the community-question section and the "Signed in without a verified email" line. The supporter removal confirmation drops the sentence about changing the answer. The add-supporter form's note says they'll get an email with a link to sign in.
 
 ### Verification (builder C, independent, after A and B)
 
-15. Audit every caller of `parseAudience`, `writeAudience`, `gateInfo`, `answerGate`, `changeQuestion`, and `addSupporter` for a missed `inviteOnly` path. Re-run the mutation proofs below. Do a browser check of both families at 360px and desktop: the invite-only gate, the post form with no groups and with groups, a family-only post that a supporter in a group can't see, the People page, and the existing family's gate and post form unchanged.
+16. Re-run the mutation proofs below. Do a browser check of both families at 360px and desktop:
+    - the invite-only gate;
+    - the post form with no groups and with groups;
+    - a family-only post that a supporter in a group can't see, including after an edit from Everyone to Family members only;
+    - the People page;
+    - the existing family's gate, post form, and group-deleted family-only edit, unchanged.
 
 ## Tests
 
-Integration tests against real Postgres. Each access test is proven by removing its rule and watching it fail. Fixtures give the invite-only family a non-empty `acceptedAnswers` where needed, so a removed check is actually reached; see `claude/lessons.md` → "Patterns that hide a removed access rule."
+Integration tests against real Postgres. Each access test is proven by removing its rule and watching it fail. Every refusal test sends otherwise-valid input and asserts the exact status and message, so it reaches the rule; see `claude/lessons.md` → "Patterns that hide a removed access rule."
 
-1. **Gate refused.** `answerGate` on an invite-only family whose fixture has accepted answers, given a matching answer, throws 403 and creates no person or session.
-2. **Confirmation page can't sign in.** On an invite-only family, `verifyEmail` returns `canSignIn: false`, and `signInWithVerifyLink` with a valid verify link and matching answer returns `invalid` and creates no session.
-3. **Question can't be set.** `changeQuestion` on an invite-only family is refused and leaves the family's question and answers unchanged.
-4. **Welcome link.** On an invite-only family, `addSupporter` stores one `sign_in` link expiring about 7 days out, and no verify link. Spending it with `signInWithLink` starts a session and marks the email verified, and a second spend fails. Removing the supporter deletes the unused link (assert the row, not just a failed sign-in). On a regular family, `addSupporter` still stores a verify link (regression).
-5. **Family members only.**
-   - On an invite-only family, an update posted with `audience: "family"` is in a family member's `listUpdates` and absent from the feed of a verified supporter who belongs to every group. A request naming it gets 404 for that supporter.
+**Fixtures.** An invite-only family is made with `createFamily({ inviteOnly: true })`. Tests that must reach a check behind the answers then set `acceptedAnswers: ["Biscuit"]` with `db.family.update`, since `createFamily` discards them. A verify link for a supporter there is created directly with `newVerificationLink()` and `db.magicLink.create`.
+
+1. **Gate refused.** `answerGate` on an invite-only family with accepted answers, given the matching answer, throws 403 "This family is invite-only." and creates no person or session.
+2. **The confirmation page can't sign in.** On an invite-only family with accepted answers, `signInWithVerifyLink` with a valid, unused verify link for an active supporter and the matching answer returns `invalid`, creates no session, and leaves the link unused.
+3. **Question can't be set.** `changeQuestion` on an invite-only family, with a valid question and answers, throws 403 "This family is invite-only." and leaves the family's question and answers unchanged.
+4. **Welcome link.**
+   - On an invite-only family, `addSupporter` stores one `sign_in` link expiring about 7 days out, and no verify link.
+   - Spending it with `signInWithLink` starts a session and marks the email verified, and a second spend fails.
+   - Removing the supporter before it's used deletes the link (assert the row, not just a failed sign-in).
+   - On a regular family, `addSupporter` still stores a verify link (regression).
+5. **Family members only.** On an invite-only family, with a verified supporter who belongs to every group:
+   - An update posted with `audience: "family"` is in a family member's `listUpdates` and absent from that supporter's.
+   - `addReaction` and `createNote` on it give that supporter 404.
    - It notifies family members (not the poster) and no supporter.
-   - Editing an everyone update to `"family"` hides it from that supporter.
-6. **"family" refused elsewhere.** On a regular family, `createUpdate` and `editUpdate` with `audience: "family"` return 400 and change nothing.
-7. **Gate info.** A unit test that `gateInfo` omits `question` for an invite-only family and includes it otherwise.
-8. **`createFamily`.** A unit or integration test that invite-only discards a passed question and answers, and that a regular family without answers is refused.
+   - Editing an Everyone update to `"family"` hides it from that supporter.
+6. **Missing audience refused.** On an invite-only family, `createUpdate` with valid content and no `audience` returns 400 "Choose who can see this update." and creates no update.
+7. **"family" refused elsewhere.** On a regular family, with valid content, no `reactions`, and (for edits) a real update ID, `createUpdate` and `editUpdate` with `audience: "family"` return 400 `Expected audience to be "everyone" or { groups }`. Nothing is created, and the edited update's row is unchanged.
+8. **Gate info.** A unit test that `gateInfo` omits `question` for an invite-only family and includes it otherwise.
+9. **`createFamily`.** Invite-only discards a passed question and answers, and a regular family without answers is refused.
 
 Run `npm run typecheck` and `npm test` before every push.
