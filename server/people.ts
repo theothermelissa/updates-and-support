@@ -1,5 +1,6 @@
 import { MAX_PRIVACY_NOTICE } from "../src/lib/privacyNotice.js";
 import { dropsAnAnswer } from "./answers.js";
+import { sharedOnlyWith } from "./audience.js";
 import { newSignInLink, newVerificationLink, signInLinkUrl } from "./auth.js";
 import type { Db } from "./db.js";
 import { addedEmail, appUrl, welcomeEmail, type SendEmail } from "./email.js";
@@ -29,8 +30,9 @@ export function requireFamilyMember(person: Person) {
 
 // The People page: the family's members, its supporters with an email (active and removed,
 // newest first), how many devices are signed in without a verified email, the community
-// question, the family's note reactions, whether new updates allow notes, and the family's privacy
-// banner wording (null for the standard wording). Family members only; supporters never see each other.
+// question, the family's note reactions, whether new updates allow notes, the family's privacy
+// banner wording (null for the standard wording), and its groups. Family members only;
+// supporters never see each other or any group.
 export async function listPeople(db: Db, person: Person) {
   requireFamilyMember(person);
   const family = await db.family.findUniqueOrThrow({
@@ -53,7 +55,45 @@ export async function listPeople(db: Db, person: Person) {
     noteReactions: family.noteReactionKinds,
     allowNotesByDefault: family.allowNotesByDefault,
     privacyNotice: family.privacyNotice,
+    groups: await groupsView(db, person.familyId),
   };
+}
+
+export type GroupView = {
+  id: string;
+  name: string;
+  members: { id: string; name: string; email: string; emailVerified: boolean; removed: boolean }[];
+  // How many updates are shared with this group and no other, for the deletion's confirmation.
+  onlyHere: number;
+};
+
+// The family's groups and their members, each sorted by name. Members are supporters with an
+// email; a removed one stays in their groups.
+async function groupsView(db: Db, familyId: string): Promise<GroupView[]> {
+  const groups = await db.group.findMany({
+    where: { familyId },
+    include: { members: { select: { person: true } } },
+  });
+  return Promise.all(
+    groups.map(async (group) => ({
+      id: group.id,
+      name: group.name,
+      members: group.members
+        .map(({ person: p }) => ({
+          id: p.id,
+          name: p.name ?? "",
+          email: p.email ?? "",
+          emailVerified: p.emailVerifiedAt !== null,
+          removed: p.removedAt !== null,
+        }))
+        .sort(byName),
+      onlyHere: await db.update.count({ where: sharedOnlyWith(familyId, group.id) }),
+    })),
+  ).then((views) => views.sort(byName));
+}
+
+function byName(a: { name: string }, b: { name: string }) {
+  return a.name.localeCompare(b.name);
 }
 
 // The live sessions of the family's supporters who have no verified email, either none given

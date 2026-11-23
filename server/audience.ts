@@ -106,6 +106,12 @@ export async function writeAudience(
   await tx.update.update({ where: { id: updateId }, data: { audience: audience === "everyone" ? "everyone" : "groups" } });
 }
 
+// The family's updates shared with this group and no other. Deleting the group would leave them
+// family members only, unless the family chooses other groups for them.
+export function sharedOnlyWith(familyId: string, groupId: string): Prisma.UpdateWhereInput {
+  return { familyId, audience: "groups", groups: { some: { groupId }, every: { groupId } } };
+}
+
 // What to load for audienceView.
 export const audienceInclude = {
   groups: { select: { group: { select: { id: true, name: true } } } },
