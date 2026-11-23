@@ -18,10 +18,10 @@
     "email:test": "tsx scripts/send-test-email.ts",
     "start": "vercel dev",
     "vercel-build": "prisma generate && prisma migrate deploy && vite build",
-    "preview": "scripts/preview.sh",
-    "preview:sign-in": "scripts/preview.sh --sign-in",
-    "preview:seed": "prisma generate && scripts/with-preview-db.sh npx tsx scripts/seed-preview.ts",
-    "preview:baseline": "scripts/with-preview-db.sh scripts/preview-baseline.sh",
+    "preview": "node scripts/check-node.mjs && scripts/preview.sh",
+    "preview:sign-in": "node scripts/check-node.mjs && scripts/preview.sh --sign-in",
+    "preview:seed": "node scripts/check-node.mjs && prisma generate && scripts/with-preview-db.sh npx tsx scripts/seed-preview.ts",
+    "preview:baseline": "node scripts/check-node.mjs && scripts/with-preview-db.sh scripts/preview-baseline.sh",
     "verification:send": "tsx scripts/send-verifications.ts"
   },
   "dependencies": {
