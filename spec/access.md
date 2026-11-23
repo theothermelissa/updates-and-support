@@ -9,7 +9,7 @@ A family has:
 - a **display name**, such as "Sam's Updates" or "The Rivera Family". It heads the family's pages, is the browser tab's title on them, and names the family in emails, in phrases like "Sam's Updates has a new update."
 - a **slug**: the family's address. The family's site lives at `/f/<slug>`. A new family's slug is a name plus an 8-character random suffix, such as `rivera-k3f9m2xq`. The suffix keeps family addresses from being guessed or listed.
 - a **community question** and one or more **accepted answers**
-- its family members, supporters, and updates
+- its family members, supporters, groups, and updates
 
 The operator creates a family with a script, giving the display name, the question, the accepted answers, and the name and email of each family member (at least one). The script prints the family's address.
 
@@ -114,7 +114,7 @@ Any family member can add another family member by name and email, on the People
 What happens depends on whom the email already belongs to in this family:
 
 - **No one:** a new family member is created.
-- **A supporter:** the supporter is **promoted**. The same record becomes a family member with the name just entered, and all of their sessions end, so they sign in again with a family member's session. If they had been removed, promotion also restores them.
+- **A supporter:** the supporter is **promoted**. The same record becomes a family member with the name just entered, and all of their sessions end, so they sign in again with a family member's session. If they had been removed, promotion also restores them. A promoted supporter leaves every group (see "Groups").
 - **A removed family member:** they are restored, with the name just entered.
 - **A current family member:** nothing changes and no email is sent; the page says they're already a family member.
 
@@ -163,7 +163,7 @@ A phone number is kept as typed, after trimming. It can contain only digits, spa
 
 ## Managing supporters
 
-Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, phone number, when they have one, as a link that calls it on a phone, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately.
+Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, phone number, when they have one, as a link that calls it on a phone, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. Below the lists is the Groups section (see "Groups").
 
 Supporters without an email aren't listed, even when they've given a name with a note. Instead the page shows how many devices are signed in without a verified email. Each device counts separately, so one person reading on a phone and a laptop counts twice, and listed supporters who haven't verified yet count too.
 
@@ -191,6 +191,55 @@ A family member can **verify** a listed supporter whose email isn't verified yet
 Only an active supporter with an unverified email in the family member's own family can be verified. Verifying an email that's already verified changes nothing.
 
 Family members are added and removed under "Adding family members" and "Removing family members."
+
+## Groups
+
+A family can sort its supporters into **groups**, such as "Investors" or "Neighbors," and share an update with one or more groups instead of everyone (see [updates.md](updates.md#audience)). A family that never creates a group sees nothing of them beyond the People page's empty Groups section.
+
+### Managing groups
+
+The People page has a **Groups** section, after the supporter lists. Any family member can:
+
+- **create** a group by name. A name is 1 to 50 characters after trimming, and no two groups in a family share a name, ignoring capitals. A family can have at most 50 groups.
+- **rename** a group, under the same rules.
+- **add members**, picking from the family's listed supporters who aren't removed and aren't in the group yet. A supporter can be in any number of groups.
+- **remove a member** from a group, at once and without confirmation, since adding them back undoes it.
+- **delete** a group (see "Deleting a group").
+
+Each group lists its members by name and email, with "Not verified" beside a member whose email isn't verified and "Removed" beside a removed one, since neither currently sees the group's updates. None of this sends emails, and a supporter is never told they were added to or removed from a group.
+
+### Who can be in a group
+
+Only supporters who appear in the supporter list, and so have an email, can be added, including before their email is verified. A supporter reading without an email can never be in a group, so they only ever see updates shared with everyone. Family members are never in a group: they always see every update. A supporter who becomes a family member leaves every group.
+
+Membership belongs to a supporter's record, not to a device. Someone who answered the question on another device is a separate supporter there (see "Joining") and sees only updates shared with everyone until they sign in by email on it.
+
+### What membership grants
+
+Membership in a group lets a supporter see that group's updates only while their email is verified and they haven't been removed. An unverified member sees the group's updates once they confirm their email or sign in by email, or a family member verifies it. A removed member stays in their groups, and restoring them gives that access back, as it does their reactions and notes.
+
+Every request checks the reader's groups against the database, so taking a supporter out of a group, removing them from the family, or deleting a group cuts their access on their next request. Notes they already left on updates they can no longer see stay, shown to everyone who can still see those updates.
+
+### Groups are invisible to supporters
+
+A supporter is never shown a group's name, which groups exist or which they belong to, or any sign that an update outside their audience exists. To them such an update is exactly like one that doesn't exist:
+
+- The feed leaves it out with no gap, count, or placeholder, and the live check never counts it among new updates.
+- Its notes, and its reactions and its notes' reactions, appear nowhere: not on the wall, in a "See all" count, in a list of who reacted, or in the wall's excerpt of an update.
+- Its notification email isn't sent to them (see [updates.md](updates.md#notifications)).
+- Every request that names it, or one of its notes, gets the same "not found" as for one that doesn't exist: fetching it, reacting to it or its notes, leaving a note, and deleting a note, even the supporter's own.
+
+The server sends an update's audience, and any group's name, only to family members. All of this is enforced on the server.
+
+### Deleting a group
+
+Deleting a group never shares an update with more people. An update shared with the group and other groups simply loses it.
+
+Deleting asks for confirmation on the page. When some updates are shared only with this group, the confirmation says how many, as in "3 updates are shared only with Investors," and offers one audience picker for all of them: **Family members only**, chosen by default, or one or more of the family's other groups. "Yes" deletes the group and gives those updates the chosen audience, video updates included; "Cancel" changes nothing. The chosen audience applies to every update shared only with this group when the deletion happens, including one posted after the confirmation opened. Deleting a group sends no emails.
+
+### Who may manage groups
+
+Only a family member of that family can create, rename, or delete a group, change its members, or see any of it; the server refuses anyone else, and accepts only that family's own groups and supporters.
 
 ## Reactions on notes
 
@@ -248,13 +297,13 @@ Supporters who give an email appear in the supporter list with the name and emai
 
 Someone who knows the answer can also give the email of a real person who isn't on the family's list yet. If that person confirms the email, the device that gave it becomes a supporter with a verified email: it stays signed in when the answer changes, and it appears in the supporter list under whatever name it gave. The verification email tells anyone who didn't ask for it to ignore it.
 
-A verified email means either its owner confirmed it or a family member verified it, and a family member's verification is trusted as is. Because the community question keeps casual observers out rather than guarding against someone who already knows the answer, the app adds no confirmation step or sign-out to protect against a mistaken verification. If a family member verifies an entry made by someone posing as a person they know, that device stays signed in when the answer changes and gets notification emails, until the family removes that supporter and changes the answer. The remaining real cost is a mistyped address: verifying it sends notification emails to whoever owns that address until the supporter is removed.
+A verified email means either its owner confirmed it or a family member verified it, and a family member's verification is trusted as is. Because the community question keeps casual observers out rather than guarding against someone who already knows the answer, the app adds no confirmation step or sign-out to protect against a mistaken verification. If a family member verifies an entry made by someone posing as a person they know, that device stays signed in when the answer changes, gets notification emails, and sees the updates of any group the family puts it in, until the family removes that supporter and changes the answer. The remaining real cost is a mistyped address: verifying it sends notification emails to whoever owns that address until the supporter is removed.
 
-Anyone who knows the answer sees the names of everyone who has reacted to an update or a note, so they can learn that a particular person follows this family. Names are whatever each person gave, so someone could also react under another person's name; the family sees named supporters in its supporter list and can remove them. Reactions from readers who never gave a name are counted without a name and can't be removed one by one, since the family can't see who those readers are. They stay even after the reader is signed out, for example by a change to the answer.
+Anyone who knows the answer sees the names of everyone who has reacted to an update shared with everyone, or to a note on one, so they can learn that a particular person follows this family. Names are whatever each person gave, so someone could also react under another person's name; the family sees named supporters in its supporter list and can remove them. Reactions from readers who never gave a name are counted without a name and can't be removed one by one, since the family can't see who those readers are. They stay even after the reader is signed out, for example by a change to the answer.
 
 Only family members see who offered to help, under the name each person gave, which can be someone else's. Anyone who knows the answer sees how many people offered on each request. On a request that doesn't require a name, anyone who knows the answer can offer as "Someone," one offer per signed-in device, so they can fill a numbered request's places; the family can remove those offers one by one. Family members see an email beside an offer when there is one: either the email on the person's record, which is also on the People page, or one given with that offer, which only family members see, is never verified, and appears nowhere else, so it can be mistyped or belong to someone else. A person who offered without an email on their record isn't on the People page; the family has only the offer. Removing the person, when they have an email on their record, hides their offers. Changing the answer signs out anyone without a verified email, and their offers stay, the same way reactions do.
 
-A photo's link keeps working for anyone who has it until the photo is deleted, like a photo-sharing link. Someone who saves or forwards a link from the feed can show that photo to others, and a supporter who is later removed, or signed out by a change to the answer, can still open links they saved. Deleting the photo, or the update it's on, ends every link to it within a few minutes. If Cloudinary can't be reached when a photo is deleted, the photo disappears from the app, but links saved earlier keep working until it's deleted from Cloudinary by hand. Browsers also keep copies of photos they've shown, so on a shared device, photos can stay in the browser's cache after signing out. The operator's Cloudinary account can see every family's stored photos, which are the shrunk copies without embedded details.
+A photo's link keeps working for anyone who has it until the photo is deleted, like a photo-sharing link. Someone who saves or forwards a link from the feed can show that photo to others, and a supporter who is later removed, taken out of the update's audience, or signed out by a change to the answer, can still open links they saved. Deleting the photo, or the update it's on, ends every link to it within a few minutes. If Cloudinary can't be reached when a photo is deleted, the photo disappears from the app, but links saved earlier keep working until it's deleted from Cloudinary by hand. Browsers also keep copies of photos they've shown, so on a shared device, photos can stay in the browser's cache after signing out. The operator's Cloudinary account can see every family's stored photos, which are the shrunk copies without embedded details.
 
 Giving an email reveals whether it already belongs to the family: a new email goes on the supporter's record, while a known one gets a sign-in link. Someone who knows the answer could use that to learn whether a particular person follows this family. Each check leaves a trace, since a new email appears in the supporter list and a known one receives an email. Hiding it would mean holding every new email until it's verified, which isn't worth the complexity for most families.
 
@@ -262,6 +311,6 @@ A family member's email isn't verified before notification emails go to it. If i
 
 A supporter added by a family member is only as safe as the email typed in. If the address is mistyped and belongs to a real person, that person can sign in by email and read the updates. They appear in the supporter list under the name the family gave, so the family can spot and remove them. Likewise, whoever receives a forwarded welcome email and knows the answer signs in as that supporter rather than under their own name.
 
-A video, on a note or an update, is shown through a link to Cloudinary that the server creates only for someone signed in to the family. The link is signed, so it can't be guessed or altered, but it doesn't expire: anyone who copies or is forwarded it can watch that video until the note or the update is deleted, including a supporter who has since been removed. They can't use it to find any other video. Links that expire need a Cloudinary plan the app doesn't use; this is about as much as someone could already keep by recording the screen while they had access. Deleting the note, or the update, deletes its video, and every link to it stops working within minutes, once Cloudinary has cleared its cached copies.
+A video, on a note or an update, is shown through a link to Cloudinary that the server creates only for someone who can see that note or update. The link is signed, so it can't be guessed or altered, but it doesn't expire: anyone who copies or is forwarded it can watch that video until the note or the update is deleted, including a supporter who has since been removed or taken out of the update's audience. They can't use it to find any other video. Links that expire need a Cloudinary plan the app doesn't use; this is about as much as someone could already keep by recording the screen while they had access. Deleting the note, or the update, deletes its video, and every link to it stops working within minutes, once Cloudinary has cleared its cached copies.
 
 Anyone who knows the answer can leave a note signed with any name, including one that isn't theirs, such as "Mom," and changing their name shows that name on their earlier notes and reactions too. The family can delete any note. A note's author who never gave an email isn't in the supporter list and can't be removed one by one; if it keeps happening, the fix is to change the answer, which signs out everyone without a verified email.

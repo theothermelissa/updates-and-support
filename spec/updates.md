@@ -1,6 +1,6 @@
 # Updates
 
-How a family posts updates, how everyone reads them, reacts to them, and leaves notes on them, and how supporters learn a new one is up. Who may see an update is defined in [access.md](access.md): anyone signed in to the family, as a family member or a supporter.
+How a family posts updates, how everyone reads them, reacts to them, and leaves notes on them, and how supporters learn a new one is up. Who may see an update is its audience (see "Audience"): everyone signed in to the family unless a family member shares it only with some groups. How the server enforces that is in [access.md](access.md).
 
 ## An update
 
@@ -13,6 +13,7 @@ An update is either formatted text, with optional photos, or a video (see "Video
   - bulleted and numbered lists, which can be nested
   - block quotes, which can hold paragraphs and lists, shown indented behind a grey line on the left in muted text
   - photos, each with an optional **caption** of plain text up to 300 characters (see "Photos")
+- its **audience**: everyone signed in to the family, one or more groups, or family members only (see "Audience")
 - its **author**, a family member, shown by the name on their record (see [access.md](access.md#changing-your-name))
 - when it was **posted**, and when it was last **edited**, if ever
 
@@ -20,13 +21,13 @@ There are no headings, colors, fonts, tables, code, or images from other website
 
 ## The feed
 
-The feed is the family's main page. Everyone signed in to the family sees every update, newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Text appears as written: formatted text, lists, quotes, and each photo at the full width of the feed with its caption, if any, beneath it. A video update shows its video instead (see "Video updates"). Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
+The feed is the family's main page. Everyone signed in to the family sees every update whose audience includes them (see "Audience"), newest first, each showing its author, posted time, content, and an "edited" mark if it was edited. Text appears as written: formatted text, lists, quotes, and each photo at the full width of the feed with its caption, if any, beneath it. A video update shows its video instead (see "Video updates"). Links open in a new tab. An update written before formatting existed shows as it always did, with its web addresses as links.
 
 The feed, like every page signed in to a family, sits under the family's navigation bar (see "Look and feel" in [MASTER_SPEC.md](MASTER_SPEC.md)).
 
 Each update has a footer of actions in one row: **React** (unless the update allows no reactions; see "Reactions") and **Leave a note** (unless the update doesn't allow notes; see "Allowing notes") for everyone signed in, and **Edit** and **Delete** as well for family members, on the right. A video update has no Edit. On a phone the row wraps rather than shrinking the buttons. Family members also see a "Post an update" button above the feed. Notes sit beside the update on a wide screen, and below it on a phone (see "Reactions" and "Notes"). While a family member is editing an update or confirming a delete, the footer shows only that step.
 
-**The feed stays current without a refresh.** While the page is open and visible, it checks for changes every 30 seconds, and immediately when the reader returns to the tab. A hidden tab doesn't check, so a forgotten tab costs nothing. Changes to updates already on screen (edits, reactions, notes, and deletions) appear in place. New updates don't appear on their own, because inserting one at the top would move whatever the reader is in the middle of; instead a "1 new update" (or "3 new updates") button appears at the top of the screen, and pressing it shows them and scrolls to the top. A family member's own post appears at once. A failed check shows nothing and simply tries again at the next one. If the reader has been signed out, for example because they were removed or the community question's answer changed, the next check takes them to the gate. The wall doesn't update itself; it's current each time it's opened.
+**The feed stays current without a refresh.** While the page is open and visible, it checks for changes every 30 seconds, and immediately when the reader returns to the tab. A hidden tab doesn't check, so a forgotten tab costs nothing. Changes to updates already on screen (edits, reactions, notes, and deletions) appear in place. New updates don't appear on their own, because inserting one at the top would move whatever the reader is in the middle of; instead a "1 new update" (or "3 new updates") button appears at the top of the screen, and pressing it shows them and scrolls to the top. A family member's own post appears at once. An update that comes into a reader's audience, for example because it was widened or they were added to a group, counts toward that button like a new post; one that leaves their audience drops out like a deleted one. A failed check shows nothing and simply tries again at the next one. If the reader has been signed out, for example because they were removed or the community question's answer changed, the next check takes them to the gate. The wall doesn't update itself; it's current each time it's opened.
 
 ## Writing an update
 
@@ -38,6 +39,7 @@ Pasting from another app or a website keeps only formatting the editor allows (p
 
 A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when everyone will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none; then a speech bubble when the update will allow notes, or the same bubble crossed out when it won't. Screen readers hear each icon's meaning, such as "Emails everyone," "Chosen reactions," or "No notes." The settings apply to either tab:
 
+- **"Who can see this,"** once the family has a group (see "Audience").
 - **"Notify everyone by email,"** checked by default, so a small follow-up can go out without emailing everyone.
 - **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
 - **"Allow notes,"** which starts checked or unchecked according to the family's default (see "Allowing notes").
@@ -46,11 +48,31 @@ Posting resets the settings to their defaults.
 
 ## Editing
 
-A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with the reactions and "Allow notes" settings, showing the update's current ones: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"), and changing "Allow notes" keeps the notes already left (see "Allowing notes"). A video update can't be edited, so its reactions and "Allow notes" stay as they were posted.
+A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with the reactions and "Allow notes" settings, showing the update's current ones: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"), and changing "Allow notes" keeps the notes already left (see "Allowing notes"). Post settings also shows "Who can see this" when the family has a group or the update isn't shared with everyone (see "Audience"). A video update can't be edited, so its reactions, "Allow notes," and audience stay as they were posted.
 
 ## Deleting
 
 A family member can delete any update in their family after confirming. Deletion is permanent: the update is removed from the database, not hidden, along with its reactions, its notes and the reactions on those notes, and its photos (see "Photos"). Its notes' videos, and the update's own video when it has one, are deleted from Cloudinary before the update is removed; if Cloudinary can't delete one of them, the update stays so it can be tried again. When the update has notes, the confirmation says they'll be deleted too.
+
+## Audience
+
+Each update has an **audience**, the people who can see it:
+
+- **Everyone**: everyone signed in to the family. This is the default, and the only audience a family without groups ever uses.
+- **One or more groups** (see [access.md](access.md#groups)): family members, plus the supporters in at least one of those groups who have a verified email and haven't been removed.
+- **Family members only**: an update gets this audience only when the one group it was shared with is deleted and the family chooses it (see [access.md](access.md#deleting-a-group)). The post form never offers it.
+
+Family members see every update, whatever its audience. Everything on an update stays inside its audience: its photos, its video, its notes, and the reactions on it and on its notes are seen only by people who can see the update, and only they can react or leave a note. To anyone else the update doesn't exist (see [access.md](access.md#groups-are-invisible-to-supporters)).
+
+**Choosing it.** Once the family has at least one group, Post settings starts with **"Who can see this"**: **Everyone**, selected by default, or **Only these groups**, which shows a checkbox for each of the family's groups, at least one of which must be checked to post. Post settings' button then shows the audience as its first icon: two people for Everyone, or a padlock otherwise, which screen readers hear as "Everyone," "Only some groups," or "Family members only." While the audience is groups, "Notify everyone by email" reads "Notify these groups by email," and its bell is heard as "Emails these groups." A family without groups sees none of this.
+
+**Changing it.** Editing a text update shows its audience and can change it to Everyone or to any groups. An update shared with family members only shows that as a third choice, selected, until it's changed. Changing an audience never sends emails, even when it widens. Notes and reactions already on the update stay, including ones left by people outside the new audience, and are shown to whoever can now see it. A video update can't be edited, so its audience stays as posted, except when a group is deleted; to change it, delete it and post it again.
+
+If a chosen group is deleted while the form is open, posting or saving is refused with "A group you chose was deleted. Please choose again," and the form keeps the update.
+
+**Telling them apart.** In the feed, family members see a small, muted label under the author and time on every update not shared with everyone, such as "Shared with Investors, Neighbors" or "Family members only." Supporters never see a label, and the server never sends them an update's audience.
+
+Only family members choose or change an audience; the server refuses anyone else, and accepts only the family's own groups.
 
 ## Photos
 
@@ -62,7 +84,7 @@ Photos are available once the operator turns them on with a setting (see the REA
 
 **How they're kept private.** Photos are stored privately with Cloudinary, a photo-hosting service.
 - Before storing a photo, Cloudinary shrinks it to at most 1600 pixels wide and removes its embedded details, such as location and camera, so the file as taken is never kept.
-- Nobody can view a stored photo without a link the server signs with the app's secret key, and the server creates those links only in the feed it sends to someone signed in to the family. A link can't be guessed or altered to show a different photo or size.
+- Nobody can view a stored photo without a link the server signs with the app's secret key, and the server creates those links only in the feed it sends to someone who can see the update. A link can't be guessed or altered to show a different photo or size.
 - While a photo loads, a grey box holds its place.
 
 **Deleting.** Deleting an update, or removing a photo while editing, deletes the photo from Cloudinary as well as from the app. If Cloudinary can't be reached at that moment, the photo still disappears from the app at once (see "Stated limits" in [access.md](access.md)).
@@ -73,7 +95,7 @@ There is no reordering, and supporters can't add photos. A video is its own kind
 
 ## Video updates
 
-A family member can post an update that is a video instead of text. It has no text and no photos. Everyone signed in to the family sees it in the feed in place of the update's text, in the same player as a video note: a still in a 16:9 shape, shown whole over a blurred backdrop, playing in place with sound and the browser's controls. It has no note color. Starting one video pauses any other that's playing, including a video note. Videos never play on their own. If a video can't be shown, its place says "This video can't be shown right now," and the rest of the page works as usual.
+A family member can post an update that is a video instead of text. It has no text and no photos. Everyone in its audience sees it in the feed in place of the update's text, in the same player as a video note: a still in a 16:9 shape, shown whole over a blurred backdrop, playing in place with sound and the browser's controls. It has no note color. Starting one video pauses any other that's playing, including a video note. Videos never play on their own. If a video can't be shown, its place says "This video can't be shown right now," and the rest of the page works as usual.
 
 The post form's Video tab holds the same recorder as a video note, so opening the tab turns the camera on and shows the live preview with "Start recording" at its bottom. "Start recording" begins a 3, 2, 1 countdown, then records until "Stop." There is no time limit. While recording, the tab shows how long the recording has run. Recording also stops if the page is hidden, and if the recording reaches 100 MB, which can still be posted. Review plays the video back unmirrored, with "Post" and "Re-record." "Re-record" discards it and returns to the live preview. Nothing uploads until "Post." "Upload a video instead" works the same way as for a note, including when the camera can't be used. A file over 100 MB is refused. A file of any length is accepted, as long as it is under 100 MB. If the upload fails, the form keeps the video and offers "Try again."
 
@@ -85,7 +107,7 @@ Videos are stored and delivered the same way as video notes (see [access.md](acc
 
 ## Reactions
 
-Everyone signed in to the family can react to an update or a note: family members and supporters, including readers who haven't given a name or email. Reactions are shown only as emoji, with no labels.
+Everyone who can see an update can react to it and to its notes: family members and supporters, including readers who haven't given a name or email (see "Audience"). Reactions are shown only as emoji, with no labels.
 
 **The catalog.** Every reaction comes from a fixed catalog in the app, with no images or data from any other service. The **usual reactions** are ❤️ 🤗 💪 👏 🎉 😂. Its order, listed here in groups for reading, is the order reactions appear everywhere; the app shows it as one list:
 
@@ -122,7 +144,7 @@ Reacting never asks for confirmation, and reactions send no emails or notificati
 
 ## Notes
 
-Everyone signed in to the family, family members and supporters alike, can leave notes of support on an update, and everyone signed in to the family reads every note. Sharing them is the point: the family and its support network get through this together.
+Everyone who can see an update, family members and supporters alike, can leave notes of support on it and reads every note on it (see "Audience"). Sharing them is the point: the family and its support network get through this together.
 
 A note is either a written note or a video note. It has:
 
@@ -172,11 +194,11 @@ On a wide screen, an update with no notes that allows notes has a round "Leave a
 
 ### The wall
 
-The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is headed "Notes of support." It shows every note in the family, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note as described under "Notes": a video note with its signature and when it was left, a written note with its author control. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Everyone signed in to the family can open it; anyone else sees the gate.
+The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is headed "Notes of support." It shows every note on the updates the reader can see, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note as described under "Notes": a video note with its signature and when it was left, a written note with its author control. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Filtered to an update outside the reader's audience, it shows what it shows for an update that doesn't exist. Everyone signed in to the family can open it; anyone else sees the gate.
 
 ### Reacting to a note
 
-The rules, the React button, the tray, and the summary are the ones under "Reactions," with the family's note set: the usual six unless the family chose otherwise on the People page. Everyone signed in to the family can react to any note, supporters included. On a video note they sit under the signature, with the time and Delete on that row. On a written note they sit under the text, with the "Family" mark and the author control on that row; Delete is behind the author control.
+The rules, the React button, the tray, and the summary are the ones under "Reactions," with the family's note set: the usual six unless the family chose otherwise on the People page. Everyone who can see a note's update can react to the note, supporters included. On a video note they sit under the signature, with the time and Delete on that row. On a written note they sit under the text, with the "Family" mark and the author control on that row; Delete is behind the author control.
 
 ### The written note's author
 
@@ -190,7 +212,7 @@ A removed person's notes are neither shown nor counted, and a removed person can
 
 ## How to help
 
-The page at `/f/<slug>/help`, headed "How to Help" under the navigation bar, starts with the family's message, when there is one (see "The family's message"), and lists what the family needs. Anyone signed in to the family can read it. Anyone else sees the gate.
+The page at `/f/<slug>/help`, headed "How to Help" under the navigation bar, starts with the family's message, when there is one (see "The family's message"), and lists what the family needs. Anyone signed in to the family can read it, whatever groups they're in: requests and the family's message are never shared with groups only. Anyone else sees the gate.
 
 A request has:
 
@@ -274,14 +296,16 @@ Offering on a numbered request emails the family's other family members that som
 
 ## Notifications
 
-When an update is posted with "Notify everyone by email" checked, one email goes to each person in the family who has notifications on and has not been removed, except the family member who posted it:
+When an update is posted with "Notify everyone by email" (or "Notify these groups by email") checked, one email goes to each person in its audience who has notifications on and has not been removed, except the family member who posted it:
 
 - every family member, whether or not they have signed in yet, since family members are added on purpose by the operator or another family member;
-- every supporter with a verified email (see [access.md](access.md#getting-notification-emails)).
+- every supporter with a verified email (see [access.md](access.md#getting-notification-emails)) who can see the update: all of them for an update shared with everyone, or those in at least one of its groups.
+
+Changing an update's audience, by editing it or deleting a group, sends no emails.
 
 Notifications are on when someone is added or gives an email, and anyone signed in with an email can turn them off or back on (see [access.md](access.md#signing-out-and-notifications)).
 
-- The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content. When the update has photos, the subject says how many, as in "Sam's Updates has a new update (2 photos)"; the photos themselves are never attached or linked. When the update is a video, the subject says so, as in "Sam's Updates has a new update (video)"; the video is never attached or linked.
+- The subject and body say only that there is a new update from the family, using the family's display name, with a link to the family's site. They never include any update content, or who the update is shared with. When the update has photos, the subject says how many, as in "Sam's Updates has a new update (2 photos)"; the photos themselves are never attached or linked. When the update is a video, the subject says so, as in "Sam's Updates has a new update (video)"; the video is never attached or linked.
 - Each email has an unsubscribe link to a page with a "Turn off notifications" button, which works without signing in. The button, rather than the link alone, keeps email security scanners that open links from unsubscribing people.
 - Each email also has `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so mail apps that offer their own "Unsubscribe" button can turn notifications off in one click. Scanners don't send that request.
 - If the emails can't be sent, the update is still posted.
