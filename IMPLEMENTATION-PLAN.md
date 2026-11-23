@@ -22,7 +22,7 @@ An invite-only family has no community question. Its signed-out page offers only
 
 - `GET /api/f/<slug>/gate` → `{ displayName, slug, home, inviteOnly: boolean, question?: string }`. `question` is absent when `inviteOnly`.
 - `POST /api/f/<slug>/gate` on an invite-only family → `403 { error: "This family is invite-only." }`. Nothing is recorded.
-- `POST /api/f/<slug>/question` on an invite-only family → `403 { error: "This family is invite-only." }`.
+- `PUT /api/f/<slug>/question` on an invite-only family → `403 { error: "This family is invite-only." }`.
 - `POST /api/f/<slug>/auth/verify`: confirming is unchanged. The answer step on an invite-only family gives the existing `400 { error: "This link has expired or was already used." }`.
 - `GET /api/f/<slug>/me` → `family.inviteOnly: boolean` added.
 - `POST /api/f/<slug>/updates`:
@@ -82,7 +82,7 @@ An invite-only family has no community question. Its signed-out page offers only
     - Family members only shows the padlock, is announced as "Family members only," and the email checkbox reads "Notify family members by email."
     - Editing a family-only update preselects it.
     - Non-invite-only families render exactly as today.
-15. **`src/pages/People.tsx`.** When `me.family.inviteOnly`, hide the community-question section and the "Signed in without a verified email" line. The supporter removal confirmation drops the sentence about changing the answer. The add-supporter form's note says they'll get an email with a link to sign in.
+15. **`src/pages/People.tsx`.** When `me.family.inviteOnly`, hide the community-question section and the "Signed in without a verified email" line. The supporter removal confirmation drops the sentence about changing the answer. After adding a supporter, the success message says they'll get an email with a link to sign in.
 
 ### Verification (builder C, independent, after A and B)
 
@@ -126,3 +126,5 @@ Run `npm run typecheck` and `npm test` before every push.
 - **`verifyEmail` is unchanged, so it can return `canSignIn: true`** for an invite-only family's supporter holding an unused verify link. `addSupporter` and `send-verifications` no longer make such links there, but the confirmation page must still decide from `gate.inviteOnly`, not `canSignIn`, as step 13 says; the server refuses the answer step regardless.
 - **`unverifiedSupporters` skipping invite-only families has its own test** in `tests/integration/notifications.test.ts`, beyond Tests 1–9.
 - **Mutation proofs.** Each rule below was removed and its test failed, then the rule was restored: `answerGate`'s refusal; `signInWithVerifyLink`'s refusal; `changeQuestion`'s refusal; `parseAudience` accepting `"family"` only when invite-only; the missing-audience refusal; `addSupporter`'s sign-in link, its 7-day lifetime, and the regular family's verify link; family members only stored as Everyone (on create, edit, reactions and notes, and notifications); `gateInfo` omitting the question; `createFamily` discarding and requiring answers; removal deleting the unused welcome link; and `unverifiedSupporters` skipping invite-only families.
+- **Frontend steps 11–15 are built**, and an independent verifier re-ran every mutation proof and checked both kinds of family in the browser at 360px and desktop, finding nothing to fix. One proof can't land in `audienceColumn` alone: `writeAudience` rewrites the column right after create, so the family-only tests guard `writeAudience` and `parseAudience` instead.
+- **The confirmation page's error state** (an expired or used link) still links to `/f/<slug>/family` on an invite-only family. That page signs people in by email, so it works; the spec covers only the confirmed state.
