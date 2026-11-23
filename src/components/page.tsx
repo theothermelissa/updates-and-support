@@ -39,11 +39,19 @@ export function ErrorMessage({ children }: { children: ReactNode }) {
 }
 
 // Asks on the page rather than with confirm(), which some in-app email browsers suppress.
-export function Confirm(props: { children: ReactNode; yes: string; onYes: () => void; onCancel: () => void }) {
+// The question can hold a choice to make first, such as a group deletion's audience picker;
+// disabled keeps Yes from being pressed until it's made.
+export function Confirm(props: {
+  children: ReactNode;
+  yes: string;
+  onYes: () => void;
+  onCancel: () => void;
+  disabled?: boolean;
+}) {
   return (
     <div className="flex w-full flex-wrap items-center gap-2 rounded-lg border bg-muted/50 p-3 text-sm">
-      <p className="basis-full">{props.children}</p>
-      <Button type="button" variant="destructive" onClick={props.onYes}>
+      <div className="basis-full">{props.children}</div>
+      <Button type="button" variant="destructive" onClick={props.onYes} disabled={props.disabled}>
         {props.yes}
       </Button>
       <Button type="button" variant="outline" onClick={props.onCancel}>
