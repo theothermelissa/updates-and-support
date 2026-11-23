@@ -533,7 +533,7 @@ describe("removing family members", () => {
 
   it("ends their access and keeps their updates, with their name", async () => {
     const { family, ana, ben, benToken } = await twoMembers();
-    await db.update.create({ data: { familyId: family.id, authorId: ben.id, body: "From Ben" } });
+    await db.update.create({ data: { familyId: family.id, authorId: ben.id, body: "From Ben", audience: "everyone" } });
     const mail = fakeMailer();
     await requestSignInLink(db, mail.send, family.slug, ben.email!);
 

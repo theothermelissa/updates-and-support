@@ -134,8 +134,8 @@ model Update {
   editedAt  DateTime?
   // Who can see it, besides family members, who see every update. `groups`: supporters in at
   // least one of its UpdateGroup rows. `groups` with no rows left is "Family members only".
-  // Every create in server/ names it. (Slice 1 keeps a default of `everyone`; slice 2 drops it.)
-  audience  Audience  @default(everyone)
+  // No default, so every create must name it.
+  audience  Audience
 
   family    Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
   author    Person        @relation(fields: [authorId], references: [id])

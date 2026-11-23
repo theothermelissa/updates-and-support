@@ -273,6 +273,7 @@ Steps marked **[subagent]** can be checked or done by a subagent independently, 
 ### Slice 2
 
 1. **Drop the `audience` default.** Remove `@default(everyone)` from `prisma/schema.prisma`, and add `prisma/migrations/20261029000000_audience_no_default/migration.sql` with `ALTER TABLE "Update" ALTER COLUMN "audience" DROP DEFAULT`. Add `audience: "everyone"` to the direct creates in `tests/integration/updates.test.ts` and `tests/integration/people.test.ts`. The type checker now flags any create that forgets it.
+   Done: a `prisma migrate diff` against a scratch database after applying it is empty. The type checker flagged exactly the two test creates; no `server/` or `scripts/` create lacked `audience`.
 2. **Server.** New `server/groups.ts`: `createGroup`, `renameGroup`, `addGroupMember`, `removeGroupMember`, and `deleteGroup`.
    - Each starts with `requireFamilyMember`, then `lockGroups`, and finds the group by `{ id, familyId }`, so another family's group is a 404.
    - Because every group write and every audience write holds the lock, none of them can hit a foreign key on a group deleted mid-transaction.
