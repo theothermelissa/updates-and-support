@@ -10,6 +10,17 @@ import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, type Me } from "../api.js";
+import {
+  audienceBody,
+  audienceLabel,
+  canShare,
+  changedAudience,
+  choiceFor,
+  EVERYONE,
+  type Audience,
+  type AudienceChoice,
+  type Group,
+} from "../audience.js";
 import { applyFetched, newUpdatesLabel } from "../liveFeed.js";
 import { followLink } from "../navigate.js";
 import { USUAL_REACTIONS } from "../lib/reactionCatalog.js";
@@ -34,9 +45,19 @@ type Update = {
   // False: no new notes; the ones already left stay.
   allowNotes: boolean;
   notes: Note[];
+  // Sent to family members only.
+  audience?: Audience;
 };
 
-type PostSettingsValues = { notify: boolean; reactions: string[]; allowNotes: boolean };
+type PostSettingsValues = {
+  audience?: "everyone" | { groups: string[] };
+  notify: boolean;
+  reactions: string[];
+  allowNotes: boolean;
+};
+
+// The audience to send with an edit, when it changed.
+type AudienceBody = PostSettingsValues["audience"];
 
 // The width of an update's card when its notes sit beside it on a wide screen.
 const UPDATE_WIDTH = "lg:w-[42rem]";
@@ -61,6 +82,8 @@ export function Feed(props: {
   // Where the post form's "Allow notes" starts. Re-read with every load, so a change on the
   // People page reaches the form without a reload.
   const [allowNotesByDefault, setAllowNotesByDefault] = useState(true);
+  // The family's groups, sorted by name, for "Who can see this". Family members only.
+  const [groups, setGroups] = useState<Group[]>([]);
   const [waiting, setWaiting] = useState(0);
   const [error, setError] = useState("");
   // The updates the reader has been shown; newer ones wait behind the "new updates" button.
@@ -76,10 +99,10 @@ export function Feed(props: {
   async function load(everything = false) {
     if (everything) showAll.current = true;
     const request = ++latest.current;
-    const { status, data } = await api<{ updates: Update[]; defaults: { allowNotesByDefault: boolean } | null }>(
-      slug,
-      "updates",
-    );
+    const { status, data } = await api<{
+      updates: Update[];
+      defaults: { allowNotesByDefault: boolean; groups?: Group[] } | null;
+    }>(slug, "updates");
     if (request !== latest.current) return;
     if (status === 401) return props.onSignedOut();
     if (status !== 200) {
@@ -90,7 +113,10 @@ export function Feed(props: {
       showAll.current = false;
       shownIds.current = new Set(data.updates.map((u) => u.id));
     }
-    if (data.defaults) setAllowNotesByDefault(data.defaults.allowNotesByDefault);
+    if (data.defaults) {
+      setAllowNotesByDefault(data.defaults.allowNotesByDefault);
+      setGroups(data.defaults.groups ?? []);
+    }
     const { visible, waiting } = applyFetched(shownIds.current, data.updates);
     setUpdates(visible);
     setWaiting(waiting);
@@ -124,11 +150,13 @@ export function Feed(props: {
   }
 
   // Runs a change, then reloads the feed. Returns whether it worked. everything: as for load.
+  // A failed change reloads too, so the forms see what changed under them, such as a deleted group.
   async function change(path: string, method: string, body?: unknown, everything = false): Promise<boolean> {
     setError("");
     const { status, data } = await api<{ error?: string }>(slug, path, { method, body });
     if (status >= 300) {
       setError(data?.error ?? "Something went wrong. Please try again.");
+      load();
       return false;
     }
     await load(everything);
@@ -155,6 +183,7 @@ export function Feed(props: {
             slug={slug}
             photos={props.photos}
             allowNotesByDefault={allowNotesByDefault}
+            groups={groups}
             onPost={(body, settings) => change("updates", "POST", { ...body, ...settings }, true)}
           />
         </div>
@@ -175,7 +204,10 @@ export function Feed(props: {
           update={update}
           canEdit={canEdit}
           photos={props.photos}
-          onEdit={(content, reactions, allowNotes) => change(`updates/${update.id}`, "PATCH", { content, reactions, allowNotes })}
+          groups={groups}
+          onEdit={(content, reactions, allowNotes, audience) =>
+            change(`updates/${update.id}`, "PATCH", { content, reactions, allowNotes, ...(audience && { audience }) })
+          }
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
           slug={slug}
@@ -193,11 +225,13 @@ function PostForm({
   slug,
   photos,
   allowNotesByDefault,
+  groups,
   onPost,
 }: {
   slug: string;
   photos: PhotoMode;
   allowNotesByDefault: boolean;
+  groups: Group[];
   onPost: (body: { content?: unknown; video?: string }, settings: PostSettingsValues) => Promise<boolean>;
 }) {
   const [mode, setMode] = useState<"write" | "video">("write");
@@ -208,6 +242,7 @@ function PostForm({
   const [uploaded, setUploaded] = useState<{ file: File; publicId: string } | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [audience, setAudience] = useState<AudienceChoice>(EVERYONE);
   const [notify, setNotify] = useState(true);
   const [reactions, setReactions] = useState<string[]>([...USUAL_REACTIONS]);
   // Null until chosen, so it follows the family's default, which arrives after this mounts.
@@ -223,12 +258,13 @@ function PostForm({
     e.preventDefault();
     setPosting(true);
     setError("");
-    const posted = mode === "write" ? content !== null && (await onPost({ content }, { notify, reactions, allowNotes })) : await postVideo();
+    const posted = mode === "write" ? content !== null && (await onPost({ content }, settings())) : await postVideo();
     if (posted) {
       setContent(null);
       setVideo(null);
       setUploaded(null);
       setEditorKey((k) => k + 1);
+      setAudience(EVERYONE);
       setNotify(true);
       setReactions([...USUAL_REACTIONS]);
       setChosenAllowNotes(null);
@@ -253,10 +289,14 @@ function PostForm({
       }
     }
     setProgress(1);
-    return onPost({ video: publicId }, { notify, reactions, allowNotes });
+    return onPost({ video: publicId }, settings());
   }
 
-  const ready = mode === "write" ? content !== null : file !== null;
+  function settings(): PostSettingsValues {
+    return { audience: audienceBody(audience, groups), notify, reactions, allowNotes };
+  }
+
+  const ready = (mode === "write" ? content !== null : file !== null) && canShare(audience, groups);
   return (
     <Card>
       <CardHeader>
@@ -291,6 +331,9 @@ function PostForm({
           {error && <ErrorMessage>{error}</ErrorMessage>}
           <PostSettings
             key={settingsKey}
+            groups={groups}
+            audience={audience}
+            onAudience={setAudience}
             notify={notify}
             onNotify={setNotify}
             reactions={reactions}
@@ -311,7 +354,9 @@ function UpdateItem(props: {
   update: Update;
   canEdit: boolean;
   photos: PhotoMode;
-  onEdit: (content: unknown, reactions: string[], allowNotes: boolean) => Promise<boolean>;
+  groups: Group[];
+  // audience: undefined when it didn't change.
+  onEdit: (content: unknown, reactions: string[], allowNotes: boolean, audience: AudienceBody) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
   slug: string;
@@ -328,13 +373,18 @@ function UpdateItem(props: {
   const [draft, setDraft] = useState<unknown>(null);
   const [reactions, setReactions] = useState<string[]>([]);
   const [allowNotes, setAllowNotes] = useState(true);
+  // The audience the update had when editing started, and the one chosen since.
+  const [startAudience, setStartAudience] = useState<AudienceChoice>(EVERYONE);
+  const [audience, setAudience] = useState<AudienceChoice>(EVERYONE);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const label = props.canEdit ? audienceLabel(update.audience) : null;
 
   async function save() {
     if (draft === null) return;
     setSaving(true);
-    if (await props.onEdit(draft, reactions, allowNotes)) setEditing(false);
+    const changed = changedAudience(startAudience, audience, props.groups);
+    if (await props.onEdit(draft, reactions, allowNotes, changed)) setEditing(false);
     setSaving(false);
   }
 
@@ -342,6 +392,8 @@ function UpdateItem(props: {
     setDraft(update.content);
     setReactions(update.reactions.allowed);
     setAllowNotes(update.allowNotes);
+    setStartAudience(choiceFor(update.audience));
+    setAudience(choiceFor(update.audience));
     setEditing(true);
   }
 
@@ -356,6 +408,7 @@ function UpdateItem(props: {
             {new Date(update.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
             {update.editedAt && " · edited"}
           </p>
+          {label && <p className="text-sm text-muted-foreground">{label}</p>}
         </CardHeader>
         <CardContent className="text-base">
           {update.video ? (
@@ -372,13 +425,16 @@ function UpdateItem(props: {
           {editing ? (
             <div className="w-full space-y-4">
               <PostSettings
+                groups={props.groups}
+                audience={audience}
+                onAudience={setAudience}
                 reactions={reactions}
                 onReactions={setReactions}
                 allowNotes={allowNotes}
                 onAllowNotes={setAllowNotes}
                 disabled={saving}
               >
-                <Button onClick={save} disabled={saving || draft === null}>
+                <Button onClick={save} disabled={saving || draft === null || !canShare(audience, props.groups)}>
                   Save
                 </Button>
                 <Button variant="outline" onClick={() => setEditing(false)}>

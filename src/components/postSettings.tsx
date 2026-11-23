@@ -1,24 +1,31 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   BellCheckIcon,
   BellMinusIcon,
   ChevronDownIcon,
   FaceSlightlySmilingIcon,
   FaceSlightlySmilingPlusIcon,
+  LockIcon,
   MessageSquareIcon,
   MessageSquareOffIcon,
+  UsersIcon,
 } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { TRAY } from "@/components/reactions";
+import type { AudienceChoice, Group } from "../audience.js";
 import { inCatalogOrder, isUsual, MAX_REACTIONS, reactionFor, REACTIONS, USUAL_REACTIONS } from "../lib/reactionCatalog.js";
 
 // A button showing an update's settings as icons, which opens them below it.
 // Closed when it mounts; the form remounts it (with a new key) to start fresh. Without
-// onNotify, as when editing, it has only the reactions and notes settings.
+// onNotify, as when editing, it has no notify setting. "Who can see this" shows once the family
+// has a group or the audience isn't everyone; without onAudience it never shows.
 export function PostSettings(props: {
+  groups?: Group[];
+  audience?: AudienceChoice;
+  onAudience?: (audience: AudienceChoice) => void;
   notify?: boolean;
   onNotify?: (notify: boolean) => void;
   reactions: string[];
@@ -33,6 +40,12 @@ export function PostSettings(props: {
   // Unchecking "Use the usual reactions" shows the grid, starting from the usual six.
   const [choosing, setChoosing] = useState(!isUsual(reactions));
   const usual = !choosing;
+  const groups = props.groups ?? [];
+  const audience = props.onAudience ? props.audience : undefined;
+  const choosingAudience = audience !== undefined && (groups.length > 0 || audience.mode !== "everyone");
+  const toGroups = choosingAudience && audience.mode === "groups";
+  // Family members only stays a choice only for an update that already has it.
+  const [offerFamily] = useState(audience?.mode === "family");
 
   return (
     <>
@@ -46,8 +59,13 @@ export function PostSettings(props: {
           onClick={() => setOpen((o) => !o)}
         >
           <span className="font-medium text-foreground">Post settings</span>
+          {choosingAudience && (
+            <SettingIcon label={AUDIENCE_LABELS[audience.mode]}>
+              {audience.mode === "everyone" ? <UsersIcon /> : <LockIcon />}
+            </SettingIcon>
+          )}
           {props.onNotify && (
-            <SettingIcon label={props.notify ? "Emails everyone" : "No email"}>
+            <SettingIcon label={props.notify ? (toGroups ? "Emails these groups" : "Emails everyone") : "No email"}>
               {props.notify ? <BellCheckIcon /> : <BellMinusIcon />}
             </SettingIcon>
           )}
@@ -62,6 +80,15 @@ export function PostSettings(props: {
       </div>
       {open && (
         <div className="space-y-4 rounded-lg border p-4">
+          {choosingAudience && (
+            <AudienceChooser
+              groups={groups}
+              audience={audience}
+              onAudience={props.onAudience!}
+              offerFamily={offerFamily}
+              disabled={disabled}
+            />
+          )}
           {props.onNotify && (
             <Label>
               <Checkbox
@@ -69,7 +96,7 @@ export function PostSettings(props: {
                 onCheckedChange={(checked) => props.onNotify!(checked === true)}
                 disabled={disabled}
               />
-              Notify everyone by email
+              {toGroups ? "Notify these groups by email" : "Notify everyone by email"}
             </Label>
           )}
           <ReactionChooser
@@ -91,6 +118,69 @@ export function PostSettings(props: {
       )}
     </>
   );
+}
+
+const AUDIENCE_LABELS = {
+  everyone: "Everyone",
+  groups: "Only some groups",
+  family: "Family members only",
+} as const;
+
+// "Who can see this": Everyone, or Only these groups with a checkbox per group, plus Family
+// members only when offerFamily. The checked groups are kept while another choice is selected.
+function AudienceChooser(props: {
+  groups: Group[];
+  audience: AudienceChoice;
+  onAudience: (audience: AudienceChoice) => void;
+  offerFamily: boolean;
+  disabled?: boolean;
+}) {
+  const { groups, audience, onAudience, disabled } = props;
+  const name = useId();
+  const choose = (mode: AudienceChoice["mode"]) => onAudience({ ...audience, mode });
+  const toggle = (id: string, on: boolean) =>
+    onAudience({ ...audience, ids: on ? [...audience.ids, id] : audience.ids.filter((x) => x !== id) });
+
+  return (
+    <fieldset className="space-y-3">
+      <legend className="mb-3 text-sm font-medium">Who can see this</legend>
+      <Label>
+        <Radio name={name} checked={audience.mode === "everyone"} onChange={() => choose("everyone")} disabled={disabled} />
+        Everyone
+      </Label>
+      {groups.length > 0 && (
+        <Label>
+          <Radio name={name} checked={audience.mode === "groups"} onChange={() => choose("groups")} disabled={disabled} />
+          Only these groups
+        </Label>
+      )}
+      {audience.mode === "groups" && (
+        <div className="space-y-3 pl-6">
+          {groups.map((g) => (
+            <Label key={g.id} className="leading-snug">
+              <Checkbox
+                checked={audience.ids.includes(g.id)}
+                onCheckedChange={(checked) => toggle(g.id, checked === true)}
+                disabled={disabled}
+              />
+              <span className="min-w-0 break-words">{g.name}</span>
+            </Label>
+          ))}
+        </div>
+      )}
+      {props.offerFamily && (
+        <Label>
+          <Radio name={name} checked={audience.mode === "family"} onChange={() => choose("family")} disabled={disabled} />
+          Family members only
+        </Label>
+      )}
+    </fieldset>
+  );
+}
+
+// A native radio button, sized and colored to match the checkboxes.
+function Radio(props: { name: string; checked: boolean; onChange: () => void; disabled?: boolean }) {
+  return <input type="radio" className="size-4 shrink-0 accent-primary disabled:opacity-50" {...props} />;
 }
 
 // "Use the usual reactions," and when it's unchecked, a tray preview and the whole catalog as
