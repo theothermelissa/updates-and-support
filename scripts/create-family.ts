@@ -28,9 +28,11 @@ async function askRequired(prompt: string): Promise<string> {
 }
 
 async function main() {
+  // An invite-only family has no community question: family members add supporters by email.
+  const inviteOnly = /^y(es)?$/i.test(await ask("Invite-only? (y/N): "));
   const displayName = await askRequired(`Display name (e.g. "Sam's Updates" or "The Rivera Family"): `);
-  const question = await askRequired("Community question: ");
-  const acceptedAnswers = (await askRequired("Accepted answers (comma-separated): ")).split(",");
+  const question = inviteOnly ? "" : await askRequired("Community question: ");
+  const acceptedAnswers = inviteOnly ? [] : (await askRequired("Accepted answers (comma-separated): ")).split(",");
 
   const members: { name: string; email: string }[] = [];
   console.log("Family members (blank name to finish):");
@@ -46,9 +48,9 @@ async function main() {
   rl.close();
 
   console.log("\nCreating the family…");
-  const family = await createFamily(getDb(), { displayName, question, acceptedAnswers, members });
+  const family = await createFamily(getDb(), { displayName, inviteOnly, question, acceptedAnswers, members });
   // The script can't tell which site uses this database, so it prints the path.
-  console.log(`\nCreated ${family.displayName} at /f/${family.slug}`);
+  console.log(`\nCreated ${family.displayName}${family.inviteOnly ? " (invite-only)" : ""} at /f/${family.slug}`);
   console.log(`Production address: ${PRODUCTION_URL}/f/${family.slug}`);
   await getDb().$disconnect();
 }

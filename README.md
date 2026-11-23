@@ -44,7 +44,7 @@ What the app should do lives in `spec/`, starting with `spec/MASTER_SPEC.md`. Ho
 | `npm run test:integration` | Runs the tests that use the real test database. |
 | `npm run build` | Builds the production frontend into `dist/`. |
 | `npm run db:migrate` | Creates and applies a migration after editing `prisma/schema.prisma`. |
-| `npm run family:create` | Creates a family and its family members, prompting for each detail, and prints the family's address. Uses `DATABASE_URL`. |
+| `npm run family:create` | Creates a family and its family members, prompting for each detail, and prints the family's address. It asks first whether the family is invite-only (no community question; family members add supporters by email), which can't be changed later. Uses `DATABASE_URL`. |
 | `npm run family:rename` | Gives a family a new display name, address, or both, asking before changing anything. The old address stops working at once. Uses `DATABASE_URL`. |
 | `npm run email:test -- you@example.com` | Sends one test email through Resend. Needs `RESEND_API_KEY` and `EMAIL_FROM` set for that command. |
 
@@ -85,9 +85,9 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 
 **Checking a pull request's preview** needs four local settings in `.env` (see `.env.example`): `PREVIEW_FAMILY_EMAIL`, the preview branch's two connection strings, and Vercel's bypass secret. Vercel keeps its own copies of the connection strings Sensitive, so they can't be pulled from there.
 
-1. `npm run preview:seed` makes sure the test family exists on the preview database, with `PREVIEW_FAMILY_EMAIL` as its family member. Run it after a preview has finished building. It refuses to touch a database that holds any other family.
+1. `npm run preview:seed` makes sure the two test families exist on the preview database, with `PREVIEW_FAMILY_EMAIL` as the family member of each: The Test Family at `testfamily-preview`, with a community question (answer: Biscuit), and the invite-only Okafor Family at `testinvite-preview`. Run it after a preview has finished building. It refuses to touch a database that holds any other family.
 2. `npm run preview` prints the branch's preview address and the test family's link, and, with `VERCEL_AUTOMATION_BYPASS_SECRET` in your `.env`, checks the test family's gate through Vercel's preview login. The address is the branch's own (`…-git-<branch>-…`), which always shows its latest push, so a sign-in there lasts for the whole pull request.
-3. `npm run preview:sign-in` does the same and also prints a sign-in link for the test family member, created directly in the preview database so no email is sent. Each link works once, within 15 minutes; open it and press Sign in. Never paste one into a pull request: the repository is public.
+3. `npm run preview:sign-in` does the same and also prints a sign-in link for the test family member, created directly in the preview database so no email is sent. Each link works once, within 15 minutes; open it and press Sign in. Never paste one into a pull request: the repository is public. Add `-- --invite-only` (`npm run preview:sign-in -- --invite-only`, or `npm run preview -- --invite-only`) for the invite-only family instead. A checkout from before the invite-only family existed refuses to sign in once the preview database holds it; merge `main` into that branch first.
 
 **Creating or recreating the preview database** (for example, after a PR with a migration is abandoned, or two open PRs change the schema):
 

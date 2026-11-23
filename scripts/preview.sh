@@ -1,11 +1,24 @@
 #!/usr/bin/env bash
 # Prints the current branch's preview address and the test family's link, and checks
 # the deploy through Vercel's protection with VERCEL_AUTOMATION_BYPASS_SECRET from .env.
-# With --sign-in, also prints a one-time sign-in link for the test family member.
+# With --sign-in, also prints a one-time sign-in link for the test family member. With
+# --invite-only as well, the link and checks are for the invite-only test family.
 # The address is the branch's stable alias, so a sign-in there lasts across pushes.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 TEST_SLUG="testfamily-preview" # matches scripts/seed-preview.ts
+invite_only=""
+sign_in=""
+for arg in "$@"; do
+  case "$arg" in
+    --sign-in) sign_in=1 ;;
+    --invite-only) invite_only=1 ;;
+    *) echo "Unknown option: $arg" >&2; exit 1 ;;
+  esac
+done
+if [ -n "$invite_only" ]; then
+  TEST_SLUG="testinvite-preview" # matches scripts/seed-preview.ts
+fi
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 sha=$(git rev-parse HEAD)
 
@@ -32,6 +45,6 @@ if [ -n "$secret" ]; then
   echo "Gate:        $(curl -s -H "x-vercel-protection-bypass: $secret" "$url/api/f/$TEST_SLUG/gate")"
 fi
 
-if [ "${1:-}" = "--sign-in" ]; then
-  PREVIEW_URL="$url" scripts/with-preview-db.sh npx tsx scripts/sign-in-preview.ts
+if [ -n "$sign_in" ]; then
+  PREVIEW_URL="$url" scripts/with-preview-db.sh npx tsx scripts/sign-in-preview.ts ${invite_only:+--invite-only}
 fi
