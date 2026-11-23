@@ -52,8 +52,10 @@ function devices(count: number) {
 }
 
 // Family members' page for family members, supporters, groups, note reactions, notes on new updates, the privacy banner, and the community question. The server
-// refuses the data to anyone else; this page only shows what it's given.
+// refuses the data to anyone else; this page only shows what it's given. An invite-only family
+// has no community question, so nothing about it shows.
 export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
+  const inviteOnly = me.family.inviteOnly;
   const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState("");
@@ -138,7 +140,12 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
       setMessage({ text: data?.error ?? "Something went wrong. Please try again.", error: true });
       return false;
     }
-    setMessage({ text: `Added ${data.name}. They'll get an email to confirm.`, error: false });
+    setMessage({
+      text: inviteOnly
+        ? `Added ${data.name}. They'll get an email with a link to sign in.`
+        : `Added ${data.name}. They'll get an email to confirm.`,
+      error: false,
+    });
     load();
     return true;
   }
@@ -239,7 +246,7 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
       />
 
       <Section title={`Supporters (${people.supporters.length})`}>
-        {people.devicesWithoutVerifiedEmail > 0 && (
+        {!inviteOnly && people.devicesWithoutVerifiedEmail > 0 && (
           <p className="text-muted-foreground">
             Signed in without a verified email: {devices(people.devicesWithoutVerifiedEmail)}, including anyone reading
             without giving an email, whom you can't see here. Removing or changing an accepted answer (below) signs them
@@ -254,7 +261,9 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
             rows={people.supporters}
             action="Remove"
             confirm={(s) =>
-              `Remove ${s.name}? They'll be signed out, and this email can't be used here again. If they know the answer, they can still read without an email until you change it.`
+              inviteOnly
+                ? `Remove ${s.name}? They'll be signed out, and this email can't be used here again.`
+                : `Remove ${s.name}? They'll be signed out, and this email can't be used here again. If they know the answer, they can still read without an email until you change it.`
             }
             onAction={(s) => setRemoved(s, true)}
             onVerify={verify}
@@ -349,27 +358,29 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
         </Card>
       </Section>
 
-      <Section title="Community question">
-        <p className="text-muted-foreground">
-          Anyone who answers this can read the updates. Removing or changing an accepted answer signs out everyone
-          without a verified email ({devices(people.devicesWithoutVerifiedEmail)} right now); supporters with a verified
-          email stay signed in. Adding an answer or rewording the question signs no one out. If someone you don't
-          recognize got in, remove them <em>and</em> change the answer.
-        </p>
-        <Card>
-          <CardContent>
-            <form onSubmit={saveQuestion} className="space-y-4">
-              <Field label="Question">
-                <Input value={question} onChange={(e) => setQuestion(e.target.value)} required maxLength={500} />
-              </Field>
-              <Field label={'Accepted answers, one per line (capitals and a leading "the" don\'t matter)'}>
-                <Textarea value={answers} onChange={(e) => setAnswers(e.target.value)} required rows={4} />
-              </Field>
-              <Button>Save question</Button>
-            </form>
-          </CardContent>
-        </Card>
-      </Section>
+      {!inviteOnly && (
+        <Section title="Community question">
+          <p className="text-muted-foreground">
+            Anyone who answers this can read the updates. Removing or changing an accepted answer signs out everyone
+            without a verified email ({devices(people.devicesWithoutVerifiedEmail)} right now); supporters with a verified
+            email stay signed in. Adding an answer or rewording the question signs no one out. If someone you don't
+            recognize got in, remove them <em>and</em> change the answer.
+          </p>
+          <Card>
+            <CardContent>
+              <form onSubmit={saveQuestion} className="space-y-4">
+                <Field label="Question">
+                  <Input value={question} onChange={(e) => setQuestion(e.target.value)} required maxLength={500} />
+                </Field>
+                <Field label={'Accepted answers, one per line (capitals and a leading "the" don\'t matter)'}>
+                  <Textarea value={answers} onChange={(e) => setAnswers(e.target.value)} required rows={4} />
+                </Field>
+                <Button>Save question</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </Section>
+      )}
     </>
   );
 }

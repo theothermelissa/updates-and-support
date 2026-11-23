@@ -35,6 +35,9 @@ export type Me = {
     hasHelpMessage: boolean;
     // The family's wording for the privacy banner; null for the standard wording.
     privacyNotice: string | null;
+    // No community question: only people the family added can read, and every update names its
+    // audience. Set when the family is created and never changes.
+    inviteOnly: boolean;
   };
   person: PersonView;
 };

@@ -18,6 +18,7 @@ import {
   choiceFor,
   EVERYONE,
   type Audience,
+  type AudienceBody,
   type AudienceChoice,
   type Group,
 } from "../audience.js";
@@ -50,14 +51,11 @@ type Update = {
 };
 
 type PostSettingsValues = {
-  audience?: "everyone" | { groups: string[] };
+  audience: AudienceBody;
   notify: boolean;
   reactions: string[];
   allowNotes: boolean;
 };
-
-// The audience to send with an edit, when it changed.
-type AudienceBody = PostSettingsValues["audience"];
 
 // The width of an update's card when its notes sit beside it on a wide screen.
 const UPDATE_WIDTH = "lg:w-[42rem]";
@@ -67,12 +65,14 @@ const NOTES_SHOWN = 6;
 const CHECK_EVERY = 30_000;
 
 // canEdit: the viewer is a family member. name: theirs, or null until they give one.
+// inviteOnly: Post settings always offers "Who can see this", with Family members only.
 // onNamed passes a name back once a note saves one. onSignedOut: a check found the reader's
 // session ended, for example because they were removed.
 export function Feed(props: {
   slug: string;
   canEdit: boolean;
   photos: PhotoMode;
+  inviteOnly: boolean;
   name: string | null;
   onNamed: (name: string) => void;
   onSignedOut: () => void;
@@ -184,6 +184,7 @@ export function Feed(props: {
             photos={props.photos}
             allowNotesByDefault={allowNotesByDefault}
             groups={groups}
+            inviteOnly={props.inviteOnly}
             onPost={(body, settings) => change("updates", "POST", { ...body, ...settings }, true)}
           />
         </div>
@@ -205,6 +206,7 @@ export function Feed(props: {
           canEdit={canEdit}
           photos={props.photos}
           groups={groups}
+          inviteOnly={props.inviteOnly}
           onEdit={(content, reactions, allowNotes, audience) =>
             change(`updates/${update.id}`, "PATCH", { content, reactions, allowNotes, ...(audience && { audience }) })
           }
@@ -226,12 +228,14 @@ function PostForm({
   photos,
   allowNotesByDefault,
   groups,
+  inviteOnly,
   onPost,
 }: {
   slug: string;
   photos: PhotoMode;
   allowNotesByDefault: boolean;
   groups: Group[];
+  inviteOnly: boolean;
   onPost: (body: { content?: unknown; video?: string }, settings: PostSettingsValues) => Promise<boolean>;
 }) {
   const [mode, setMode] = useState<"write" | "video">("write");
@@ -332,6 +336,7 @@ function PostForm({
           <PostSettings
             key={settingsKey}
             groups={groups}
+            inviteOnly={inviteOnly}
             audience={audience}
             onAudience={setAudience}
             notify={notify}
@@ -355,8 +360,9 @@ function UpdateItem(props: {
   canEdit: boolean;
   photos: PhotoMode;
   groups: Group[];
+  inviteOnly: boolean;
   // audience: undefined when it didn't change.
-  onEdit: (content: unknown, reactions: string[], allowNotes: boolean, audience: AudienceBody) => Promise<boolean>;
+  onEdit: (content: unknown, reactions: string[], allowNotes: boolean, audience: AudienceBody | undefined) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
   slug: string;
@@ -426,6 +432,7 @@ function UpdateItem(props: {
             <div className="w-full space-y-4">
               <PostSettings
                 groups={props.groups}
+                inviteOnly={props.inviteOnly}
                 audience={audience}
                 onAudience={setAudience}
                 reactions={reactions}
