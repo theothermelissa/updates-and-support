@@ -273,6 +273,7 @@ Steps marked **[subagent]** can be checked or done by a subagent independently, 
 ### Slice 2
 
 1. **Drop the `audience` default.** Remove `@default(everyone)` from `prisma/schema.prisma`, and add `prisma/migrations/20261029000000_audience_no_default/migration.sql` with `ALTER TABLE "Update" ALTER COLUMN "audience" DROP DEFAULT`. Add `audience: "everyone"` to the direct creates in `tests/integration/updates.test.ts` and `tests/integration/people.test.ts`. The type checker now flags any create that forgets it.
+   Done: a `prisma migrate diff` against a scratch database after applying it is empty. The type checker flagged exactly the two test creates; no `server/` or `scripts/` create lacked `audience`.
 2. **Server.** New `server/groups.ts`: `createGroup`, `renameGroup`, `addGroupMember`, `removeGroupMember`, and `deleteGroup`.
    - Each starts with `requireFamilyMember`, then `lockGroups`, and finds the group by `{ id, familyId }`, so another family's group is a 404.
    - Because every group write and every audience write holds the lock, none of them can hit a foreign key on a group deleted mid-transaction.
@@ -283,9 +284,13 @@ Steps marked **[subagent]** can be checked or done by a subagent independently, 
      - finds the updates shared only with this group: `{ familyId, audience: "groups", groups: { some: { groupId }, every: { groupId } } }`;
      - locks those update rows with `SELECT id FROM "Update" WHERE id = ANY(…) FOR UPDATE`, so an update deleted meanwhile drops out instead of failing the insert's foreign key;
      - adds the `moveTo` rows to the updates still there, and deletes the group.
+   Done: `deleteGroup` refuses `moveTo` naming the group itself or listing one twice (400) and another family's or an unknown group (`GROUP_GONE`); an absent `moveTo` is family members only. The "shared only with this group" filter is `sharedOnlyWith` in `server/audience.ts`, used by both `deleteGroup` and `listPeople`. `addGroupMember`'s filter is the `FOR UPDATE` query itself. Adding someone already in the group, or removing someone who isn't, changes nothing. A missing or another family's group is 404 "Group not found"; a refused person is 404 "Person not found". Names: 400 outside 1 to 50 characters, 409 for a taken name or a 51st group.
 3. **People data.** `server/people.ts:listPeople` adds `groups: { id, name, members: { id, name, email, emailVerified, removed }[], onlyHere }[]`, sorted by name.
+   Done: members are sorted by name too. `onlyHere` is a count per group with `sharedOnlyWith`, so it matches what deletion acts on.
 4. **Endpoints.** `api/f/[slug]/groups/index.ts` (POST) and `api/f/[slug]/groups/[id].ts` (PATCH, DELETE). Thin handlers, like `people/[id].ts`.
+   Done: `POST /groups` `{ name }` returns `{ group: { id, name } }`. `PATCH /groups/:id` takes exactly one of `name`, `add`, `remove` (otherwise 400) and returns `{ ok: true }`. `DELETE /groups/:id` needs a JSON body, `{ moveTo?: string[] }`, and returns `{ ok: true }`.
 5. **Tests.** `tests/integration/groups.test.ts`, tests 1–8, each access test proven against its rule. **[subagent]** can do the mutation proofs in a worktree.
+   Done: 11 cases, plus one through the handlers; all failed against stubs first. `queuedOrDone` now takes a list of lock types, and test 5 waits on advisory or transactionid. Test 4's "nothing is emailed" holds by construction: `deleteGroup` takes no mailer. Proofs, each made a test fail and was restored: `requireFamilyMember` in each of the five functions, and the group lookup's `familyId` (test 1); each of `addGroupMember`'s four conditions (test 2); the membership delete (test 3); `sharedOnlyWith`'s `some` and `every`, and `moveTo`'s not-itself, same-family, and distinct checks (test 4); `lockGroups` in `deleteGroup`, and in `editUpdate` (test 5, five clean runs with both, and the update ends up with Cousins without either); `writeAudience`'s group check (test 7).
 6. **People page.** `src/pages/People.tsx`, in a Groups card after the removed supporters:
    - a create form;
    - per group, the name with a Rename control, members by name and email with "Not verified" and "Removed" tags, and a Remove button that acts at once;
@@ -293,6 +298,7 @@ Steps marked **[subagent]** can be checked or done by a subagent independently, 
    - Delete, which reloads the people data, then shows the inline `Confirm`. When `onlyHere > 0`, it reads "N updates are shared only with X" and offers a radio, Family members only (the default) or Other groups, with checkboxes for the other groups.
 7. **Stale groups in the post form.** `src/pages/Feed.tsx`: when a post or save returns 409, reload the feed so the group checkboxes are current, and keep the draft.
 8. **Check by hand and ship.** On the preview, as the test family member, with a second `+` address as a supporter: create two groups, add the supporter, post to one group, and check the supporter sees it and doesn't see a post to the other. Remove them from the group and check it's gone on their next check. Delete a group with each audience choice and check the labels. Then typecheck, test, open the PR, and send the preview link.
+   Done (locally): an independent verifier found no leaks, re-proved three rules, and clicked through creating, renaming, adding, removing, posting to a group, and deleting with each audience choice, at 360px with the real handlers. Every group write takes `lockGroups` first, except the membership delete in `addFamilyMember`, which the person-row lock covers instead. The preview pass is Melissa's.
 
 ## What we're cutting
 

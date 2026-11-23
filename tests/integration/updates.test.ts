@@ -122,7 +122,7 @@ it("shows body when it no longer matches content, as after an edit by older code
 it("converts an update with no content from its body, linking web addresses", async () => {
   const { family, people: [ana] } = await makeFamily(db, "Rivera");
   await db.update.create({
-    data: { familyId: family.id, authorId: ana!.id, body: 'She said "hi" \\o/\n\nSee https://example.com.' },
+    data: { familyId: family.id, authorId: ana!.id, audience: "everyone", body: 'She said "hi" \\o/\n\nSee https://example.com.' },
   });
   const [row] = await db.$queryRaw<{ isNull: boolean }[]>`SELECT content IS NULL AS "isNull" FROM "Update"`;
   expect(row!.isNull).toBe(true);

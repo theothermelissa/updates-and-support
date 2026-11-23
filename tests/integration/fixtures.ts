@@ -69,9 +69,11 @@ export async function makeGroup(db: Db, familyId: string, name: string, memberId
 }
 
 // Waits until a transaction is queued on an advisory lock, such as a family's gate lock, or
-// the given work has finished without queuing. Pass "transactionid" to wait on a row lock instead. Tests use it to start work while holding a
-// lock themselves, so a race plays out the same way every time.
-export async function queuedOrDone(db: Db, work: Promise<unknown>, locktype = "advisory") {
+// the given work has finished without queuing. Pass "transactionid" to wait on a row lock instead,
+// or a list to wait on any of them. Tests use it to start work while holding a lock themselves, so
+// a race plays out the same way every time.
+export async function queuedOrDone(db: Db, work: Promise<unknown>, locktype: string | string[] = "advisory") {
+  const locktypes = Array.isArray(locktype) ? locktype : [locktype];
   let done = false;
   work.then(
     () => (done = true),
@@ -79,7 +81,7 @@ export async function queuedOrDone(db: Db, work: Promise<unknown>, locktype = "a
   );
   for (let i = 0; i < 400 && !done; i++) {
     const [row] = await db.$queryRaw<{ waiting: number }[]>`
-      SELECT count(*)::int AS waiting FROM pg_locks WHERE locktype = ${locktype} AND NOT granted`;
+      SELECT count(*)::int AS waiting FROM pg_locks WHERE locktype = ANY(${locktypes}) AND NOT granted`;
     if (row!.waiting > 0) return;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }

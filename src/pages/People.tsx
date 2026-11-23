@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { PageTitle } from "@/components/familyShell";
+import { Groups, type PeopleGroup } from "@/components/groups";
 import { Confirm, EmailInput, ErrorMessage, Field, PhoneLink } from "@/components/page";
 import { ReactionChooser } from "@/components/postSettings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -38,6 +39,8 @@ type People = {
   noteReactions: string[];
   allowNotesByDefault: boolean;
   privacyNotice: string | null;
+  // Sorted by name.
+  groups: PeopleGroup[];
 };
 
 function date(iso: string) {
@@ -48,7 +51,7 @@ function devices(count: number) {
   return count === 1 ? "1 device" : `${count} devices`;
 }
 
-// Family members' page for family members, supporters, note reactions, notes on new updates, the privacy banner, and the community question. The server
+// Family members' page for family members, supporters, groups, note reactions, notes on new updates, the privacy banner, and the community question. The server
 // refuses the data to anyone else; this page only shows what it's given.
 export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
   const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
@@ -65,7 +68,7 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
   const [privacyNoticeStatus, setPrivacyNoticeStatus] = useState<{ text: string; error: boolean } | null>(null);
 
   function load() {
-    api<People>(slug, "people").then(({ status, data }) => {
+    return api<People>(slug, "people").then(({ status, data }) => {
       if (status === 200) {
         setPeople(data);
         setQuestion(data.question);
@@ -79,7 +82,9 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
   }
 
   // Again when the reader's name changes, since the family members list shows it.
-  useEffect(load, [slug, me.person.name]);
+  useEffect(() => {
+    load();
+  }, [slug, me.person.name]);
 
   async function setRemoved(person: { id: string }, removed: boolean) {
     const { status, data } = await api<{ error?: string }>(slug, `people/${person.id}`, {
@@ -266,6 +271,10 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
           <SupporterTable rows={people.removed} action="Restore" onAction={(s) => setRemoved(s, false)} />
         </Section>
       )}
+
+      <Section title={`Groups (${people.groups.length})`}>
+        <Groups slug={slug} groups={people.groups} supporters={people.supporters} reload={load} />
+      </Section>
 
       <Section title="Reactions on notes">
         <p className="text-muted-foreground">

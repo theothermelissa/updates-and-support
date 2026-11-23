@@ -179,7 +179,7 @@ function AudienceChooser(props: {
 }
 
 // A native radio button, sized and colored to match the checkboxes.
-function Radio(props: { name: string; checked: boolean; onChange: () => void; disabled?: boolean }) {
+export function Radio(props: { name: string; checked: boolean; onChange: () => void; disabled?: boolean }) {
   return <input type="radio" className="size-4 shrink-0 accent-primary disabled:opacity-50" {...props} />;
 }
 

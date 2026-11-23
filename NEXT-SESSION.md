@@ -2,6 +2,19 @@
 
 Deferred ideas and follow-ups, highest priority first. Claude maintains this list; see "The next-session backlog" in `CLAUDE.md`.
 
+## Views (next features, in order)
+
+Decided with Melissa for her own family's site; each becomes its own spec, plan, and PR after group management ships. The existing family's site keeps its community question and sees none of this.
+
+- **2026-11-23** — Invite-only sites.
+  A per-site setting: no community question and no anonymous readers. The signed-out page shows the site's (later the View's) name and a "Request an invite" form (name, email, optional message). Requests email the family's admins only (see the next entry), who approve them into one or more groups on the People page. Everyone signs in by email link. On these sites every update is shared with groups ("All groups" is a choice); "Everyone" isn't offered.
+- **2026-11-23** — Non-admin family members.
+  A family member who can post, leave notes, and see supporters, but doesn't manage people, groups, or settings, and doesn't get invite-request emails. Until this exists, Melissa will turn off that family member's notifications by hand.
+- **2026-11-23** — Notes and reactions per group.
+  Each group sees only notes left by its own members; family members see every note together. A family member's note is seen by the update's whole audience. Reactions: a reader sees names for reactions from their own group and anonymous counts for other groups; family members see every name.
+- **2026-11-23** — Views: a name, branding, and domain per group.
+  A View is a group with its own front door: name, accent color, maybe a logo, and an optional custom domain. On a View's domain a reader sees only updates shared with that View's group, and emails link to that domain under that name. The domain only narrows what's shown and never grants access. Family members post from an admin domain that also serves the family's own View to close relatives and friends. Each domain is added in Vercel by hand and attached with an operator script; real domains never go in the repo. Don't attach the admin domain to the Vercel project before this ships: `ROOT_FAMILY_SLUG` would show the existing family at its root. If its DNS goes through Cloudflare, keep records DNS-only so no proxy decrypts the app's traffic.
+
 ## Privacy and security
 
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
