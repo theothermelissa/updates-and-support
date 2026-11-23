@@ -189,6 +189,15 @@ describe("an update outside the audience is not found everywhere", () => {
     expect(await db.reaction.count({ where: { personId: s.hal.id, updateId: s.n } })).toBe(0);
   });
 
+  it("refuses a reaction the hidden update doesn't allow as not found, not as unavailable", async () => {
+    const s = await setUp();
+    await db.update.update({ where: { id: s.n }, data: { reactionKinds: [] } });
+    const missing = await refusal(setReaction(db, s.hal, { updateId: "no-such-update", kind: "heart" }));
+    expect(await refusal(setReaction(db, s.hal, { updateId: s.n, kind: "heart" }))).toEqual(missing);
+    // Gia can see N, so she gets the real answer: the update exists and allows no reactions.
+    expect((await refusal(setReaction(db, s.gia, { updateId: s.n, kind: "heart" }))).status).toBe(400);
+  });
+
   it("refuses reacting to a note on it", async () => {
     const s = await setUp();
     const { note: giaNote } = await note(s.gia, s.n);
