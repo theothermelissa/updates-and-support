@@ -10,8 +10,8 @@ The app hosts many families. Each family has its own private site, its own suppo
 
 ## People
 
-- **Family Member**: posts, edits, and deletes updates, and manages the family's supporters and family members. Every family member has the same permissions; the person the updates are about is simply one of the family members.
-- **Supporter**: someone in the family's support network. Reads updates, reacts and leaves notes, and can get an email when a new one is posted.
+- **Family Member**: posts, edits, and deletes updates, and manages the family's supporters, family members, and groups. Every family member has the same permissions; the person the updates are about is simply one of the family members.
+- **Supporter**: someone in the family's support network. Reads the updates shared with them, reacts and leaves notes, and can get an email when a new one is posted.
 - **Operator**: the person running the app (Melissa). Creates and renames families with command-line scripts. The operator is not a role inside the app.
 
 A person who is both a supporter and a family member of different families has a separate, unrelated record in each.
@@ -24,17 +24,18 @@ A person who is both a supporter and a family member of different families has a
 - Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
 - Family members add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
-- Family members post, edit, and delete updates with simple formatting (bold, italic, strikethrough, links, lists, and quotes); everyone signed in to the family reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
+- Family members post, edit, and delete updates with simple formatting (bold, italic, strikethrough, links, lists, and quotes); everyone they're shared with reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
+- Family members sort supporters into groups on the People page, and share an update with everyone (the default) or with one or more groups. Supporters never learn that groups, or updates outside their audience, exist. → [access.md](access.md#groups), [updates.md](updates.md#audience)
 - Photos in updates, with optional captions, up to six per update, once the operator turns photos on; test sites can use grey placeholder photos instead. → [updates.md](updates.md#photos)
 - A family member posts an update as a video of any length, up to 100 MB, with the same recorder as a video note. A video update has no text and can't be edited. → [updates.md](updates.md#video-updates)
-- Everyone signed in to the family can give each update and each note one reaction, and sees who reacted. Each update allows up to six emoji from the app's catalog, chosen by the family when posting (the usual six by default, or none); notes share one set the family chooses on the People page, the usual six by default. → [updates.md](updates.md#reactions)
-- Everyone signed in to the family can leave colored notes of support on an update, written or as a video of up to 60 seconds, and reads every note under its update and together on the family's wall. → [updates.md](updates.md#notes)
+- Everyone who can see an update can give it and each of its notes one reaction, and sees who reacted. Each update allows up to six emoji from the app's catalog, chosen by the family when posting (the usual six by default, or none); notes share one set the family chooses on the People page, the usual six by default. → [updates.md](updates.md#reactions)
+- Everyone who can see an update can leave colored notes of support on it, written or as a video of up to 60 seconds, and reads its notes under it and together on the family's wall. → [updates.md](updates.md#notes)
 - Family members can turn off new notes on any update, and choose on the People page whether new updates allow notes by default. → [updates.md](updates.md#allowing-notes)
 - Family members post ways to help, each with a formatted description, an optional date and time and a choice of whether offers need a name or an email, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered, and a family member can mark any request resolved, which shows the same check and stops new offers while keeping the ones made. → [updates.md](updates.md#resolving-a-request)
 - Family members can keep a formatted message at the top of How to help, with an introduction and optional "Do" and "Don't" lists, for everyone signed in to read. → [updates.md](updates.md#the-familys-message)
 - A privacy banner across the top of every page asks readers not to copy or screenshot what they read; family members can reword it for their own family. → [access.md](access.md#the-privacy-banner)
 - Supporters can keep a phone number on their record for the family to reach them; only family members see it. → [access.md](access.md#your-phone-number)
-- Family members, and supporters with a verified email, get a notification email when a new update is posted; the family member who posted it doesn't. → [updates.md](updates.md#notifications)
+- Family members, and supporters with a verified email in the update's audience, get a notification email when a new update is posted; the family member who posted it doesn't. → [updates.md](updates.md#notifications)
 
 ### Later
 
@@ -45,18 +46,21 @@ These are planned but not yet specified. Each gets its own area spec when it bec
 - For the wall of notes: unread markers, filtering by supporter and time, text search, and editing a note.
 - Supporters sharing contact details with each other, and reaching out for their own support.
 - Supporters deleting their own record.
+- Public updates, readable without signing in.
+- Posting one update to more than one family's site.
+- Scheduling an update to post later.
 
 ## Product-wide rules
 
 These apply to every page, endpoint, and feature.
 
-- **Health information is sensitive.** Update content is shown only to people signed in to that family, and only the server decides who that is. See [access.md](access.md).
+- **Health information is sensitive.** An update, and everything on it, is shown only to people signed in to that family who are in its audience, and only the server decides who that is. See [access.md](access.md).
 - **Families are isolated.** Being signed in to one family grants nothing in another, and no page or response reveals one family's data to another family's members or supporters.
 - **No third-party tracking.** No analytics, tracking pixels, ad scripts, or third-party embeds on any page. Videos play in the browser's own video player, never Cloudinary's.
 - **Everything is served from the app's own domain, except photos and videos.** Fonts, scripts, styles, and images are bundled with the app. The exceptions are photos in updates and videos, in updates and in notes, which Cloudinary stores and serves (see [updates.md](updates.md#photos), [updates.md](updates.md#video-updates), and [updates.md](updates.md#video-notes)); pages send it no referrer, so Cloudinary never learns which family's page a request came from.
 - **Content is never inserted as HTML.** Updates, the family's message, and ways to help are stored as checked documents and drawn by the app's own code, so nothing a family member writes or pastes can run as code on a reader's page.
 - **Not indexable.** Every page sends `noindex`, and `robots.txt` disallows all crawling.
-- **Emails carry no update content.** Notification and sign-in emails name the family and contain a link, nothing more, because emails are forwarded and shown in lock-screen previews. The exceptions are how many photos a new update has, and that a new update is a video.
+- **Emails carry no update content.** Notification and sign-in emails name the family and contain a link, nothing more, because emails are forwarded and shown in lock-screen previews. The exceptions are how many photos a new update has, and that a new update is a video. No email says who an update is shared with.
 - **Email is sent through Resend** from a subdomain of `orbul.com`, so deliverability problems cannot affect the root domain.
 
 ## Look and feel
@@ -71,5 +75,5 @@ The app follows the visual language of Vercel's Geist design system: the Geist S
 
 ## Area specs
 
-- [access.md](access.md): families, the community question, supporter and family member sign-in, sessions, names and phone numbers, managing people, and the privacy banner.
-- [updates.md](updates.md): posting, editing, and deleting updates, photos, video updates, the feed, reactions, notes, ways to help, and notifications.
+- [access.md](access.md): families, the community question, supporter and family member sign-in, sessions, names and phone numbers, managing people, groups, and the privacy banner.
+- [updates.md](updates.md): posting, editing, and deleting updates, audiences, photos, video updates, the feed, reactions, notes, ways to help, and notifications.

@@ -1,3 +1,4 @@
+import { visibleUpdates } from "./audience.js";
 import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import { validName } from "./families.js";
@@ -33,11 +34,12 @@ export type NoteView = {
   mine: boolean;
 } & ReactionsView;
 
-// The notes anyone signed in to a family may see: on its updates, by its people, and not by
-// someone removed. Filtered by the author's family too, rather than trusting how notes were
-// written. The wall, the feed, and deletion all use it, so they can't drift apart.
-export function visibleNotes(familyId: string): Prisma.NoteWhereInput {
-  return { update: { familyId }, author: { familyId, removedAt: null } };
+// The notes this person may see: on updates they may see (see visibleUpdates), by their
+// family's people, and not by someone removed. Filtered by the author's family too, rather than
+// trusting how notes were written. The wall, the feed, reactions, and deletion all use it, so
+// they can't drift apart.
+export function visibleNotes(person: Person): Prisma.NoteWhereInput {
+  return { update: visibleUpdates(person), author: { familyId: person.familyId, removedAt: null } };
 }
 
 // What to load for a note's view, including reactions from this family's people who haven't
@@ -173,6 +175,10 @@ export async function createNote(
       const [update] = await tx.$queryRaw<{ allowNotes: boolean }[]>`
         SELECT "allowNotes" FROM "Update" WHERE id = ${updateId} AND "familyId" = ${person.familyId} FOR SHARE`;
       if (!update) throw new RequestError(404, "Update not found");
+      // An update outside the person's audience behaves like one that doesn't exist. Checked
+      // before notes being off and the hourly limit, which would otherwise reveal it.
+      const visible = await tx.update.count({ where: { AND: [{ id: updateId }, visibleUpdates(person)] } });
+      if (visible === 0) throw new RequestError(404, "Update not found");
       if (!update.allowNotes) throw new RequestError(403, "Notes are turned off for this update");
 
       const since = new Date(Date.now() - 60 * 60 * 1000);
@@ -253,7 +259,7 @@ export async function lockUnusedVideo(tx: Prisma.TransactionClient, personId: st
 // Every visible note in the person's family, newest first, for the wall.
 export async function listNotes(db: Db, person: Person, store: VideoStore = cloudinaryStore): Promise<NoteView[]> {
   const notes = await db.note.findMany({
-    where: visibleNotes(person.familyId),
+    where: visibleNotes(person),
     orderBy: { createdAt: "desc" },
     select: noteSelect(person.familyId),
   });
@@ -265,10 +271,8 @@ export async function listNotes(db: Db, person: Person, store: VideoStore = clou
 // they can't delete behaves like one that doesn't exist. A video note's video is deleted
 // first, so a failure there leaves the note to try again rather than a video nobody can delete.
 export async function deleteNote(db: Db, person: Person, id: string, store: VideoStore = cloudinaryStore): Promise<void> {
-  const where = {
-    id,
-    ...visibleNotes(person.familyId),
-    ...(person.role === "family" ? {} : { authorId: person.id }),
+  const where: Prisma.NoteWhereInput = {
+    AND: [{ id }, visibleNotes(person), person.role === "family" ? {} : { authorId: person.id }],
   };
   const note = await db.note.findFirst({ where, select: { videoId: true } });
   if (!note) throw new RequestError(404, "Note not found");

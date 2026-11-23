@@ -1,3 +1,4 @@
+import { canSeeUpdate } from "./audience.js";
 import { newVerificationLink } from "./auth.js";
 import type { Db } from "./db.js";
 import { appUrl, notificationEmail, verificationEmail, type SendEmails } from "./email.js";
@@ -7,27 +8,37 @@ import type { Person } from "./generated/prisma/client.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Emails everyone in the family that there's a new update, with how many photos it has: every
-// opted-in, active family member but its author, and every verified, opted-in, active supporter.
-// Family members aren't verified first, since they're added on purpose.
-export async function notifyNewUpdate(
-  db: Db,
-  send: SendEmails,
-  familyId: string,
-  authorId: string,
-  photos = 0,
-  video = false,
-): Promise<void> {
+// Emails the people who can see a new update (see canSeeUpdate) that it's there, with how many
+// photos it has: every opted-in, active family member but its author, and every verified,
+// opted-in, active supporter in its audience. Family members aren't verified first, since
+// they're added on purpose. The email never names the update's audience.
+export async function notifyNewUpdate(db: Db, send: SendEmails, updateId: string, photos = 0, video = false): Promise<void> {
+  const update = await db.update.findUniqueOrThrow({
+    where: { id: updateId },
+    select: { familyId: true, authorId: true, audience: true, groups: { select: { groupId: true } } },
+  });
+  const audience = canSeeUpdate({
+    familyId: update.familyId,
+    audience: update.audience,
+    groupIds: update.groups.map((g) => g.groupId),
+  });
   const family = await db.family.findUniqueOrThrow({
-    where: { id: familyId },
+    where: { id: update.familyId },
     include: {
       people: {
         where: {
-          id: { not: authorId },
-          email: { not: null },
-          OR: [{ role: "family" }, { emailVerifiedAt: { not: null } }],
-          notificationsOn: true,
-          removedAt: null,
+          AND: [
+            audience,
+            // These matter beyond the audience: canSeeUpdate doesn't check removal or
+            // verification for everyone-updates or for family members.
+            {
+              id: { not: update.authorId },
+              email: { not: null },
+              OR: [{ role: "family" }, { emailVerifiedAt: { not: null } }],
+              notificationsOn: true,
+              removedAt: null,
+            },
+          ],
         },
         select: { email: true, unsubscribeToken: true },
       },

@@ -18,8 +18,10 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 ## Features and fixes
 
+- **2026-11-23** — Help group members get signed in by email.
+  Group membership follows a supporter's record, so someone who only answered the question on a device sees just "Everyone" updates there until they sign in by email. A "you've been added" email with a sign-in link, or a prompt on the feed, would save the family explaining it. Came up while speccing groups.
 - **2026-10-17** — Let a family member change a video update's post settings.
-  Video updates can't be edited, so their reactions and "Allow notes" stay as posted. A settings-only edit would fix a regretted choice.
+  Video updates can't be edited, so their reactions, "Allow notes," and audience stay as posted. A settings-only edit would fix a regretted choice without deleting and reposting, which loses notes and re-sends emails.
 - **2026-10-15** — Let a supporter change an email they haven't confirmed.
   A typo in the feed's email prompt leaves them without notifications, and the only fix is signing out and answering again. Allow replacing an unverified email, cancelling its old verify link.
 - **2026-10-16** — Warn before leaving a page with an unposted update or note.
@@ -32,6 +34,10 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
   Family members now get new-update emails and can turn them off, but the People page shows notification status only for supporters, so the family can't see that one of them opted out. Cut for speed when family members started getting emails.
 - **2026-10-14** — Show People page messages next to the form that caused them.
   "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. Toasts (shadcn's `sonner`) are the natural fix.
+- **2026-11-23** — Keep the "new updates" button off the privacy banner on phones.
+  At 360px the floating "1 new update" pill sits over the banner's text at the top of the page. Seen while checking group audiences in the browser.
+- **2026-11-23** — Bring an update that newly comes into a reader's audience to their attention.
+  Widening an older update's audience counts it in "new updates," but it appears at its original date below newer ones, where the button doesn't scroll. Accepted in the groups plan.
 - **2026-10-16** — Restore scroll position on Back, and show a light loading state under the nav bar.
   Back lands at the top of the feed rather than where the reader was, and the content area is briefly empty while a page fetches.
 - **2026-10-17** — Tidy the How to Help editors.

@@ -1,3 +1,4 @@
+import { visibleUpdates } from "./audience.js";
 import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
@@ -59,8 +60,8 @@ export async function setReaction(
 
   const chosen = kind as string | null;
   if (hasUpdate) {
-    // Another family's update behaves like one that doesn't exist.
-    const update = await db.update.findFirst({ where: { id: updateId, familyId: person.familyId } });
+    // An update the person can't see, including another family's, behaves like one that doesn't exist.
+    const update = await db.update.findFirst({ where: { AND: [{ id: updateId }, visibleUpdates(person)] } });
     if (!update) throw new RequestError(404, "Update not found");
     if (chosen !== null && !update.reactionKinds.includes(chosen)) throw notAllowed();
     const key = { updateId, personId: person.id };
@@ -78,9 +79,10 @@ export async function setReaction(
     return;
   }
 
-  // A note that isn't shown, including another family's, behaves like one that doesn't exist.
+  // A note that isn't shown, including another family's or one on an update outside the
+  // person's audience, behaves like one that doesn't exist.
   const note = await db.note.findFirst({
-    where: { id: noteId as string, ...visibleNotes(person.familyId) },
+    where: { AND: [{ id: noteId as string }, visibleNotes(person)] },
   });
   if (!note) throw new RequestError(404, "Note not found");
   // visibleNotes put the note in the person's family, so this is the note's family's set.

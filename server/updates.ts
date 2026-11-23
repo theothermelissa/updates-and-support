@@ -1,4 +1,15 @@
 import type { Doc, Photo } from "../src/lib/doc.js";
+import {
+  audienceInclude,
+  audienceView,
+  lockGroups,
+  parseAudience,
+  visibleUpdates,
+  writeAudience,
+  type AudienceInput,
+  type AudienceView,
+  type LoadedAudience,
+} from "./audience.js";
 import { destroyPhotos, isFamilyPhotoId, photoUrl, type CloudinaryConfig } from "./cloudinary.js";
 import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
@@ -27,12 +38,20 @@ export type UpdateView = {
   editedAt: Date | null;
 };
 
-export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[] };
+// `audience` only for family members: a supporter is never sent an update's audience.
+export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[]; audience?: AudienceView };
 
-type UpdateInput = { content?: unknown; body?: unknown; video?: unknown; reactions?: unknown; allowNotes?: unknown };
+type UpdateInput = {
+  content?: unknown;
+  body?: unknown;
+  video?: unknown;
+  reactions?: unknown;
+  allowNotes?: unknown;
+  audience?: unknown;
+};
 
-// Everyone signed in to the family reads every update, newest first, with its reactions and
-// its notes, newest first.
+// The updates the person may see (see visibleUpdates), newest first, with their reactions and
+// their notes, newest first. Family members also get each update's audience.
 // Reactions are filtered by family on their own, rather than trusting how they were written,
 // and a removed person's reactions are hidden until they're restored.
 export async function listUpdates(
@@ -41,10 +60,13 @@ export async function listUpdates(
   store: VideoStore = cloudinaryStore,
   settings: PhotoSettings = NO_PHOTOS,
 ): Promise<FeedUpdate[]> {
+  const isFamily = person.role === "family";
   const updates = await db.update.findMany({
-    where: { familyId: person.familyId },
+    where: visibleUpdates(person),
     orderBy: { createdAt: "desc" },
     include: {
+      // Only loaded for family members, so a supporter's response can't carry a group's name.
+      groups: isFamily ? audienceInclude.groups : false,
       author: { select: { name: true } },
       photos: { select: { publicId: true } },
       reactions: {
@@ -52,7 +74,7 @@ export async function listUpdates(
         orderBy: { createdAt: "asc" },
         select: { kind: true, personId: true, person: { select: { name: true } } },
       },
-      notes: { where: visibleNotes(person.familyId), orderBy: { createdAt: "desc" }, select: noteSelect(person.familyId) },
+      notes: { where: visibleNotes(person), orderBy: { createdAt: "desc" }, select: noteSelect(person.familyId) },
     },
   });
   const noteReactions = await noteReactionSet(db, person.familyId);
@@ -63,6 +85,8 @@ export async function listUpdates(
       content: withPhotoLinks(shown.content, person.familyId, new Set(u.photos.map((p) => p.publicId)), settings.cloudinary ?? null),
       ...reactionsView(u.reactions, person.id, u.reactionKinds),
       notes: u.notes.map((n) => noteView(n, person.id, store, noteReactions)),
+      // Prisma can't type an include that depends on the role; groups are loaded when isFamily.
+      ...(isFamily ? { audience: audienceView(u as typeof u & LoadedAudience) } : {}),
     };
   });
 }
@@ -79,16 +103,31 @@ export async function createUpdate(
 ): Promise<UpdateView> {
   requireFamilyMember(person);
   const reactionKinds = reactionSetFrom(input);
+  // Absent is everyone, so a page loaded before audiences existed still posts.
+  const audience = parseAudience(input.audience) ?? "everyone";
   const allowNotes = allowNotesFrom(input) ?? (await allowNotesByDefault(db, person.familyId));
-  if (input.video !== undefined) return createVideoUpdate(db, person, input, reactionKinds, allowNotes, notifyWith, store);
+  if (input.video !== undefined) {
+    return createVideoUpdate(db, person, input, reactionKinds, allowNotes, audience, notifyWith, store);
+  }
   const { content, body } = contentFrom(input, settings, { familyId: person.familyId });
   const ids = [...publicIdsIn(content)];
   const update = await savePhoto(async () =>
     db.$transaction(async (tx) => {
+      // The groups lock comes first, before any row lock (see lockGroups).
+      if (audience !== "everyone") await lockGroups(tx, person.familyId);
       const created = await tx.update.create({
-        data: { familyId: person.familyId, authorId: person.id, content, body, reactionKinds, allowNotes },
+        data: {
+          familyId: person.familyId,
+          authorId: person.id,
+          content,
+          body,
+          reactionKinds,
+          allowNotes,
+          audience: audienceColumn(audience),
+        },
         include: { author: { select: { name: true } } },
       });
+      if (audience !== "everyone") await writeAudience(tx, person.familyId, created.id, audience);
       if (ids.length > 0) {
         await tx.photo.createMany({ data: ids.map((publicId) => ({ updateId: created.id, publicId })) });
       }
@@ -97,7 +136,7 @@ export async function createUpdate(
   );
   if (notifyWith) {
     try {
-      await notifyNewUpdate(db, notifyWith, person.familyId, person.id, photoCount(content));
+      await notifyNewUpdate(db, notifyWith, update.id, photoCount(content));
     } catch (err) {
       console.error(`Notifications failed for family ${person.familyId}: ${(err as Error).message}`);
     }
@@ -113,6 +152,7 @@ async function createVideoUpdate(
   input: UpdateInput,
   reactionKinds: string[],
   allowNotes: boolean,
+  audience: AudienceInput,
   notifyWith: SendEmails | undefined,
   store: VideoStore,
 ): Promise<UpdateView> {
@@ -123,6 +163,8 @@ async function createVideoUpdate(
   let update;
   try {
     update = await db.$transaction(async (tx) => {
+      // The groups lock comes first, before the author's row lock (see lockGroups).
+      if (audience !== "everyone") await lockGroups(tx, person.familyId);
       const [author] = await tx.$queryRaw<{ role: string; removedAt: Date | null }[]>`
         SELECT "role"::text AS role, "removedAt" FROM "Person"
         WHERE id = ${person.id} AND "familyId" = ${person.familyId}
@@ -131,10 +173,20 @@ async function createVideoUpdate(
         throw new RequestError(403, "Only family members can do this");
       }
       await lockUnusedVideo(tx, person.id, videoId);
-      return tx.update.create({
-        data: { familyId: person.familyId, authorId: person.id, body: "[Video]", videoId, reactionKinds, allowNotes },
+      const created = await tx.update.create({
+        data: {
+          familyId: person.familyId,
+          authorId: person.id,
+          body: "[Video]",
+          videoId,
+          reactionKinds,
+          allowNotes,
+          audience: audienceColumn(audience),
+        },
         include: { author: { select: { name: true } } },
       });
+      if (audience !== "everyone") await writeAudience(tx, person.familyId, created.id, audience);
+      return created;
     });
   } catch (err) {
     if (err instanceof RequestError) throw err;
@@ -143,7 +195,7 @@ async function createVideoUpdate(
   }
   if (notifyWith) {
     try {
-      await notifyNewUpdate(db, notifyWith, person.familyId, person.id, 0, true);
+      await notifyNewUpdate(db, notifyWith, update.id, 0, true);
     } catch (err) {
       console.error(`Notifications failed for family ${person.familyId}: ${(err as Error).message}`);
     }
@@ -166,8 +218,12 @@ export async function editUpdate(
   // Absent leaves the update's set as it is.
   const reactionKinds = input.reactions === undefined ? undefined : parseReactionSet(input.reactions);
   const allowNotes = allowNotesFrom(input);
+  // Absent keeps the update's audience, including family members only, and takes no groups lock.
+  const audience = parseAudience(input.audience);
   const { update, dropped } = await savePhoto(() =>
     db.$transaction(async (tx) => {
+      // The groups lock comes first, before the update's row lock (see lockGroups).
+      if (audience !== undefined) await lockGroups(tx, person.familyId);
       const [row] = await tx.$queryRaw<{ id: string; videoId: string | null }[]>`
         SELECT id, "videoId" FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
       if (!row) throw new RequestError(404, "Update not found");
@@ -183,6 +239,7 @@ export async function editUpdate(
       if (added.length > 0) {
         await tx.photo.createMany({ data: added.map((publicId) => ({ updateId: id, publicId })) });
       }
+      if (audience !== undefined) await writeAudience(tx, person.familyId, id, audience);
       const updated = await tx.update.update({
         where: { id },
         data: { content, body, reactionKinds, allowNotes, editedAt: new Date() },
@@ -248,10 +305,23 @@ async function allowNotesByDefault(db: Db, familyId: string): Promise<boolean> {
   return family.allowNotesByDefault;
 }
 
-// What the post form starts from: for family members only, since only they post.
-export async function newUpdateDefaults(db: Db, person: Person): Promise<{ allowNotesByDefault: boolean } | null> {
+// What the post form starts from, including the family's groups, sorted by name: for family
+// members only, since only they post, and a supporter is never sent a group's name.
+export async function newUpdateDefaults(
+  db: Db,
+  person: Person,
+): Promise<{ allowNotesByDefault: boolean; groups: { id: string; name: string }[] } | null> {
   if (person.role !== "family") return null;
-  return { allowNotesByDefault: await allowNotesByDefault(db, person.familyId) };
+  const groups = await db.group.findMany({ where: { familyId: person.familyId }, select: { id: true, name: true } });
+  return {
+    allowNotesByDefault: await allowNotesByDefault(db, person.familyId),
+    groups: groups.sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+// The stored column for a requested audience; writeAudience then stores its groups.
+function audienceColumn(audience: AudienceInput): "everyone" | "groups" {
+  return audience === "everyone" ? "everyone" : "groups";
 }
 
 // A photo already stored for another update hits the unique public id. Nothing is saved.

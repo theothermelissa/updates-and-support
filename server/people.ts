@@ -105,6 +105,8 @@ export async function addFamilyMember(
         },
       });
       await tx.session.deleteMany({ where: { personId: existing.id } });
+      // Family members are never in a group: they see every update.
+      await tx.groupMember.deleteMany({ where: { personId: existing.id } });
       return existing.role === "supporter" ? "promoted" : "restored";
     });
   } catch (err) {
