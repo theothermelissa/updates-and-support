@@ -60,19 +60,23 @@ Each update has an **audience**, the people who can see it:
 
 - **Everyone**: everyone signed in to the family. This is the default, and the only audience a family without groups ever uses.
 - **One or more groups** (see [access.md](access.md#groups)): family members, plus the supporters in at least one of those groups who have a verified email and haven't been removed.
-- **Family members only**: an update gets this audience only when the one group it was shared with is deleted and the family chooses it (see [access.md](access.md#deleting-a-group)). The post form never offers it.
+- **Family members only**: on an invite-only family, a choice when posting or editing. Elsewhere, an update gets this audience only when the one group it was shared with is deleted and the family chooses it (see [access.md](access.md#deleting-a-group)), and the post form never offers it.
+
+On an invite-only family (see [access.md](access.md#invite-only-families)), "Everyone" means every supporter the family has added, since no one can read there without being added.
 
 Family members see every update, whatever its audience. Everything on an update stays inside its audience: its photos, its video, its notes, and the reactions on it and on its notes are seen only by people who can see the update, and only they can react or leave a note. To anyone else the update doesn't exist (see [access.md](access.md#groups-are-invisible-to-supporters)).
 
 **Choosing it.** Once the family has at least one group, Post settings starts with **"Who can see this"**: **Everyone**, selected by default, or **Only these groups**, which shows a checkbox for each of the family's groups, at least one of which must be checked to post. Post settings' button then shows the audience as its first icon: two people for Everyone, or a padlock otherwise, which screen readers hear as "Everyone," "Only some groups," or "Family members only." While the audience is groups, "Notify everyone by email" reads "Notify these groups by email," and its bell is heard as "Emails these groups." A family without groups sees none of this.
 
-**Changing it.** Editing a text update shows its audience and can change it to Everyone or to any groups. An update shared with family members only shows that as a third choice, selected, until it's changed. Changing an audience never sends emails, even when it widens. Notes and reactions already on the update stay, including ones left by people outside the new audience, and are shown to whoever can now see it. A video update can't be edited, so its audience stays as posted, except when a group is deleted; to change it, delete it and post it again.
+An invite-only family always sees "Who can see this," even with no groups yet: **Everyone**, selected by default, **Family members only**, and, once it has groups, **Only these groups**. Family members only shows the padlock, and its email checkbox reads "Notify family members by email."
+
+**Changing it.** Editing a text update shows its audience and can change it to Everyone or to any groups. An update shared with family members only shows that as a third choice, selected, until it's changed; an invite-only family always has that choice. Changing an audience never sends emails, even when it widens. Notes and reactions already on the update stay, including ones left by people outside the new audience, and are shown to whoever can now see it. A video update can't be edited, so its audience stays as posted, except when a group is deleted; to change it, delete it and post it again.
 
 If a chosen group is deleted while the form is open, posting or saving is refused with "A group you chose was deleted. Please choose again," and the form keeps the update.
 
 **Telling them apart.** In the feed, family members see a small, muted label under the author and time on every update not shared with everyone, such as "Shared with Investors, Neighbors" or "Family members only." Supporters never see a label, and the server never sends them an update's audience.
 
-Only family members choose or change an audience; the server refuses anyone else, and accepts only the family's own groups.
+Only family members choose or change an audience; the server refuses anyone else, accepts only the family's own groups, and accepts Family members only as a choice only from an invite-only family.
 
 ## Photos
 
