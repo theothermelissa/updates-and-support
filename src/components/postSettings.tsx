@@ -21,9 +21,11 @@ import { inCatalogOrder, isUsual, MAX_REACTIONS, reactionFor, REACTIONS, USUAL_R
 // A button showing an update's settings as icons, which opens them below it.
 // Closed when it mounts; the form remounts it (with a new key) to start fresh. Without
 // onNotify, as when editing, it has no notify setting. "Who can see this" shows once the family
-// has a group or the audience isn't everyone; without onAudience it never shows.
+// has a group or the audience isn't everyone, and always on an invite-only family; without
+// onAudience it never shows.
 export function PostSettings(props: {
   groups?: Group[];
+  inviteOnly?: boolean;
   audience?: AudienceChoice;
   onAudience?: (audience: AudienceChoice) => void;
   notify?: boolean;
@@ -42,10 +44,14 @@ export function PostSettings(props: {
   const usual = !choosing;
   const groups = props.groups ?? [];
   const audience = props.onAudience ? props.audience : undefined;
-  const choosingAudience = audience !== undefined && (groups.length > 0 || audience.mode !== "everyone");
+  const inviteOnly = props.inviteOnly ?? false;
+  const choosingAudience =
+    audience !== undefined && (inviteOnly || groups.length > 0 || audience.mode !== "everyone");
   const toGroups = choosingAudience && audience.mode === "groups";
-  // Family members only stays a choice only for an update that already has it.
-  const [offerFamily] = useState(audience?.mode === "family");
+  const toFamily = choosingAudience && audience.mode === "family";
+  // An invite-only family can always choose Family members only. Elsewhere it stays a choice
+  // only for an update that already has it.
+  const [offerFamily] = useState(inviteOnly || audience?.mode === "family");
 
   return (
     <>
@@ -65,7 +71,17 @@ export function PostSettings(props: {
             </SettingIcon>
           )}
           {props.onNotify && (
-            <SettingIcon label={props.notify ? (toGroups ? "Emails these groups" : "Emails everyone") : "No email"}>
+            <SettingIcon
+              label={
+                props.notify
+                  ? toGroups
+                    ? "Emails these groups"
+                    : toFamily
+                      ? "Emails family members"
+                      : "Emails everyone"
+                  : "No email"
+              }
+            >
               {props.notify ? <BellCheckIcon /> : <BellMinusIcon />}
             </SettingIcon>
           )}
@@ -86,6 +102,7 @@ export function PostSettings(props: {
               audience={audience}
               onAudience={props.onAudience!}
               offerFamily={offerFamily}
+              familyFirst={inviteOnly}
               disabled={disabled}
             />
           )}
@@ -96,7 +113,11 @@ export function PostSettings(props: {
                 onCheckedChange={(checked) => props.onNotify!(checked === true)}
                 disabled={disabled}
               />
-              {toGroups ? "Notify these groups by email" : "Notify everyone by email"}
+              {toGroups
+                ? "Notify these groups by email"
+                : toFamily
+                  ? "Notify family members by email"
+                  : "Notify everyone by email"}
             </Label>
           )}
           <ReactionChooser
@@ -127,12 +148,14 @@ const AUDIENCE_LABELS = {
 } as const;
 
 // "Who can see this": Everyone, or Only these groups with a checkbox per group, plus Family
-// members only when offerFamily. The checked groups are kept while another choice is selected.
+// members only when offerFamily: right after Everyone when familyFirst (an invite-only family),
+// otherwise last. The checked groups are kept while another choice is selected.
 function AudienceChooser(props: {
   groups: Group[];
   audience: AudienceChoice;
   onAudience: (audience: AudienceChoice) => void;
   offerFamily: boolean;
+  familyFirst: boolean;
   disabled?: boolean;
 }) {
   const { groups, audience, onAudience, disabled } = props;
@@ -140,6 +163,12 @@ function AudienceChooser(props: {
   const choose = (mode: AudienceChoice["mode"]) => onAudience({ ...audience, mode });
   const toggle = (id: string, on: boolean) =>
     onAudience({ ...audience, ids: on ? [...audience.ids, id] : audience.ids.filter((x) => x !== id) });
+  const family = props.offerFamily && (
+    <Label>
+      <Radio name={name} checked={audience.mode === "family"} onChange={() => choose("family")} disabled={disabled} />
+      Family members only
+    </Label>
+  );
 
   return (
     <fieldset className="space-y-3">
@@ -148,6 +177,7 @@ function AudienceChooser(props: {
         <Radio name={name} checked={audience.mode === "everyone"} onChange={() => choose("everyone")} disabled={disabled} />
         Everyone
       </Label>
+      {props.familyFirst && family}
       {groups.length > 0 && (
         <Label>
           <Radio name={name} checked={audience.mode === "groups"} onChange={() => choose("groups")} disabled={disabled} />
@@ -168,12 +198,7 @@ function AudienceChooser(props: {
           ))}
         </div>
       )}
-      {props.offerFamily && (
-        <Label>
-          <Radio name={name} checked={audience.mode === "family"} onChange={() => choose("family")} disabled={disabled} />
-          Family members only
-        </Label>
-      )}
+      {!props.familyFirst && family}
     </fieldset>
   );
 }

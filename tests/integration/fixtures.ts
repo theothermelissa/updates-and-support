@@ -2,7 +2,7 @@ import type { Db } from "../../server/db.js";
 import type { Email, SendEmail, SendEmails } from "../../server/email.js";
 import { createFamily } from "../../server/families.js";
 import { addEmail, answerGate, type Client } from "../../server/gate.js";
-import { verifySupporter } from "../../server/people.js";
+import { addSupporter, verifySupporter } from "../../server/people.js";
 import type { Family } from "../../server/generated/prisma/client.js";
 import type { VideoStore } from "../../server/videos.js";
 
@@ -12,10 +12,12 @@ export async function resetDb(db: Db) {
   );
 }
 
-// A family of fictional family members, named after the given surname.
-export async function makeFamily(db: Db, surname: string, firstNames = ["Ana"]) {
+// A family of fictional family members, named after the given surname. An invite-only one has
+// no question.
+export async function makeFamily(db: Db, surname: string, firstNames = ["Ana"], { inviteOnly = false } = {}) {
   const family = await createFamily(db, {
     displayName: `The ${surname} Family`,
+    inviteOnly,
     question: "What is the dog's name?",
     acceptedAnswers: ["Biscuit"],
     members: firstNames.map((first) => ({
@@ -56,6 +58,17 @@ export async function joinWithEmail(db: Db, family: Family, name: string, send?:
 export async function verifiedSupporter(db: Db, family: Family, name: string) {
   const { person } = await joinWithEmail(db, family, name);
   const member = await db.person.findFirstOrThrow({ where: { familyId: family.id, role: "family", removedAt: null } });
+  await verifySupporter(db, member, person.id, true);
+  return db.person.findUniqueOrThrow({ where: { id: person.id } });
+}
+
+// A supporter a family member added by email, such as "gia@example.com" for "Gia", with their
+// email verified by that family member. The only way into an invite-only family.
+export async function addedSupporter(db: Db, family: Family, name: string) {
+  const member = await db.person.findFirstOrThrow({ where: { familyId: family.id, role: "family", removedAt: null } });
+  const email = `${name.toLowerCase()}@example.com`;
+  await addSupporter(db, fakeMailer().send, member, { name, email });
+  const person = await db.person.findUniqueOrThrow({ where: { familyId_email: { familyId: family.id, email } } });
   await verifySupporter(db, member, person.id, true);
   return db.person.findUniqueOrThrow({ where: { id: person.id } });
 }

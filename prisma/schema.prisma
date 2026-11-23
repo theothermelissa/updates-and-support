@@ -30,6 +30,10 @@ model Family {
   allowNotesByDefault Boolean @default(true)
   // The family's wording for the privacy banner atop every signed-in page; null shows the standard wording.
   privacyNotice   String?
+  // Set only when the family is created, and never changed. An invite-only family has no community
+  // question (its question is empty and it has no accepted answers): supporters are added by a
+  // family member and sign in by email.
+  inviteOnly      Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   people       Person[]

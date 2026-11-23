@@ -1,9 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { getSession, requestSignInLink, signInWithLink, verifyEmail } from "../../server/auth.js";
+import { getSession, newVerificationLink, requestSignInLink, signInWithLink, verifyEmail } from "../../server/auth.js";
 import { answerGate, BROWSER_LIMIT, NETWORK_LIMIT, signInWithVerifyLink, type Client } from "../../server/gate.js";
 import { addFamilyMember, addSupporter, setRemoved } from "../../server/people.js";
 import { createTestDb } from "./db.js";
-import { fakeMailer, joinWithEmail, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
+import { addedSupporter, fakeMailer, joinWithEmail, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -206,5 +206,23 @@ describe("signing in with a verification link and the answer", () => {
     expect(await verifyEmail(db, family.slug, token)).toEqual({ canSignIn: true });
     const result = await signInWithVerifyLink(db, family, phone, token, "Biscuit");
     expect(result.result).toBe("signed-in");
+  });
+});
+
+describe("an invite-only family", () => {
+  it("never signs in with a verification link and an answer, leaving the link unused", async () => {
+    const { family } = await makeFamily(db, "Okafor", ["Chidi"], { inviteOnly: true });
+    const gia = await addedSupporter(db, family, "Gia");
+    // Neither exists in an invite-only family; both are made here so only the invite-only rule
+    // stands between this request and a session.
+    const withAnswer = await db.family.update({ where: { id: family.id }, data: { acceptedAnswers: ["Biscuit"] } });
+    const link = newVerificationLink();
+    const stored = await db.magicLink.create({ data: { personId: gia.id, ...link.data } });
+    const sessionsBefore = await db.session.count();
+
+    const phone: Client = { browserId: "phone", network: "203.0.113.9" };
+    expect(await signInWithVerifyLink(db, withAnswer, phone, link.token, "Biscuit")).toEqual({ result: "invalid" });
+    expect(await db.session.count()).toBe(sessionsBefore);
+    expect((await db.magicLink.findUniqueOrThrow({ where: { id: stored.id } })).usedAt).toBeNull();
   });
 });

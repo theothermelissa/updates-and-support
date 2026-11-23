@@ -8,10 +8,10 @@ A family has:
 
 - a **display name**, such as "Sam's Updates" or "The Rivera Family". It heads the family's pages, is the browser tab's title on them, and names the family in emails, in phrases like "Sam's Updates has a new update."
 - a **slug**: the family's address. The family's site lives at `/f/<slug>`. A new family's slug is a name plus an 8-character random suffix, such as `rivera-k3f9m2xq`. The suffix keeps family addresses from being guessed or listed.
-- a **community question** and one or more **accepted answers**
+- a **community question** and one or more **accepted answers**, unless the family is invite-only (see "Invite-only families")
 - its family members, supporters, groups, and updates
 
-The operator creates a family with a script, giving the display name, the question, the accepted answers, and the name and email of each family member (at least one). The script prints the family's address.
+The operator creates a family with a script, giving the display name, whether the family is invite-only, the question and accepted answers (for a family that isn't), and the name and email of each family member (at least one). The script prints the family's address. Whether a family is invite-only is chosen only when it's created and never changes.
 
 The operator can rename a family with another script, giving a new display name, a new slug, or both.
 - A new slug is words of lowercase letters and numbers joined by single hyphens, such as `for-sam`, and no other family may have it.
@@ -31,6 +31,16 @@ Two settings name real families, so they live in the hosting's settings rather t
 Each email belongs to at most one person in a family: someone is either a family member or a supporter there, never both. A supporter who has only answered the question has no name or email (see "Joining"); one who leaves a note has a name but may have no email.
 
 A visit to `/f/<slug>` for a slug that does not exist, and isn't redirected, shows the same generic "not found" page as any other unknown address.
+
+## Invite-only families
+
+An invite-only family has no community question and no anonymous readers. Every supporter is someone the family added, and everyone signs in by email. The rest of this spec applies except where this section says otherwise; everything about the community question (joining by answering, wrong-answer limits, the confirmation page's question, changing the question, and the device count) doesn't.
+
+- **The signed-out page.** A visitor who isn't signed in sees the family's display name, a line saying the site is private and that people who've been invited can sign in with their email, and an email box with a "Send me a sign-in link" button. It sends a magic link exactly as "Sign in by email" does (see "Magic links"), and says "Check your email" whether or not the email is known. Nothing else about the family appears.
+- **No answers.** The server refuses every answer to an invite-only family's gate, and refuses to give it a question or answers, whatever the request says. The confirmation page never offers a question there; once confirmed, it links to the signed-out page.
+- **Adding a supporter.** A family member adds supporters on the People page as described in "Added by a family member," with one difference: the welcome email carries a **sign-in link**, not a confirmation link. It says the family added them, with the link, and says that it works once and expires in 7 days, and that after that they can sign in any time at the family's address with their email. Using it signs them in and marks their email verified, like any magic link. Removing the supporter cancels it, as it does every unused link.
+- **The People page** has no community question section and no count of devices without a verified email. Removing a supporter's confirmation doesn't mention changing the answer, because removal alone keeps them out.
+- **Audiences.** An invite-only family always chooses who sees each update, including before it has any groups (see [updates.md](updates.md#audience)).
 
 ## Supporters
 
@@ -289,7 +299,9 @@ The gate keeps out bots, crawlers, and casual strangers. It does not stop a dete
 
 So the app doesn't add friction, such as confirmation steps or forced sign-outs, to defend against someone who already knows the answer. Supporters are family and friends, many of them elderly, and every extra step costs them more than it stops an insider. When the family wants someone out, the remedy is to remove that person and change the answer. This limits only the gate: server-side authorization, keeping each family's data separate, and the tests for both are never relaxed.
 
-A slug chosen without the random suffix, such as `for-sam`, can be guessed, and the family shown at the site's root can be found by anyone who knows the site's address. Either way, the finder sees the family's display name and question, and can try answers within the wrong-answer limits.
+A slug chosen without the random suffix, such as `for-sam`, can be guessed, and the family shown at the site's root can be found by anyone who knows the site's address. Either way, the finder sees the family's display name and question, and can try answers within the wrong-answer limits. At an invite-only family's address, they see only its display name.
+
+An invite-only family's welcome email signs in whoever uses its link, once, for 7 days. Forwarded in that week, it lets the recipient read as that supporter instead, until the family removes them. This trades a little safety for a single step, since many supporters are elderly; the 15-minute link from "Sign in by email" is the safer path after that.
 
 Anyone who knows the answer can read without giving a name or email. The family sees how many devices are signed in without a verified email, but not who is behind them. If the number looks too high, or the family suspects the answer has spread, the fix is to change the answer, which signs all of them out.
 

@@ -80,6 +80,15 @@ export function welcomeEmail(to: string, familyName: string, link: string): Emai
   };
 }
 
+// An invite-only family's welcome: a sign-in link, since there's no question to answer.
+export function invitedEmail(to: string, familyName: string, links: { signIn: string; site: string }): Email {
+  return {
+    to,
+    subject: `You've been added to ${familyName}`,
+    text: `You've been added to ${familyName}. Sign in here:\n\n${links.signIn}\n\nThe link works once and expires in 7 days. After that, you can sign in any time at ${links.site} with your email. If you don't know this family, you can ignore this email.`,
+  };
+}
+
 export function verificationEmail(to: string, familyName: string, link: string): Email {
   return {
     to,

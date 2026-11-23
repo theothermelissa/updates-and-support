@@ -7,8 +7,9 @@ export type Group = { id: string; name: string };
 export type Audience = "everyone" | { groups: Group[] };
 
 // What Post settings' "Who can see this" holds. ids are the checked groups, kept while another
-// choice is selected so switching back finds them. "family" is offered only while it's the
-// update's current audience; the post form never starts there.
+// choice is selected so switching back finds them. An invite-only family can always choose
+// "family". Elsewhere it's offered only while it's the update's current audience, after its
+// group was deleted, and the post form never starts there.
 export type AudienceChoice = { mode: "everyone" | "groups" | "family"; ids: string[] };
 
 export const EVERYONE: AudienceChoice = { mode: "everyone", ids: [] };
@@ -29,15 +30,19 @@ export function canShare(choice: AudienceChoice, groups: Group[]): boolean {
   return choice.mode !== "groups" || chosenIds(choice, groups).length > 0;
 }
 
-// The request's `audience`. Family members only is never sent: it's kept by leaving it out.
-export function audienceBody(choice: AudienceChoice, groups: Group[]): "everyone" | { groups: string[] } | undefined {
+// The request's `audience`.
+export type AudienceBody = "everyone" | "family" | { groups: string[] };
+
+// The `audience` for a choice. The server accepts "family" only from an invite-only family;
+// elsewhere a family-only update keeps its audience by sending none (changedAudience).
+export function audienceBody(choice: AudienceChoice, groups: Group[]): AudienceBody {
   if (choice.mode === "everyone") return "everyone";
   if (choice.mode === "groups") return { groups: chosenIds(choice, groups) };
-  return undefined;
+  return "family";
 }
 
 // The `audience` to send with an edit, or undefined when it hasn't changed.
-export function changedAudience(from: AudienceChoice, to: AudienceChoice, groups: Group[]) {
+export function changedAudience(from: AudienceChoice, to: AudienceChoice, groups: Group[]): AudienceBody | undefined {
   if (from.mode === to.mode) {
     if (to.mode !== "groups") return undefined;
     const ids = chosenIds(to, groups);

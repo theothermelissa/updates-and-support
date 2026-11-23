@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "../api.js";
+import type { GateInfo } from "./Gate.js";
 
 type Answered = { result?: "signed-in" | "wrong" | "limited"; error?: string };
 
@@ -14,12 +15,15 @@ const MESSAGES = {
 
 // Verification and welcome emails link here. Only pressing the button confirms, because
 // email security scanners open links before the recipient does. Someone not signed in
-// here can then answer the community question to sign in; the link alone never does.
+// here can then answer the community question to sign in; the link alone never does. An
+// invite-only family has no question, so it links to its signed-out page instead.
 export function Verify({ slug }: { slug: string }) {
   // The token is after "#" in the link, so it never reaches a server's logs.
   const token = new URLSearchParams(location.hash.slice(1)).get("token") ?? "";
   const [state, setState] = useState<"ready" | "confirming" | "signed-in" | "question" | "confirmed" | "failed">("ready");
   const [question, setQuestion] = useState("");
+  // Where "sign in by email" goes once confirmed: an invite-only family's signed-out page.
+  const [signInPage, setSignInPage] = useState(`/f/${slug}/family`);
   const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,9 +33,13 @@ export function Verify({ slug }: { slug: string }) {
     const { status, data } = await api<{ canSignIn?: boolean }>(slug, "auth/verify", { method: "POST", body: { token } });
     if (status !== 200) return setState("failed");
     if ((await api(slug, "me")).status === 200) return setState("signed-in");
+    const gate = await api<GateInfo>(slug, "gate");
+    if (gate.data?.inviteOnly) {
+      setSignInPage(gate.data.home);
+      return setState("confirmed");
+    }
     if (!data.canSignIn) return setState("confirmed");
-    const gate = await api<{ question: string }>(slug, "gate");
-    setQuestion(gate.data.question);
+    setQuestion(gate.data.question ?? "");
     setState("question");
   }
 
@@ -47,7 +55,7 @@ export function Verify({ slug }: { slug: string }) {
     setMessage(data?.error ?? "Something went wrong. Please try again.");
   }
 
-  const signInByEmail = <a href={`/f/${slug}/family`}>sign in by email</a>;
+  const signInByEmail = <a href={signInPage}>sign in by email</a>;
 
   return (
     <PageShell title={["signed-in", "question", "confirmed"].includes(state) ? "Email confirmed" : "Confirm your email"}>

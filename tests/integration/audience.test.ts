@@ -12,7 +12,17 @@ import { hashToken, newToken } from "../../server/tokens.js";
 import { canSeeUpdate, GROUP_GONE } from "../../server/audience.js";
 import { createUpdate, editUpdate, listUpdates } from "../../server/updates.js";
 import { createTestDb } from "./db.js";
-import { answerCorrectly, fakeMailer, fakeVideoStore, joinWithEmail, makeFamily, makeGroup, resetDb, verifiedSupporter } from "./fixtures.js";
+import {
+  addedSupporter,
+  answerCorrectly,
+  fakeMailer,
+  fakeVideoStore,
+  joinWithEmail,
+  makeFamily,
+  makeGroup,
+  resetDb,
+  verifiedSupporter,
+} from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -529,5 +539,89 @@ describe("promotion", () => {
     expect(await db.groupMember.count({ where: { personId: s.pia.id } })).toBe(1);
     const promoted = await db.person.findUniqueOrThrow({ where: { id: s.gia.id } });
     expect(await seen(promoted)).toEqual(sorted(s.e, s.n, s.ni, s.f));
+  });
+});
+
+describe("an invite-only family", () => {
+  const FAMILY_ONLY = "Family members only, Zinnia-secret";
+
+  // The invite-only Okafor family (Chidi and Ada), with Gia, a verified supporter in both of its
+  // groups, so only "family members only" can keep an update from her.
+  async function okafor() {
+    const { family, people } = await makeFamily(db, "Okafor", ["Ada", "Chidi"], { inviteOnly: true });
+    const [ada, chidi] = people as [Person, Person];
+    const gia = await addedSupporter(db, family, "Gia");
+    await makeGroup(db, family.id, "Neighbors", [gia.id]);
+    await makeGroup(db, family.id, "Investors", [gia.id]);
+    return { family, ada, chidi, gia };
+  }
+
+  it("shows a family-only update to family members and to no supporter", async () => {
+    const o = await okafor();
+    const posted = await createUpdate(db, o.chidi, { body: FAMILY_ONLY, audience: "family" });
+    const everyone = await createUpdate(db, o.chidi, { body: "For everyone", audience: "everyone" });
+
+    expect(await seen(o.ada)).toEqual(sorted(posted.id, everyone.id));
+    expect(await seen(o.gia)).toEqual([everyone.id]);
+    const stored = await db.update.findUniqueOrThrow({ where: { id: posted.id }, include: { groups: true } });
+    expect({ audience: stored.audience, groups: stored.groups }).toEqual({ audience: "groups", groups: [] });
+    const [adaView] = (await listUpdates(db, o.ada)).filter((u) => u.id === posted.id);
+    expect(adaView?.audience).toEqual({ groups: [] });
+  });
+
+  it("refuses a supporter reacting to it or leaving a note on it as not found", async () => {
+    const o = await okafor();
+    const posted = await createUpdate(db, o.chidi, { body: FAMILY_ONLY, audience: "family" });
+    const missing = await refusal(setReaction(db, o.gia, { updateId: "no-such-update", kind: "heart" }));
+    expect(missing.status).toBe(404);
+    expect(await refusal(setReaction(db, o.gia, { updateId: posted.id, kind: "heart" }))).toEqual(missing);
+    expect(await refusal(note(o.gia, posted.id))).toMatchObject({ status: 404 });
+    expect(await db.reaction.count()).toBe(0);
+    expect(await db.note.count()).toBe(0);
+  });
+
+  it("emails family members other than the poster about it, and no supporter", async () => {
+    const o = await okafor();
+    const toFamily = fakeMailer();
+    await createUpdate(db, o.chidi, { body: FAMILY_ONLY, audience: "family" }, toFamily.sendMany);
+    expect(toFamily.sent.map((e) => e.to)).toEqual([o.ada.email]);
+
+    const toAll = fakeMailer();
+    await createUpdate(db, o.chidi, { body: "For everyone", audience: "everyone" }, toAll.sendMany);
+    expect(toAll.sent.map((e) => e.to).sort()).toEqual([o.ada.email, "gia@example.com"].sort());
+  });
+
+  it("hides an update from supporters once it's edited to family members only", async () => {
+    const o = await okafor();
+    const posted = await createUpdate(db, o.chidi, { body: "For everyone", audience: "everyone" });
+    expect(await seen(o.gia)).toEqual([posted.id]);
+
+    await editUpdate(db, o.ada, posted.id, { body: FAMILY_ONLY, audience: "family" });
+    expect(await seen(o.gia)).toEqual([]);
+    expect(await seen(o.chidi)).toEqual([posted.id]);
+  });
+
+  it("refuses a new update that doesn't say who can see it, creating nothing", async () => {
+    const o = await okafor();
+    expect(await refusal(createUpdate(db, o.chidi, { body: "Who sees this?" }))).toEqual({
+      status: 400,
+      message: "Choose who can see this update.",
+    });
+    expect(await db.update.count()).toBe(0);
+  });
+});
+
+describe("family members only, elsewhere", () => {
+  it("is refused as an audience to a family that isn't invite-only, changing nothing", async () => {
+    const s = await setUp();
+    const unknown = { status: 400, message: 'Expected audience to be "everyone" or { groups }' };
+    const before = await db.update.count();
+    const e = await db.update.findUniqueOrThrow({ where: { id: s.e } });
+
+    expect(await refusal(createUpdate(db, s.ana, { body: "Hidden from readers", audience: "family" }))).toEqual(unknown);
+    expect(await refusal(editUpdate(db, s.ana, s.e, { body: "Hidden from readers", audience: "family" }))).toEqual(unknown);
+    expect(await db.update.count()).toBe(before);
+    expect(await db.update.findUniqueOrThrow({ where: { id: s.e } })).toEqual(e);
+    expect(await seen(s.ned)).toContain(s.e);
   });
 });

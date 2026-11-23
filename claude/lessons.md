@@ -66,6 +66,7 @@ The local database holds several families, so `scripts/seed-preview.ts` refuses 
 
 **How to apply:**
 - Run `npm run db:deploy` first.
+- Melissa's terminal may be on Node 20, and her generated Prisma client (gitignored) goes stale after a schema change, which shows as "Unknown argument" for a new column. The `preview` commands check the Node version and regenerate the client; for anything else, tell her `nvm use` and `npx prisma generate`.
 - Make a fictional family by piping answers into `npm run family:create`.
 - To act as a family member without a sign-in email, write a scratchpad `.mts` script that calls the `server/` functions with absolute imports, and run it with `npx tsx --env-file=.env`. One that creates a `sign_in` link with `newSignInLink` and prints its `/sign-in#token=` URL uses the real flow; the page then needs its Sign in button pressed.
 - Before minting a sign-in link, open the family page in the browser pane: it keeps sessions between runs, and auto mode refuses to read a minted link's token back.
@@ -96,6 +97,14 @@ Melissa may ask for implementation by subagents so the main session stays free t
 ### Patterns that hide a removed access rule
 
 CLAUDE.md requires proving each access test fails with its rule removed. Three patterns hide a removed rule. A test can take a path that never reaches the rule: the check that a bad link costs no gate attempt passed with the order reversed, because it sent the *correct* answer, which never records an attempt. Next, a backstop check can mask the cleanup it backs up: removal's session and link deletion passed its test with the deletion gone, because `getSession` and `spendLink` refuse removed people anyway, so assert the cleanup directly. Last, a single concurrent race can come out right by timing alone: the family-member lock's test passed without the lock until it repeated the race 20 times. Where the rule is a lock, make the race deterministic instead: hold the lock in a test transaction, start the competing work, wait until it's queued in `pg_locks` (`queuedOrDone` in the test fixtures), then act and commit. The gate-lock tests work this way, and each one fails every time its lock is removed. Holding the lock in the test doesn't work when the unfixed code would also block on it, for example at a foreign-key check on a row the test locked; then pause the code mid-transaction instead, with a Prisma query extension that waits after the step in question (the magic-link removal race in `tests/integration/auth.test.ts`).
+
+### Never let a missing value default to a wider audience
+
+When the server fills in an omitted field, the default must be the narrowest safe choice, or the field must be required.
+
+**Why:** on invite-only families, the post form deliberately left out "Family members only" and the server read a missing audience as Everyone, so family-only posts would have gone to every supporter. The plan review caught it, not a test.
+
+**How to apply:** when adding a choice that narrows access, trace it from the form to the stored row, and make the server refuse a missing value wherever the widest default isn't intended. A later write can also mask a mapping (`writeAudience` rewrites the column `audienceColumn` set), so prove the rule where it actually takes effect.
 
 ### The local test database is shared between sessions
 

@@ -524,6 +524,73 @@ describe("adding supporters", () => {
   });
 });
 
+describe("an invite-only family", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  async function okafor() {
+    const { family, people: [chidi] } = await makeFamily(db, "Okafor", ["Chidi"], { inviteOnly: true });
+    return { family, chidi: chidi! };
+  }
+
+  function linksOf(email: string) {
+    return db.magicLink.findMany({ where: { person: { email } } });
+  }
+
+  it("refuses to set a question and answers, changing nothing", async () => {
+    const { family, chidi } = await okafor();
+    await expect(changeQuestion(db, chidi, { question: "What is the dog's name?", answers: ["Biscuit"] })).rejects.toMatchObject({
+      status: 403,
+      message: "This family is invite-only.",
+    });
+    expect(await db.family.findUniqueOrThrow({ where: { id: family.id } })).toMatchObject({ question: "", acceptedAnswers: [] });
+  });
+
+  it("welcomes an added supporter with a 7-day sign-in link, and no verification link", async () => {
+    const { family, chidi } = await okafor();
+    const mail = fakeMailer();
+    await addSupporter(db, mail.send, chidi, { name: "Tess", email: "tess@example.com" });
+
+    const links = await linksOf("tess@example.com");
+    expect(links.map((l) => l.purpose)).toEqual(["sign_in"]);
+    const lifetime = links[0]!.expiresAt.getTime() - Date.now();
+    expect(lifetime).toBeGreaterThan(7 * DAY - 60_000);
+    expect(lifetime).toBeLessThanOrEqual(7 * DAY);
+    expect(mail.sent.map((e) => e.to)).toEqual(["tess@example.com"]);
+    expect(mail.sent[0]!.subject).toBe("You've been added to The Okafor Family");
+    expect(mail.sent[0]!.text).toContain(`/f/${family.slug}/sign-in#token=`);
+    expect(mail.sent[0]!.text).toContain("expires in 7 days");
+  });
+
+  it("signs the added supporter in once with the welcome link, verifying their email", async () => {
+    const { family, chidi } = await okafor();
+    const mail = fakeMailer();
+    await addSupporter(db, mail.send, chidi, { name: "Tess", email: "tess@example.com" });
+    const token = tokenFrom(mail.sent[0]!);
+
+    const signedIn = await signInWithLink(db, family.slug, token);
+    expect(signedIn?.person).toMatchObject({ email: "tess@example.com", role: "supporter" });
+    expect(signedIn?.person.emailVerifiedAt).toBeInstanceOf(Date);
+    expect(await getSession(db, family.slug, signedIn!.sessionToken)).not.toBeNull();
+    expect(await signInWithLink(db, family.slug, token)).toBeNull();
+  });
+
+  it("deletes the unused welcome link when the supporter is removed", async () => {
+    const { chidi } = await okafor();
+    await addSupporter(db, fakeMailer().send, chidi, { name: "Tess", email: "tess@example.com" });
+    const tess = await db.person.findFirstOrThrow({ where: { email: "tess@example.com" } });
+    expect(await linksOf("tess@example.com")).toHaveLength(1);
+
+    await setRemoved(db, chidi, tess.id, true);
+    expect(await linksOf("tess@example.com")).toEqual([]);
+  });
+
+  it("leaves a family with a question welcoming with a verification link", async () => {
+    const { ana } = await setUp();
+    await addSupporter(db, fakeMailer().send, ana, { name: "Tess", email: "tess@example.com" });
+    expect((await linksOf("tess@example.com")).map((l) => l.purpose)).toEqual(["verify"]);
+  });
+});
+
 describe("removing family members", () => {
   async function twoMembers() {
     const { family, people } = await makeFamily(db, "Rivera", ["Ana", "Ben"]);

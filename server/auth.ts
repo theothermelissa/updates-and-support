@@ -9,6 +9,8 @@ const DAY = 24 * 60 * MINUTE;
 const LINK_LIFETIME = 15 * MINUTE;
 const LINKS_PER_HOUR = 5;
 export const VERIFY_LINK_LIFETIME = 7 * DAY;
+// The sign-in link in an invite-only family's welcome email, which people may not open at once.
+export const WELCOME_LINK_LIFETIME = 7 * DAY;
 export const SESSION_LIFETIME = { family: 30 * DAY, supporter: 180 * DAY } as const;
 
 // Sends a magic link if the email belongs to someone in the family who hasn't been
@@ -37,11 +39,11 @@ export async function requestSignInLink(
 }
 
 // A new sign-in link's data, for creating alongside the person it belongs to.
-export function newSignInLink() {
+export function newSignInLink(lifetime = LINK_LIFETIME) {
   const token = newToken();
   return {
     token,
-    data: { purpose: "sign_in" as const, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + LINK_LIFETIME) },
+    data: { purpose: "sign_in" as const, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + lifetime) },
   };
 }
 

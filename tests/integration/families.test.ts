@@ -1,6 +1,6 @@
-import { afterAll, afterEach, beforeEach, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getSession } from "../../server/auth.js";
-import { findFamilyBySlug, renameFamily } from "../../server/families.js";
+import { createFamily, findFamilyBySlug, renameFamily } from "../../server/families.js";
 import { createTestDb } from "./db.js";
 import { answerCorrectly, makeFamily, resetDb } from "./fixtures.js";
 
@@ -50,4 +50,39 @@ it("refuses another family's address, a malformed address or name, or an unknown
     await expect(renameFamily(db, current, input)).rejects.toThrow(message);
   }
   expect(await db.family.findMany({ orderBy: { id: "asc" } })).toEqual(before);
+});
+
+describe("creating a family", () => {
+  const members = [{ name: "Chidi Okafor", email: "chidi.okafor@example.com" }];
+
+  it("gives an invite-only family no question or answers, whatever is passed", async () => {
+    const family = await createFamily(db, {
+      displayName: "The Okafor Family",
+      inviteOnly: true,
+      question: "What is the dog's name?",
+      acceptedAnswers: ["Biscuit"],
+      members,
+    });
+    expect(family).toMatchObject({ inviteOnly: true, question: "", acceptedAnswers: [] });
+  });
+
+  it("refuses a family that isn't invite-only without a question or an answer, creating nothing", async () => {
+    for (const input of [
+      { question: "What is the dog's name?", acceptedAnswers: [] },
+      { question: "What is the dog's name?", acceptedAnswers: [" "] },
+      { question: " ", acceptedAnswers: ["Biscuit"] },
+    ]) {
+      await expect(createFamily(db, { displayName: "The Okafor Family", ...input, members })).rejects.toThrow(
+        "needs a question and at least one accepted answer",
+      );
+    }
+    expect(await db.family.count()).toBe(0);
+    const family = await createFamily(db, {
+      displayName: "The Okafor Family",
+      question: " What is the dog's name? ",
+      acceptedAnswers: ["Biscuit", " "],
+      members,
+    });
+    expect(family).toMatchObject({ inviteOnly: false, question: "What is the dog's name?", acceptedAnswers: ["Biscuit"] });
+  });
 });
