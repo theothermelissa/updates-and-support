@@ -18,7 +18,7 @@ When a PR's preview has built, run `npm run preview:seed` and `npm run preview` 
 
 **Why:** setting up each preview by hand (copying a connection string, running the family script, finding the URL) was tedious and error-prone, and she asked for it to be automated.
 
-**How to apply:** the scripts are described in README → Deployment. `npm run preview` prints the branch's stable address, which always shows the latest push; send that one, not a push's own address. To sign the browser pane in as the family member, run `npm run preview:sign-in` and navigate the pane to the printed link, then press Sign in; the pane stays signed in on that address for the whole PR. The pane must be signed in to Vercel first. Never put a sign-in link in a PR description or commit. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
+**How to apply:** the scripts are described in README → Deployment. `npm run preview` prints the branch's stable address, which always shows the latest push; send that one, not a push's own address. To sign the browser pane in as the family member, run `npm run preview:sign-in` and navigate the pane to the printed link, then press Sign in; the pane stays signed in on that address for the whole PR. The pane must be signed in to Vercel first. `preview:sign-in` looks up the preview for the local checkout's commit, so on Melissa's Mac the PR branch must be checked out and pulled first; from `main` it says "No preview for <sha> yet." Never put a sign-in link in a PR description or commit. Test as the family member at `PREVIEW_FAMILY_EMAIL`, and as a supporter with another `+` address of hers. A recreated preview database has a new endpoint and password, so `.env`'s `PREVIEW_DATABASE_URL*` and Vercel's Preview variables both need its new strings before `preview:baseline`. Rebuild a failed preview with `npx vercel redeploy <url> --scope theothermelissa-s-team`, because the CLI's default team is a different one.
 
 ### Stop the local dev server when its PR merges
 
@@ -84,6 +84,14 @@ A cloud session can run the tests and its pushes build Vercel previews, but it c
 - Postgres 16 is installed but stopped: `pg_ctlcluster 16 main start`, create a role with a password, and point a gitignored `.env` at local databases.
 - For browser checks, a small scratchpad server that runs the `api/` handlers behind Vite in middleware mode works with the Playwright install in `/opt/node-tools` (launch with `executablePath: '/opt/pw-browsers/chromium'`). The scratchpad is outside the repo, so import Vite by its absolute path in `node_modules`. Set `VERCEL_ENV=development` so session cookies work over plain http, and sign a family member in by creating a session row and setting its `session_<slug>` cookie in the browser context. While a Radix menu is open, it hides the rest of the page from role queries, so measure the page before opening it. Radix moves focus on the tick after an arrow key, so wait briefly before checking focus.
 - Prisma refuses `migrate reset` from an agent without Melissa's explicit consent. After editing an unmerged migration, apply it to a fresh `createdb` database instead.
+
+### Delegating a feature to subagents
+
+Melissa may ask for implementation by subagents so the main session stays free to talk. This worked for the groups feature: one subagent built `server/` and tests in the main checkout while another built `src/` in a worktree against API shapes fixed in the plan, then a third, independent one audited call sites, re-ran mutation proofs, and did the browser check in its own worktree with its own databases.
+
+**Why:** parallel builders on disjoint files avoid conflicts, and a verifier that didn't write the code finds what the author missed (the plan review caught dropped notification guards and an edit-versus-deletion race).
+
+**How to apply:** a worktree subagent's branch starts from `origin/main`, not the session's branch, so bring its commit over with `git cherry-pick`. Give each subagent the exact Node path, database names, scratchpad path, and commit trailer. Don't commit a builder's uncommitted files when a stop hook asks: they're often tests written to fail before their rule exists; push only its finished commits. Check every subagent claim that matters (screenshots, the call-site list, any "Done") yourself before reporting it.
 
 ### Patterns that hide a removed access rule
 

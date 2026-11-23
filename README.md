@@ -65,6 +65,8 @@ Vercel deploys `main` to production and every pull request to a preview URL.
 
 **Migrations run during the Vercel build.** Vercel runs the `vercel-build` script, which applies pending migrations (`prisma migrate deploy`) before building the frontend. A PR's preview applies its migrations to the `preview` branch, and merging to `main` applies them to production. Migrations use Neon's direct connection, `DATABASE_URL_UNPOOLED`; the running app uses the pooled `DATABASE_URL`. Because production migrates before the new code is live, keep migrations backward-compatible with the code already running.
 
+**Never roll production back past the groups release** (PRs #63 and #64). Code from before it doesn't know about update audiences, so once any family has a group it would show group-only updates to everyone. Fix forward instead.
+
 **Photos and video notes share `CLOUDINARY_URL`.** Use two Cloudinary accounts: one for Production, and one for Preview and local work. Previews run unmerged code, so the preview account's key must never be pasted into Production. In each account, open Settings → Upload and delete any unsigned upload preset the account came with. When `CLOUDINARY_URL` is set, "Add photo" uploads to that account. Grey placeholders already saved stay grey.
 
 **Environment variables in Vercel:**
