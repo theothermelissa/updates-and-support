@@ -46,6 +46,7 @@ describe("answering", () => {
       question: "What is the dog's name?",
       slug: family.slug,
       home: `/f/${family.slug}`,
+      inviteOnly: false,
     });
   });
 
@@ -148,6 +149,22 @@ describe("answering", () => {
     const { family: other } = await makeFamily(db, "Okafor");
     await wrongAnswers(family, browserA, 5);
     expect((await answerGate(db, other, browserA, { answer: "Biscuit" })).result).toBe("joined");
+  });
+});
+
+describe("an invite-only family", () => {
+  it("refuses even an answer that matches, recording nothing", async () => {
+    const { family } = await makeFamily(db, "Okafor", ["Chidi"], { inviteOnly: true });
+    // createFamily discards answers for an invite-only family; give it one, so only the
+    // invite-only rule stands between this answer and a session.
+    const withAnswer = await db.family.update({ where: { id: family.id }, data: { acceptedAnswers: ["Biscuit"] } });
+
+    await expect(answerGate(db, withAnswer, browserA, { answer: "Biscuit" })).rejects.toMatchObject({
+      status: 403,
+      message: "This family is invite-only.",
+    });
+    expect(await created()).toEqual([0, 0]);
+    expect(await db.gateAttempt.count()).toBe(0);
   });
 });
 

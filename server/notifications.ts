@@ -84,9 +84,16 @@ export async function setNotifications(db: Db, person: Person, on: unknown): Pro
 }
 
 // Active supporters with an email they haven't verified, for the one-time verification send.
+// Not in invite-only families, which have no question to sign in with a verification link.
 export function unverifiedSupporters(db: Db) {
   return db.person.findMany({
-    where: { role: "supporter", email: { not: null }, emailVerifiedAt: null, removedAt: null },
+    where: {
+      role: "supporter",
+      email: { not: null },
+      emailVerifiedAt: null,
+      removedAt: null,
+      family: { inviteOnly: false },
+    },
     include: { family: true },
   });
 }

@@ -30,13 +30,19 @@ export type GateResult =
 
 // All a visitor who isn't signed in may learn about a family. The slug is the family's current
 // address and home its home page's path, so a page reached elsewhere can move to where it lives.
+// An invite-only family has no question.
 export function gateInfo(family: Family) {
   return {
     displayName: family.displayName,
-    question: family.question,
     slug: family.slug,
     home: familyHomePath(family.slug),
+    inviteOnly: family.inviteOnly,
+    ...(family.inviteOnly ? {} : { question: family.question }),
   };
+}
+
+function inviteOnlyRefusal() {
+  return new RequestError(403, "This family is invite-only.");
 }
 
 // The family's gate lock, held until the transaction ends. Answer checks take it so a burst
@@ -69,13 +75,14 @@ async function checkAnswer(tx: Prisma.TransactionClient, familyId: string, clien
 // A correct answer signs the visitor in at once, as a new supporter with no name or email.
 // Checking and signing in share one transaction under the gate lock, so a change to the
 // answers lands wholly before this (and the old answer is wrong) or after it (and its
-// sign-out ends this session).
+// sign-out ends this session). An invite-only family refuses every answer, recording nothing.
 export async function answerGate(
   db: Db,
   family: Family,
   client: Client,
   input: { answer?: unknown },
 ): Promise<GateResult> {
+  if (family.inviteOnly) throw inviteOnlyRefusal();
   const answer = typeof input.answer === "string" ? input.answer : "";
   return db.$transaction(async (tx) => {
     const outcome = await checkAnswer(tx, family.id, client, answer);
@@ -169,7 +176,8 @@ export type VerifySignInResult = { result: "invalid" | "wrong" | "limited" } | {
 // Signs a supporter in with their verification link and the community question's answer,
 // under the gate's wrong-answer limits. The link alone never signs in, because these emails
 // get forwarded. A bad link is refused before the answer is checked, so it costs no attempt.
-// Only an active supporter can sign in this way, never a family member.
+// Only an active supporter can sign in this way, never a family member, and never at an
+// invite-only family, which has no question.
 export async function signInWithVerifyLink(
   db: Db,
   family: Family,
@@ -177,6 +185,7 @@ export async function signInWithVerifyLink(
   token: string,
   answer: string,
 ): Promise<VerifySignInResult> {
+  if (family.inviteOnly) return { result: "invalid" };
   const found = await findUsableLink(db, family.slug, token, "verify");
   if (!found || found.person.role !== "supporter") return { result: "invalid" };
 

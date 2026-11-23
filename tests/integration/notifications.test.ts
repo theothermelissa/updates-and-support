@@ -194,3 +194,9 @@ it("sends one-time verification emails only to unverified, active supporters wit
   expect(mail.sent[0]!.text).toMatch(/^Please confirm your email .*https:\/\/updates\.example\.org\/f\/[a-z0-9-]+\/verify#token=/s);
   expect(await db.magicLink.count({ where: { purpose: "verify" } })).toBe(2);
 });
+
+it("sends no verification email to an invite-only family's supporters, who sign in by email instead", async () => {
+  const { family } = await makeFamily(db, "Okafor", ["Chidi"], { inviteOnly: true });
+  await db.person.create({ data: { familyId: family.id, role: "supporter", name: "Uri", email: "uri@example.com" } });
+  expect(await unverifiedSupporters(db)).toEqual([]);
+});

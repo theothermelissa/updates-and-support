@@ -1,11 +1,11 @@
 import { MAX_PRIVACY_NOTICE } from "../src/lib/privacyNotice.js";
 import { dropsAnAnswer } from "./answers.js";
 import { sharedOnlyWith } from "./audience.js";
-import { newSignInLink, newVerificationLink, signInLinkUrl } from "./auth.js";
+import { newSignInLink, newVerificationLink, signInLinkUrl, WELCOME_LINK_LIFETIME } from "./auth.js";
 import type { Db } from "./db.js";
-import { addedEmail, appUrl, welcomeEmail, type SendEmail } from "./email.js";
+import { addedEmail, appUrl, invitedEmail, welcomeEmail, type SendEmail } from "./email.js";
 import { RequestError } from "./errors.js";
-import { validNameAndEmail } from "./families.js";
+import { familyHomePath, validNameAndEmail } from "./families.js";
 import { lockGate, QUEUE } from "./gate.js";
 import type { Person, Prisma } from "./generated/prisma/client.js";
 
@@ -176,7 +176,9 @@ function alreadyFamily() {
 
 // Adds a supporter to the signed-in family member's family and emails them a link to confirm.
 // They get no notifications until they confirm, so a mistyped email gets one email only.
-// An email already in the family changes nothing.
+// An invite-only family, which has no question to answer with a confirmation link, sends a
+// one-use sign-in link instead; using it also confirms the email. An email already in the
+// family changes nothing.
 export async function addSupporter(
   db: Db,
   send: SendEmail,
@@ -194,10 +196,10 @@ export async function addSupporter(
   }
   if (existing) throw new RequestError(409, "That person is already a supporter.");
 
-  const verification = newVerificationLink();
+  const link = family.inviteOnly ? newSignInLink(WELCOME_LINK_LIFETIME) : newVerificationLink();
   try {
     await db.person.create({
-      data: { familyId: family.id, role: "supporter", name, email, magicLinks: { create: verification.data } },
+      data: { familyId: family.id, role: "supporter", name, email, magicLinks: { create: link.data } },
     });
   } catch (err) {
     // Someone with this email was added or joined a moment ago.
@@ -209,7 +211,14 @@ export async function addSupporter(
 
   // They're added either way; if the email fails, they can sign in by email from the gate.
   try {
-    await send(welcomeEmail(email, family.displayName, `${appUrl()}/f/${family.slug}/verify#token=${verification.token}`));
+    await send(
+      family.inviteOnly
+        ? invitedEmail(email, family.displayName, {
+            signIn: signInLinkUrl(family.slug, link.token),
+            site: `${appUrl()}${familyHomePath(family.slug)}`,
+          })
+        : welcomeEmail(email, family.displayName, `${appUrl()}/f/${family.slug}/verify#token=${link.token}`),
+    );
   } catch (err) {
     console.error(`Welcome email failed at ${family.slug}:`, err);
   }
@@ -306,12 +315,15 @@ export async function setPrivacyNotice(
 // supporter without a verified email is signed out, so whoever got in with the old answer
 // must answer again; supporters with a verified email can be seen and removed one by one.
 // Holds the gate lock, so no answer is checked against the old answers once this commits.
+// An invite-only family never gets a question or answers.
 export async function changeQuestion(
   db: Db,
   person: Person,
   input: { question?: unknown; answers?: unknown },
 ): Promise<{ question: string; acceptedAnswers: string[]; signedOut: number }> {
   requireFamilyMember(person);
+  const { inviteOnly } = await db.family.findUniqueOrThrow({ where: { id: person.familyId } });
+  if (inviteOnly) throw new RequestError(403, "This family is invite-only.");
   const question = typeof input.question === "string" ? input.question.trim() : "";
   if (question.length === 0 || question.length > MAX_QUESTION) {
     throw new RequestError(400, `The question must be 1 to ${MAX_QUESTION} characters.`);

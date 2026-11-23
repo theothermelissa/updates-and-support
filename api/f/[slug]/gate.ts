@@ -2,7 +2,14 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { SESSION_LIFETIME } from "../../../server/auth.js";
 import { getDb } from "../../../server/db.js";
 import { answerGate, gateInfo } from "../../../server/gate.js";
-import { clientOf, familyContext, jsonBody, methodNotAllowed, startSession } from "../../../server/http.js";
+import {
+  clientOf,
+  familyContext,
+  jsonBody,
+  methodNotAllowed,
+  sendRequestError,
+  startSession,
+} from "../../../server/http.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET" && req.method !== "POST") return methodNotAllowed(res);
@@ -14,7 +21,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!body) return;
   // Already signed in here, as from a gate left open in another tab: keep that session.
   if (ctx.person) return res.status(200).json({ result: "joined" });
-  const outcome = await answerGate(getDb(), ctx.family, clientOf(req, res), body);
+  let outcome;
+  try {
+    outcome = await answerGate(getDb(), ctx.family, clientOf(req, res), body);
+  } catch (err) {
+    return sendRequestError(res, err);
+  }
   if (outcome.result === "joined") {
     await startSession(getDb(), req, res, ctx.family.slug, outcome.sessionToken, SESSION_LIFETIME.supporter);
   }

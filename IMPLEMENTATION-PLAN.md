@@ -118,3 +118,11 @@ Integration tests against real Postgres. Each access test is proven by removing 
 9. **`createFamily`.** Invite-only discards a passed question and answers, and a regular family without answers is refused.
 
 Run `npm run typecheck` and `npm test` before every push.
+
+## Discoveries
+
+- **Server steps 1–10 are built.** The migration is `prisma/migrations/20261030000000_invite_only` (after `main`'s newest, `20261029000000_audience_no_default`), and a fresh database migrated with it shows no drift from the schema.
+- **`family:create` now asks "Invite-only?" before the display name**, so answers piped into it need a leading line (blank or `n` for a family with a question).
+- **`verifyEmail` is unchanged, so it can return `canSignIn: true`** for an invite-only family's supporter holding an unused verify link. `addSupporter` and `send-verifications` no longer make such links there, but the confirmation page must still decide from `gate.inviteOnly`, not `canSignIn`, as step 13 says; the server refuses the answer step regardless.
+- **`unverifiedSupporters` skipping invite-only families has its own test** in `tests/integration/notifications.test.ts`, beyond Tests 1–9.
+- **Mutation proofs.** Each rule below was removed and its test failed, then the rule was restored: `answerGate`'s refusal; `signInWithVerifyLink`'s refusal; `changeQuestion`'s refusal; `parseAudience` accepting `"family"` only when invite-only; the missing-audience refusal; `addSupporter`'s sign-in link, its 7-day lifetime, and the regular family's verify link; family members only stored as Everyone (on create, edit, reactions and notes, and notifications); `gateInfo` omitting the question; `createFamily` discarding and requiring answers; removal deleting the unused welcome link; and `unverifiedSupporters` skipping invite-only families.

@@ -9,8 +9,9 @@ const MAX_GROUPS = 50;
 
 export const GROUP_GONE = "A group you chose was deleted. Please choose again.";
 
-// An audience as a request gives it: everyone, or one or more of the family's groups.
-export type AudienceInput = "everyone" | { groups: string[] };
+// An audience as a request gives it: everyone, one or more of the family's groups, or, only on
+// an invite-only family, family members only.
+export type AudienceInput = "everyone" | "family" | { groups: string[] };
 
 // What a family member sees of an update's audience. An empty list is "Family members only".
 // Only family members ever receive it.
@@ -66,12 +67,14 @@ export function canSeeUpdate(update: { familyId: string; audience: Audience; gro
   };
 }
 
-// Absent is undefined: a new update is shared with everyone, an edit keeps its audience.
-// Otherwise "everyone", or { groups } with 1 to 50 distinct ids. Whether the ids are this
-// family's groups is checked by writeAudience, under the groups lock.
-export function parseAudience(input: unknown): AudienceInput | undefined {
+// Absent is undefined, which callers decide on. Otherwise "everyone", "family" (only for an
+// invite-only family; elsewhere it's refused like any unknown value), or { groups } with 1 to
+// 50 distinct ids. Whether the ids are this family's groups is checked by writeAudience, under
+// the groups lock.
+export function parseAudience(input: unknown, family: { inviteOnly: boolean }): AudienceInput | undefined {
   if (input === undefined) return undefined;
   if (input === "everyone") return "everyone";
+  if (input === "family" && family.inviteOnly) return "family";
   const groups = typeof input === "object" && input !== null ? (input as { groups?: unknown }).groups : undefined;
   if (!Array.isArray(groups)) throw new RequestError(400, 'Expected audience to be "everyone" or { groups }');
   if (groups.length === 0) throw new RequestError(400, "Choose at least one group");
@@ -89,14 +92,15 @@ export async function lockGroups(tx: Prisma.TransactionClient, familyId: string)
 }
 
 // Sets an update's audience. Call after lockGroups, in the same transaction. A group that isn't
-// this family's, including one deleted while the form was open, is refused.
+// this family's, including one deleted while the form was open, is refused. Family members only
+// is groups with none listed.
 export async function writeAudience(
   tx: Prisma.TransactionClient,
   familyId: string,
   updateId: string,
   audience: AudienceInput,
 ): Promise<void> {
-  const ids = audience === "everyone" ? [] : audience.groups;
+  const ids = audience === "everyone" || audience === "family" ? [] : audience.groups;
   if (ids.length > 0) {
     const found = await tx.group.count({ where: { id: { in: ids }, familyId } });
     if (found !== ids.length) throw new RequestError(409, GROUP_GONE);

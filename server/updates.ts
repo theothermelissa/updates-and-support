@@ -103,8 +103,12 @@ export async function createUpdate(
 ): Promise<UpdateView> {
   requireFamilyMember(person);
   const reactionKinds = reactionSetFrom(input);
-  // Absent is everyone, so a page loaded before audiences existed still posts.
-  const audience = parseAudience(input.audience) ?? "everyone";
+  // Absent is everyone, so a page loaded before audiences existed still posts. An invite-only
+  // family must always choose, so a slip in the form can't widen an update.
+  const family = await inviteOnlyOf(db, person.familyId);
+  const parsed = parseAudience(input.audience, family);
+  if (parsed === undefined && family.inviteOnly) throw new RequestError(400, "Choose who can see this update.");
+  const audience = parsed ?? "everyone";
   const allowNotes = allowNotesFrom(input) ?? (await allowNotesByDefault(db, person.familyId));
   if (input.video !== undefined) {
     return createVideoUpdate(db, person, input, reactionKinds, allowNotes, audience, notifyWith, store);
@@ -219,7 +223,7 @@ export async function editUpdate(
   const reactionKinds = input.reactions === undefined ? undefined : parseReactionSet(input.reactions);
   const allowNotes = allowNotesFrom(input);
   // Absent keeps the update's audience, including family members only, and takes no groups lock.
-  const audience = parseAudience(input.audience);
+  const audience = parseAudience(input.audience, await inviteOnlyOf(db, person.familyId));
   const { update, dropped } = await savePhoto(() =>
     db.$transaction(async (tx) => {
       // The groups lock comes first, before the update's row lock (see lockGroups).
@@ -320,8 +324,14 @@ export async function newUpdateDefaults(
 }
 
 // The stored column for a requested audience; writeAudience then stores its groups.
+// Family members only is groups with none listed.
 function audienceColumn(audience: AudienceInput): "everyone" | "groups" {
   return audience === "everyone" ? "everyone" : "groups";
+}
+
+// Whether the family is invite-only, which never changes, so it's read outside any lock.
+function inviteOnlyOf(db: Db, familyId: string) {
+  return db.family.findUniqueOrThrow({ where: { id: familyId }, select: { inviteOnly: true } });
 }
 
 // A photo already stored for another update hits the unique public id. Nothing is saved.

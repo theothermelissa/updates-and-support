@@ -34,22 +34,32 @@ export function validNameAndEmail(name: unknown, email: unknown) {
 
 export type NewFamily = {
   displayName: string;
+  // Absent is false. An invite-only family has no community question.
+  inviteOnly?: boolean;
   question: string;
   acceptedAnswers: string[];
   members: { name: string; email: string }[];
 };
 
-// Creates a family and its family members in one transaction.
+// Creates a family and its family members in one transaction. An invite-only family gets no
+// question or answers, whatever is passed; any other family must have both.
 export async function createFamily(db: Db, input: NewFamily) {
   if (input.members.length === 0) throw new Error("A family needs at least one family member");
   const invalid = input.members.find((m) => !isValidEmail(normalizeEmail(m.email)));
   if (invalid) throw new Error(`Not a valid email: ${invalid.email}`);
+  const inviteOnly = input.inviteOnly === true;
+  const question = inviteOnly ? "" : input.question.trim();
+  const acceptedAnswers = inviteOnly ? [] : input.acceptedAnswers.map((a) => a.trim()).filter(Boolean);
+  if (!inviteOnly && (question === "" || acceptedAnswers.length === 0)) {
+    throw new Error("A family that isn't invite-only needs a question and at least one accepted answer");
+  }
   return db.family.create({
     data: {
       slug: makeSlug(input.displayName),
       displayName: input.displayName.trim(),
-      question: input.question.trim(),
-      acceptedAnswers: input.acceptedAnswers.map((a) => a.trim()).filter(Boolean),
+      inviteOnly,
+      question,
+      acceptedAnswers,
       people: {
         create: input.members.map((m) => ({
           role: "family" as const,
