@@ -122,7 +122,7 @@ describe("the family's default", () => {
   it("is sent with the feed to family members only", async () => {
     const { ana, sam, family } = await setUp();
     await db.family.update({ where: { id: family.id }, data: { allowNotesByDefault: false } });
-    expect(await newUpdateDefaults(db, ana)).toEqual({ allowNotesByDefault: false });
+    expect(await newUpdateDefaults(db, ana)).toEqual({ allowNotesByDefault: false, groups: [] });
     expect(await newUpdateDefaults(db, sam)).toBeNull();
   });
 });

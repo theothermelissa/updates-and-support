@@ -513,12 +513,13 @@ describe("adding supporters", () => {
     const mail = fakeMailer();
     await addSupporter(db, mail.send, ana, { name: "Tess", email: "tess@example.com" });
 
+    const update = await db.update.create({ data: { familyId: family.id, authorId: ana.id, body: "News", audience: "everyone" } });
     const notified = fakeMailer();
-    await notifyNewUpdate(db, notified.sendMany, family.id, ana.id);
+    await notifyNewUpdate(db, notified.sendMany, update.id);
     expect(notified.sent.map((e) => e.to)).not.toContain("tess@example.com");
 
     await verifyEmail(db, family.slug, tokenFrom(mail.sent[0]!));
-    await notifyNewUpdate(db, notified.sendMany, family.id, ana.id);
+    await notifyNewUpdate(db, notified.sendMany, update.id);
     expect(notified.sent.map((e) => e.to)).toContain("tess@example.com");
   });
 });

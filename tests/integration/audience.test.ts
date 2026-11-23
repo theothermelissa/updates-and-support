@@ -5,13 +5,14 @@ import updatesHandler from "../../api/f/[slug]/updates/index.js";
 import { getDb } from "../../server/db.js";
 import type { Person } from "../../server/generated/prisma/client.js";
 import { createNote, deleteNote, issueVideoUpload, listNotes } from "../../server/notes.js";
-import { setRemoved, verifySupporter } from "../../server/people.js";
+import { addFamilyMember, setRemoved, verifySupporter } from "../../server/people.js";
 import type { PhotoSettings } from "../../server/photoSettings.js";
 import { setReaction } from "../../server/reactions.js";
 import { hashToken, newToken } from "../../server/tokens.js";
-import { createUpdate, listUpdates } from "../../server/updates.js";
+import { canSeeUpdate, GROUP_GONE } from "../../server/audience.js";
+import { createUpdate, editUpdate, listUpdates } from "../../server/updates.js";
 import { createTestDb } from "./db.js";
-import { answerCorrectly, fakeVideoStore, joinWithEmail, makeFamily, makeGroup, resetDb, verifiedSupporter } from "./fixtures.js";
+import { answerCorrectly, fakeMailer, fakeVideoStore, joinWithEmail, makeFamily, makeGroup, resetDb, verifiedSupporter } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -114,6 +115,13 @@ async function refusal(work: Promise<unknown>): Promise<{ status: number; messag
     return { status, message };
   }
   throw new Error("Expected a refusal");
+}
+
+// A video this person was issued a ticket for and has "uploaded" to the fake host.
+async function uploadedVideo(videos: ReturnType<typeof fakeVideoStore>, person: Person) {
+  const { publicId } = await issueVideoUpload(db, person, videos.store);
+  videos.videos.set(publicId, 10);
+  return publicId;
 }
 
 function note(person: Person, updateId: string, body = "Thinking of you") {
@@ -240,63 +248,60 @@ describe("an update outside the audience is not found everywhere", () => {
   });
 });
 
+// The handlers read the database and Cloudinary from the environment.
+const savedUrl = process.env.DATABASE_URL;
+const savedCloud = process.env.CLOUDINARY_URL;
+
+beforeAll(() => {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+  process.env.CLOUDINARY_URL = "cloudinary://1234:abcd-secret@demo";
+});
+
+afterAll(async () => {
+  await getDb().$disconnect();
+  restore("DATABASE_URL", savedUrl);
+  restore("CLOUDINARY_URL", savedCloud);
+});
+
+function restore(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
+async function sessionFor(personId: string) {
+  const token = newToken();
+  await db.session.create({
+    data: { personId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+  });
+  return token;
+}
+
+async function get(handler: (req: VercelRequest, res: VercelResponse) => Promise<unknown>, slug: string, token: string) {
+  const req = { method: "GET", query: { slug }, headers: {}, cookies: { [`session_${slug}`]: token } };
+  const res = {
+    statusCode: 0,
+    body: undefined as unknown,
+    setHeader() {},
+    appendHeader() {},
+    status(code: number) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload: unknown) {
+      this.body = payload;
+      return this;
+    },
+  };
+  await handler(req as unknown as VercelRequest, res as unknown as VercelResponse);
+  expect(res.statusCode).toBe(200);
+  return res.body as Record<string, unknown>;
+}
+
 describe("nothing hidden leaks into a supporter's responses", () => {
-  const savedUrl = process.env.DATABASE_URL;
-  const savedCloud = process.env.CLOUDINARY_URL;
-
-  beforeAll(() => {
-    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
-    process.env.CLOUDINARY_URL = "cloudinary://1234:abcd-secret@demo";
-  });
-
-  afterAll(async () => {
-    await getDb().$disconnect();
-    restore("DATABASE_URL", savedUrl);
-    restore("CLOUDINARY_URL", savedCloud);
-  });
-
-  function restore(name: string, value: string | undefined) {
-    if (value === undefined) delete process.env[name];
-    else process.env[name] = value;
-  }
-
-  async function sessionFor(personId: string) {
-    const token = newToken();
-    await db.session.create({
-      data: { personId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
-    });
-    return token;
-  }
-
-  async function get(handler: (req: VercelRequest, res: VercelResponse) => Promise<unknown>, slug: string, token: string) {
-    const req = { method: "GET", query: { slug }, headers: {}, cookies: { [`session_${slug}`]: token } };
-    const res = {
-      statusCode: 0,
-      body: undefined as unknown,
-      setHeader() {},
-      appendHeader() {},
-      status(code: number) {
-        this.statusCode = code;
-        return this;
-      },
-      json(payload: unknown) {
-        this.body = payload;
-        return this;
-      },
-    };
-    await handler(req as unknown as VercelRequest, res as unknown as VercelResponse);
-    expect(res.statusCode).toBe(200);
-    return res.body as Record<string, unknown>;
-  }
-
   it("leaves out the update, its photo, video, notes, reactions, and audience", async () => {
     const s = await setUp();
     const videos = fakeVideoStore();
-    async function uploaded(person: Person) {
-      const { publicId } = await issueVideoUpload(db, person, videos.store);
-      videos.videos.set(publicId, 10);
-      return publicId;
-    }
+    const uploaded = (person: Person) => uploadedVideo(videos, person);
     const updateVideo = await uploaded(s.ana);
     const v = await createUpdate(db, s.ana, { video: updateVideo }, undefined, PHOTOS, videos.store);
     await shareWith(v.id, [s.neighbors.id]);
@@ -336,5 +341,184 @@ describe("nothing hidden leaks into a supporter's responses", () => {
     for (const text of groupWords) expect(giaHttp).not.toContain(text);
     expect(halFeed.defaults).toBeNull();
     expect(giaFeed.defaults).toBeNull();
+  });
+});
+
+describe("family members see every audience", () => {
+  it("labels each update's audience for family members, with the family's groups for the post form", async () => {
+    const s = await setUp();
+    const neighbors = { id: s.neighbors.id, name: "Neighbors" };
+    const investors = { id: s.investors.id, name: "Investors" };
+    const audiences = Object.fromEntries((await listUpdates(db, s.ana)).map((u) => [u.id, u.audience]));
+    expect(audiences).toEqual({
+      [s.e]: "everyone",
+      [s.n]: { groups: [neighbors] },
+      [s.ni]: { groups: [investors, neighbors] },
+      [s.f]: { groups: [] },
+    });
+
+    const anaFeed = await get(updatesHandler, s.family.slug, await sessionFor(s.ana.id));
+    expect(anaFeed.defaults).toEqual({ allowNotesByDefault: true, groups: [investors, neighbors] });
+    const feed = anaFeed.updates as { id: string; audience: unknown }[];
+    expect(Object.fromEntries(feed.map((u) => [u.id, u.audience]))).toEqual(audiences);
+  });
+});
+
+describe("posting and editing an audience", () => {
+  async function groupsOf(updateId: string) {
+    const update = await db.update.findUniqueOrThrow({ where: { id: updateId }, include: { groups: true } });
+    return { audience: update.audience, groupIds: update.groups.map((g) => g.groupId).sort() };
+  }
+
+  it("posts a text or video update to a group", async () => {
+    const s = await setUp();
+    const posted = await createUpdate(db, s.ana, { body: "For the neighbors", audience: { groups: [s.neighbors.id] } });
+    expect(await groupsOf(posted.id)).toEqual({ audience: "groups", groupIds: [s.neighbors.id] });
+    expect(await seen(s.gia)).toContain(posted.id);
+    expect(await seen(s.hal)).not.toContain(posted.id);
+
+    const videos = fakeVideoStore();
+    const video = await uploadedVideo(videos, s.ana);
+    const v = await createUpdate(db, s.ana, { video, audience: { groups: [s.neighbors.id] } }, undefined, PHOTOS, videos.store);
+    expect(await groupsOf(v.id)).toEqual({ audience: "groups", groupIds: [s.neighbors.id] });
+    expect(await seen(s.gia)).toContain(v.id);
+    expect(await seen(s.hal)).not.toContain(v.id);
+
+    const everyone = await createUpdate(db, s.ana, { body: "For all", audience: "everyone" });
+    expect(await groupsOf(everyone.id)).toEqual({ audience: "everyone", groupIds: [] });
+    expect(await seen(s.ned)).toContain(everyone.id);
+  });
+
+  it("refuses an empty list, a non-list, and a repeated group", async () => {
+    const s = await setUp();
+    const before = await db.update.count();
+    for (const audience of [{ groups: [] }, { groups: s.neighbors.id }, "groups", { groups: [s.neighbors.id, s.neighbors.id] }]) {
+      await expect(createUpdate(db, s.ana, { body: "Hi", audience })).rejects.toMatchObject({ status: 400 });
+      await expect(editUpdate(db, s.ana, s.e, { body: "Hi", audience })).rejects.toMatchObject({ status: 400 });
+    }
+    expect(await db.update.count()).toBe(before);
+    expect(await groupsOf(s.e)).toEqual({ audience: "everyone", groupIds: [] });
+  });
+
+  it("keeps the audience when an edit doesn't name one, and changes it when it does", async () => {
+    const s = await setUp();
+    await editUpdate(db, s.ana, s.f, { body: "Still family only" });
+    expect(await groupsOf(s.f)).toEqual({ audience: "groups", groupIds: [] });
+
+    await editUpdate(db, s.ana, s.ni, { body: "Now for everyone", audience: "everyone" });
+    expect(await groupsOf(s.ni)).toEqual({ audience: "everyone", groupIds: [] });
+    expect(await seen(s.ned)).toContain(s.ni);
+    expect(await seen(s.uma)).toContain(s.ni);
+
+    await editUpdate(db, s.ana, s.ni, { body: "Now for the neighbors", audience: { groups: [s.neighbors.id] } });
+    expect(await groupsOf(s.ni)).toEqual({ audience: "groups", groupIds: [s.neighbors.id] });
+    expect(await seen(s.hal)).not.toContain(s.ni);
+    expect(await seen(s.gia)).toContain(s.ni);
+  });
+
+  it("lets only family members set an audience", async () => {
+    const s = await setUp();
+    const audience = { groups: [s.neighbors.id] };
+    await expect(createUpdate(db, s.gia, { body: "Hi", audience })).rejects.toMatchObject({ status: 403 });
+    await expect(editUpdate(db, s.gia, s.e, { body: "Hi", audience })).rejects.toMatchObject({ status: 403 });
+    expect(await groupsOf(s.e)).toEqual({ audience: "everyone", groupIds: [] });
+  });
+
+  it("refuses another family's group, and stores or changes nothing", async () => {
+    const s = await setUp();
+    expect(await db.group.count({ where: { id: s.okaforNeighbors.id } })).toBe(1);
+    const gone = { status: 409, message: GROUP_GONE };
+    const before = await db.update.count();
+    for (const groups of [[s.okaforNeighbors.id], [s.neighbors.id, s.okaforNeighbors.id]]) {
+      expect(await refusal(createUpdate(db, s.ana, { body: "Hi", audience: { groups } }))).toEqual(gone);
+      expect(await refusal(editUpdate(db, s.ana, s.n, { body: "Changed", audience: { groups } }))).toEqual(gone);
+    }
+    expect(await db.update.count()).toBe(before);
+    expect(await groupsOf(s.n)).toEqual({ audience: "groups", groupIds: [s.neighbors.id] });
+    const n = await db.update.findUniqueOrThrow({ where: { id: s.n } });
+    expect(n.editedAt).toBeNull();
+    expect(n.body).toContain("Zinnia-secret");
+  });
+});
+
+describe("notifications go to the audience only", () => {
+  it("emails exactly the people who can see the new update, and never names a group", async () => {
+    const s = await setUp();
+    await setRemoved(db, s.ana, s.rae.id, true);
+    expect((await db.person.findUniqueOrThrow({ where: { id: s.fay.id } })).notificationsOn).toBe(true);
+    const neighbors = { groups: [s.neighbors.id] };
+    const to = (sent: { to: string }[]) => sent.map((e) => e.to).sort();
+    const emails = (...names: string[]) => names.map((n) => (n === "ben" ? s.ben.email! : `${n}@example.com`)).sort();
+
+    const toGroup = fakeMailer();
+    await createUpdate(db, s.ana, { body: "For the neighbors", audience: neighbors }, toGroup.sendMany);
+    expect(to(toGroup.sent)).toEqual(emails("ben", "gia", "pia"));
+
+    const toAll = fakeMailer();
+    await createUpdate(db, s.ana, { body: "For everyone" }, toAll.sendMany);
+    expect(to(toAll.sent)).toEqual(emails("ben", "gia", "pia", "hal"));
+
+    const videos = fakeVideoStore();
+    const video = await uploadedVideo(videos, s.ana);
+    const toGroupVideo = fakeMailer();
+    await createUpdate(db, s.ana, { video, audience: neighbors }, toGroupVideo.sendMany, PHOTOS, videos.store);
+    expect(to(toGroupVideo.sent)).toEqual(emails("ben", "gia", "pia"));
+
+    // Edits never take a sender: widening N to everyone emails no one.
+    const widened = fakeMailer();
+    await editUpdate(db, s.ana, s.n, { body: "Now for everyone", audience: "everyone" });
+    expect(widened.sent).toEqual([]);
+
+    for (const email of [...toGroup.sent, ...toAll.sent, ...toGroupVideo.sent]) {
+      for (const name of ["Neighbors", "Investors"]) {
+        expect(email.subject).not.toContain(name);
+        expect(email.text).not.toContain(name);
+      }
+    }
+  });
+});
+
+describe("the rule and its inverse agree", () => {
+  it("lists an update for a person exactly when the person matches canSeeUpdate for it", async () => {
+    const s = await setUp();
+    const videos = fakeVideoStore();
+    const v = await createUpdate(db, s.ana, { video: await uploadedVideo(videos, s.ana), audience: { groups: [s.neighbors.id] } }, undefined, PHOTOS, videos.store);
+    await setRemoved(db, s.ana, s.rae.id, true);
+    // Hal in Okafor's group, and N shared with it too: grants nothing either way.
+    await db.groupMember.create({ data: { groupId: s.okaforNeighbors.id, personId: s.hal.id } });
+    await db.updateGroup.create({ data: { updateId: s.n, groupId: s.okaforNeighbors.id } });
+
+    // Stale Person rows for Fay and Rae, from before their removal.
+    const cast = [s.ana, s.ben, s.fay, s.chidi, s.gia, s.pia, s.hal, s.uma, s.rae, s.ned, s.olu];
+    const updates = [s.e, s.n, s.ni, s.f, s.o, v.id];
+    let checked = 0;
+    for (const updateId of updates) {
+      const loaded = await db.update.findUniqueOrThrow({ where: { id: updateId }, include: { groups: true } });
+      const matching = await db.person.findMany({
+        where: canSeeUpdate({ familyId: loaded.familyId, audience: loaded.audience, groupIds: loaded.groups.map((g) => g.groupId) }),
+        select: { id: true },
+      });
+      const matches = new Set(matching.map((p) => p.id));
+      for (const person of cast) {
+        const listed = (await seen(person)).includes(updateId);
+        expect({ person: person.name, updateId, listed }).toEqual({ person: person.name, updateId, listed: matches.has(person.id) });
+        checked++;
+      }
+    }
+    expect(checked).toBe(cast.length * updates.length);
+  });
+});
+
+describe("promotion", () => {
+  it("takes a promoted supporter out of every group", async () => {
+    const s = await setUp();
+    await db.groupMember.create({ data: { groupId: s.investors.id, personId: s.gia.id } });
+    expect(await db.groupMember.count({ where: { personId: s.gia.id } })).toBe(2);
+    const result = await addFamilyMember(db, fakeMailer().send, s.ana, { name: "Gia Rivera", email: "gia@example.com" });
+    expect(result.outcome).toBe("promoted");
+    expect(await db.groupMember.count({ where: { personId: s.gia.id } })).toBe(0);
+    expect(await db.groupMember.count({ where: { personId: s.pia.id } })).toBe(1);
+    const promoted = await db.person.findUniqueOrThrow({ where: { id: s.gia.id } });
+    expect(await seen(promoted)).toEqual(sorted(s.e, s.n, s.ni, s.f));
   });
 });
