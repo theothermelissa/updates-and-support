@@ -36,6 +36,7 @@ model Family {
   gateAttempts GateAttempt[]
   updates      Update[]
   helpRequests HelpRequest[]
+  groups       Group[]
 }
 
 enum Role {
@@ -77,6 +78,7 @@ model Person {
   notes         Note[]
   videoUploads  VideoUpload[]
   helpOffers    HelpOffer[]
+  groupMemberships GroupMember[]
 
   @@unique([familyId, email])
 }
@@ -130,14 +132,61 @@ model Update {
   allowNotes Boolean  @default(true)
   createdAt DateTime  @default(now())
   editedAt  DateTime?
+  // Who can see it, besides family members, who see every update. `groups`: supporters in at
+  // least one of its UpdateGroup rows. `groups` with no rows left is "Family members only".
+  // Every create in server/ names it. (Slice 1 keeps a default of `everyone`; slice 2 drops it.)
+  audience  Audience  @default(everyone)
 
-  family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  author    Person     @relation(fields: [authorId], references: [id])
+  family    Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  author    Person        @relation(fields: [authorId], references: [id])
   reactions Reaction[]
   notes     Note[]
   photos    Photo[]
+  groups    UpdateGroup[]
 
   @@index([familyId, createdAt])
+}
+
+enum Audience {
+  everyone
+  groups
+}
+
+// A family's named set of supporters. Names are unique per family ignoring capitals, which
+// server/groups.ts enforces under the family's groups lock.
+model Group {
+  id        String   @id @default(cuid())
+  familyId  String
+  name      String
+  createdAt DateTime @default(now())
+
+  family  Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  members GroupMember[]
+  updates UpdateGroup[]
+
+  @@index([familyId])
+}
+
+model GroupMember {
+  groupId  String
+  personId String
+
+  group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, personId])
+  @@index([personId])
+}
+
+model UpdateGroup {
+  updateId String
+  groupId  String
+
+  update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([updateId, groupId])
+  @@index([groupId])
 }
 
 // A real photo's Cloudinary public ID. One photo is on one update; deleting the update
