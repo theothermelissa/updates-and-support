@@ -298,6 +298,7 @@ Steps marked **[subagent]** can be checked or done by a subagent independently, 
    - Delete, which reloads the people data, then shows the inline `Confirm`. When `onlyHere > 0`, it reads "N updates are shared only with X" and offers a radio, Family members only (the default) or Other groups, with checkboxes for the other groups.
 7. **Stale groups in the post form.** `src/pages/Feed.tsx`: when a post or save returns 409, reload the feed so the group checkboxes are current, and keep the draft.
 8. **Check by hand and ship.** On the preview, as the test family member, with a second `+` address as a supporter: create two groups, add the supporter, post to one group, and check the supporter sees it and doesn't see a post to the other. Remove them from the group and check it's gone on their next check. Delete a group with each audience choice and check the labels. Then typecheck, test, open the PR, and send the preview link.
+   Done (locally): an independent verifier found no leaks, re-proved three rules, and clicked through creating, renaming, adding, removing, posting to a group, and deleting with each audience choice, at 360px with the real handlers. Every group write takes `lockGroups` first, except the membership delete in `addFamilyMember`, which the person-row lock covers instead. The preview pass is Melissa's.
 
 ## What we're cutting
 
