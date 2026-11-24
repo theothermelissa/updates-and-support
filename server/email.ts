@@ -127,3 +127,21 @@ export function notificationEmail(
     },
   };
 }
+
+// Says only that someone asked to join, never who or what they wrote: emails are forwarded and
+// shown in lock-screen previews.
+export function inviteRequestEmail(
+  to: string,
+  familyName: string,
+  links: { peoplePage: string; unsubscribePage: string; oneClickUnsubscribe: string },
+): Email {
+  return {
+    to,
+    subject: `Someone asked to join ${familyName}`,
+    text: `Someone asked to join ${familyName}. See and answer the request here:\n\n${links.peoplePage}\n\nTo stop these emails, turn them off here:\n${links.unsubscribePage}`,
+    headers: {
+      "List-Unsubscribe": `<${links.oneClickUnsubscribe}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  };
+}

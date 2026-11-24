@@ -21,7 +21,7 @@ A person who is both a supporter and a family member of different families has a
 ### MVP
 
 - Operator creates and renames families with scripts. → [access.md](access.md)
-- A family can be created invite-only: no community question, no anonymous readers, only supporters the family adds, who sign in by email, and a "Family members only" audience choice alongside Everyone and groups. → [access.md](access.md#invite-only-families), [updates.md](updates.md#audience)
+- A family can be created invite-only: no community question, no anonymous readers, only supporters the family adds, who sign in by email, and a "Family members only" audience choice alongside Everyone and groups. Visitors can request an invite, and family members approve or decline requests on the People page. → [access.md](access.md#invite-only-families), [access.md](access.md#requesting-an-invite), [updates.md](updates.md#audience)
 - Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
 - Family members add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
@@ -76,5 +76,5 @@ The app follows the visual language of Vercel's Geist design system: the Geist S
 
 ## Area specs
 
-- [access.md](access.md): families, invite-only families, the community question, supporter and family member sign-in, sessions, names and phone numbers, managing people, groups, and the privacy banner.
+- [access.md](access.md): families, invite-only families and requests for an invite, the community question, supporter and family member sign-in, sessions, names and phone numbers, managing people, groups, and the privacy banner.
 - [updates.md](updates.md): posting, editing, and deleting updates, audiences, photos, video updates, the feed, reactions, notes, ways to help, and notifications.

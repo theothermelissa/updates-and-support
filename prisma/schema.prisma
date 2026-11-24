@@ -41,6 +41,7 @@ model Family {
   updates      Update[]
   helpRequests HelpRequest[]
   groups       Group[]
+  inviteRequests InviteRequest[]
 }
 
 enum Role {
@@ -333,5 +334,24 @@ model GateAttempt {
   family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 
   @@index([familyId, browserId, createdAt])
+  @@index([familyId, network, createdAt])
+}
+
+// Someone who asked an invite-only family to add them. Not a Person: it has no session and no
+// groups, and only a family member of the family ever reads it. Deleted when approved, declined
+// or after 30 days.
+model InviteRequest {
+  id        String   @id @default(cuid())
+  familyId  String
+  name      String
+  email     String   // normalized, as Person.email is
+  message   String?
+  network   String   // networkKey(), for the per-network limit
+  createdAt DateTime @default(now())
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, email])
+  @@index([familyId, createdAt])
   @@index([familyId, network, createdAt])
 }

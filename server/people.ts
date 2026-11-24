@@ -7,11 +7,17 @@ import { addedEmail, appUrl, invitedEmail, welcomeEmail, type SendEmail } from "
 import { RequestError } from "./errors.js";
 import { familyHomePath, validNameAndEmail } from "./families.js";
 import { lockGate, QUEUE } from "./gate.js";
-import type { Person, Prisma } from "./generated/prisma/client.js";
+import type { Family, Person, Prisma } from "./generated/prisma/client.js";
 
 const MAX_QUESTION = 500;
 const MAX_ANSWER = 200;
 const MAX_ANSWERS = 50;
+const INVITE_REQUEST_EXPIRY = 30 * 24 * 60 * 60 * 1000;
+
+// Requests to join made before this are expired: deleted by the next request, and never shown or approved.
+export function inviteRequestCutoff(): Date {
+  return new Date(Date.now() - INVITE_REQUEST_EXPIRY);
+}
 
 export type SupporterView = {
   id: string;
@@ -45,6 +51,15 @@ export async function listPeople(db: Db, person: Person) {
     .map((p) => ({ id: p.id, name: p.name, email: p.email, isYou: p.id === person.id }));
   const supporters = family.people.filter((p) => p.role === "supporter").map(supporterView);
   const devicesWithoutVerifiedEmail = await db.session.count({ where: unverifiedSessions(person.familyId) });
+  // Pending requests to join, oldest first. Only an invite-only family takes them. Expired ones
+  // are never shown, though they may not be deleted yet.
+  const inviteRequests = family.inviteOnly
+    ? await db.inviteRequest.findMany({
+        where: { familyId: person.familyId, createdAt: { gt: inviteRequestCutoff() } },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true, email: true, message: true, createdAt: true },
+      })
+    : [];
   return {
     familyMembers,
     supporters: supporters.filter((s) => !s.removedAt),
@@ -56,6 +71,7 @@ export async function listPeople(db: Db, person: Person) {
     allowNotesByDefault: family.allowNotesByDefault,
     privacyNotice: family.privacyNotice,
     groups: await groupsView(db, person.familyId),
+    inviteRequests,
   };
 }
 
@@ -196,11 +212,9 @@ export async function addSupporter(
   }
   if (existing) throw new RequestError(409, "That person is already a supporter.");
 
-  const link = family.inviteOnly ? newSignInLink(WELCOME_LINK_LIFETIME) : newVerificationLink();
+  let link;
   try {
-    await db.person.create({
-      data: { familyId: family.id, role: "supporter", name, email, magicLinks: { create: link.data } },
-    });
+    link = await createSupporter(db, family, name, email);
   } catch (err) {
     // Someone with this email was added or joined a moment ago.
     if ((err as { code?: string }).code === "P2002") {
@@ -208,21 +222,40 @@ export async function addSupporter(
     }
     throw err;
   }
+  await sendSupporterWelcome(send, family, email, link.token);
+  return { name };
+}
 
-  // They're added either way; if the email fails, they can sign in by email from the gate.
+// Creates a supporter and the link their welcome email carries: a one-use sign-in link for an
+// invite-only family, otherwise a confirmation link. Throws Prisma's P2002 when the email is
+// already in the family. Takes a transaction so the invite request's approval can use it.
+export async function createSupporter(
+  db: Prisma.TransactionClient,
+  family: Family,
+  name: string,
+  email: string,
+) {
+  const link = family.inviteOnly ? newSignInLink(WELCOME_LINK_LIFETIME) : newVerificationLink();
+  await db.person.create({
+    data: { familyId: family.id, role: "supporter", name, email, magicLinks: { create: link.data } },
+  });
+  return link;
+}
+
+// They're added either way; if the email fails, they can sign in by email from the gate.
+export async function sendSupporterWelcome(send: SendEmail, family: Family, email: string, token: string) {
   try {
     await send(
       family.inviteOnly
         ? invitedEmail(email, family.displayName, {
-            signIn: signInLinkUrl(family.slug, link.token),
+            signIn: signInLinkUrl(family.slug, token),
             site: `${appUrl()}${familyHomePath(family.slug)}`,
           })
-        : welcomeEmail(email, family.displayName, `${appUrl()}/f/${family.slug}/verify#token=${link.token}`),
+        : welcomeEmail(email, family.displayName, `${appUrl()}/f/${family.slug}/verify#token=${token}`),
     );
   } catch (err) {
     console.error(`Welcome email failed at ${family.slug}:`, err);
   }
-  return { name };
 }
 
 // Removes or restores a supporter, or removes a family member, in the signed-in family

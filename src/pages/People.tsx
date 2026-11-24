@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { PageTitle } from "@/components/familyShell";
 import { Groups, type PeopleGroup } from "@/components/groups";
+import { InviteRequests, type InviteRequest } from "@/components/inviteRequests";
 import { Confirm, EmailInput, ErrorMessage, Field, PhoneLink } from "@/components/page";
 import { ReactionChooser } from "@/components/postSettings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -41,6 +42,8 @@ type People = {
   privacyNotice: string | null;
   // Sorted by name.
   groups: PeopleGroup[];
+  // Invite-only families only; empty otherwise. Oldest first.
+  inviteRequests: InviteRequest[];
 };
 
 function date(iso: string) {
@@ -244,6 +247,19 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
         onRemove={(m) => setRemoved(m, true)}
         onAdd={addFamilyMember}
       />
+
+      {people.inviteRequests.length > 0 && (
+        <Section title="Requests to join">
+          <InviteRequests
+            slug={slug}
+            requests={people.inviteRequests}
+            onDone={(m) => {
+              setMessage(m);
+              load();
+            }}
+          />
+        </Section>
+      )}
 
       <Section title={`Supporters (${people.supporters.length})`}>
         {!inviteOnly && people.devicesWithoutVerifiedEmail > 0 && (
