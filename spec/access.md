@@ -36,11 +36,43 @@ A visit to `/f/<slug>` for a slug that does not exist, and isn't redirected, sho
 
 An invite-only family has no community question and no anonymous readers. Every supporter is someone the family added, and everyone signs in by email. The rest of this spec applies except where this section says otherwise; everything about the community question (joining by answering, wrong-answer limits, the confirmation page's question, changing the question, and the device count) doesn't.
 
-- **The signed-out page.** A visitor who isn't signed in sees the family's display name, a line saying the site is private and that people who've been invited can sign in with their email, and an email box with a "Send me a sign-in link" button. It sends a magic link exactly as "Sign in by email" does (see "Magic links"), and says "Check your email" whether or not the email is known. Nothing else about the family appears.
+- **The signed-out page.** A visitor who isn't signed in sees the family's display name, a line saying the site is private and that people who've been invited can sign in with their email, and an email box with a "Send me a sign-in link" button. It sends a magic link exactly as "Sign in by email" does (see "Magic links"), and says "Check your email" whether or not the email is known. Below it, a "Request an invite" link opens the request form (see "Requesting an invite"). Nothing else about the family appears.
 - **No answers.** The server refuses every answer to an invite-only family's gate, and refuses to give it a question or answers, whatever the request says. The confirmation page never offers a question there; once confirmed, it links to the signed-out page.
 - **Adding a supporter.** A family member adds supporters on the People page as described in "Added by a family member," with one difference: the welcome email carries a **sign-in link**, not a confirmation link. It says the family added them, with the link, and says that it works once and expires in 7 days, and that after that they can sign in any time at the family's address with their email. Using it signs them in and marks their email verified, like any magic link. Removing the supporter cancels it, as it does every unused link.
 - **The People page** has no community question section and no count of devices without a verified email. Removing a supporter's confirmation doesn't mention changing the answer, because removal alone keeps them out.
 - **Audiences.** An invite-only family always chooses who sees each update, including before it has any groups (see [updates.md](updates.md#audience)).
+- **Notifications.** Family members' notification checkbox covers requests to join too, and reads "Email me about new updates and requests to join" (see "Requesting an invite").
+
+### Requesting an invite
+
+Someone who hasn't been added can ask the family to add them. The signed-out page's "Request an invite" link opens a form with a **name** (1 to 100 characters), an **email**, and an optional **message** (up to 500 characters, plain text). Submitting it never signs anyone in and never gives access: it only tells the family.
+
+Whatever the email belongs to, the reply is the same: "Thanks. If the family approves, you'll get an email at that address." It promises nothing else, and never says whether the email is known, or whether anything was stored or sent. What happens behind it depends on the email:
+
+- **No one in the family, no pending request:** the request is stored and the family is told (see "Telling the family").
+- **A pending request already:** nothing changes and no one is told again. The name and message from the first request stand.
+- **A supporter or family member who hasn't been removed:** nothing is stored, and the email gets a sign-in link as "Send me a sign-in link" would (see "Magic links"), under the same limit of 5 an hour per email.
+- **A removed supporter or family member:** nothing is stored and nothing is sent.
+
+Requests are limited, and refused with the same reply as any other except where noted:
+
+- **Per network:** 5 stored requests an hour from one network (see "Wrong-answer limits" for what a network is). Beyond that, nothing is stored and the reply is the same as above.
+- **Pending cap:** at most 50 requests wait at once. When the family is at the cap, the form says "Requests are closed right now. Please contact the family." and stores nothing. That reply doesn't depend on the email, so it reveals nothing about who is known.
+- **Expiry:** a request is deleted 30 days after it was made. Expired requests are cleared whenever a new request is made, so they never count toward the cap, and approving, declining, or listing never shows one.
+
+A request is not a person: it has no record in the family's people, no session, and no groups, so it can read nothing and appears nowhere except the People page's "Requests to join" section. Only family members ever see a request's name, email, or message; the server sends them to no one else. Only an invite-only family takes requests; the server refuses the form for any other family.
+
+#### Telling the family
+
+When a request is stored, every family member of that family who hasn't been removed and has notifications on gets an email saying only that someone asked to join the family, with a link to the People page and one to turn notifications off. It carries no name, email, or message, since emails are forwarded and shown in lock-screen previews. If it can't be sent, the request is still stored.
+
+#### Approving and declining
+
+The People page of an invite-only family has a **Requests to join** section above the supporter lists, shown only when it has requests, oldest first, each with the name, email, message, and when it was made, and **Approve** and **Decline** buttons. Declining asks for an inline confirmation. Nothing is sent to the requester when a request is declined.
+
+**Approve** adds them as a supporter exactly as "Added by a family member" does: the same record, the same welcome email with the 7-day sign-in link, in Everyone and in no groups, and the name they gave. The family adds them to groups afterward in the Groups section. The request is deleted. If the person has meanwhile been added by hand, or become a family member, or been removed, approving changes nothing about them, deletes the request, and says so, as the matching case in "Added by a family member" does. Approving and declining take turns: of two family members acting on the same request at once, one succeeds and the other is told the request is gone.
+
+Only a family member of that family can see, approve, or decline its requests; the server refuses anyone else, and another family's requests behave like IDs that don't exist.
 
 ## Supporters
 
@@ -105,7 +137,7 @@ Answering the question on a new device gets a supporter reading there at once, a
 
 ### Signing out and notifications
 
-A signed-in supporter can sign out on the current device. Once they've given an email, they can turn notification emails off or back on, with "Email me when there's a new update" above the feed. Family members have the same checkbox. Every notification email lets its recipient, supporter or family member, turn notifications off without signing in (see [updates.md](updates.md#notifications)).
+A signed-in supporter can sign out on the current device. Once they've given an email, they can turn notification emails off or back on, with "Email me when there's a new update" above the feed. Family members have the same checkbox, which on an invite-only family also covers requests to join (see "Invite-only families"). Every notification email lets its recipient, supporter or family member, turn notifications off without signing in (see [updates.md](updates.md#notifications)).
 
 ## Family members
 
@@ -173,7 +205,7 @@ A phone number is kept as typed, after trimming. It can contain only digits, spa
 
 ## Managing supporters
 
-Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, phone number, when they have one, as a link that calls it on a phone, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. Below the lists is the Groups section (see "Groups").
+Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, phone number, when they have one, as a link that calls it on a phone, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. On an invite-only family, the "Requests to join" section sits above the lists (see "Requesting an invite"). Below the lists is the Groups section (see "Groups").
 
 Supporters without an email aren't listed, even when they've given a name with a note. Instead the page shows how many devices are signed in without a verified email. Each device counts separately, so one person reading on a phone and a laptop counts twice, and listed supporters who haven't verified yet count too.
 
@@ -300,6 +332,8 @@ The gate keeps out bots, crawlers, and casual strangers. It does not stop a dete
 So the app doesn't add friction, such as confirmation steps or forced sign-outs, to defend against someone who already knows the answer. Supporters are family and friends, many of them elderly, and every extra step costs them more than it stops an insider. When the family wants someone out, the remedy is to remove that person and change the answer. This limits only the gate: server-side authorization, keeping each family's data separate, and the tests for both are never relaxed.
 
 A slug chosen without the random suffix, such as `for-sam`, can be guessed, and the family shown at the site's root can be found by anyone who knows the site's address. Either way, the finder sees the family's display name and question, and can try answers within the wrong-answer limits. At an invite-only family's address, they see only its display name.
+
+Anyone can ask an invite-only family for an invite, with any name and message, and each request tells the family to look. The limits (5 an hour per network, 50 pending, 30-day expiry) keep that from becoming a flood or from filling the family's list for good, but a person with many networks can still send a few. A request grants nothing until a family member approves it, and approval sends the sign-in link only to the email typed in, so someone who types another person's email gets that person an unexpected welcome email and nothing more. Declining deletes the request, so someone the family declines can ask again; the family just declines again.
 
 An invite-only family's welcome email signs in whoever uses its link, once, for 7 days. Forwarded in that week, it lets the recipient read as that supporter instead, until the family removes them. This trades a little safety for a single step, since many supporters are elderly; the 15-minute link from "Sign in by email" is the safer path after that.
 
