@@ -3,7 +3,7 @@ import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import { validName } from "./families.js";
 import { NoteColor, type Person, type Prisma } from "./generated/prisma/client.js";
-import { requireFamilyMember } from "./people.js";
+import { requireAdmin } from "./people.js";
 import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
 import { cloudinaryStore, newPublicId, type VideoStore } from "./videos.js";
 
@@ -300,14 +300,14 @@ function validBody(body: unknown): string {
   return text;
 }
 
-// A family member sets whether "Allow notes" starts checked when anyone in the family posts.
+// An admin sets whether "Allow notes" starts checked when anyone in the family posts.
 // Updates already posted keep their own setting.
 export async function setAllowNotesByDefault(
   db: Db,
   person: Person,
   input: { allowNotesByDefault?: unknown },
 ): Promise<{ allowNotesByDefault: boolean }> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   if (typeof input.allowNotesByDefault !== "boolean") {
     throw new RequestError(400, "Expected allowNotesByDefault to be true or false");
   }

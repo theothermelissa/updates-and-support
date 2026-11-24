@@ -403,7 +403,7 @@ describe("video updates", () => {
   it("says the email is a video, and never names the video", async () => {
     const { family, ana, sam, videos } = await setUp();
     await db.person.update({ where: { id: sam.id }, data: { emailVerifiedAt: new Date() } });
-    await db.person.create({ data: { familyId: family.id, role: "family", name: "Ben", email: "ben@example.com" } });
+    await db.person.create({ data: { familyId: family.id, role: "family", isAdmin: true, name: "Ben", email: "ben@example.com" } });
     const publicId = await upload(videos, ana);
     const mail = fakeMailer();
     await createUpdate(db, ana, { video: publicId }, mail.sendMany, undefined, videos.store);

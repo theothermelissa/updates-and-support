@@ -151,7 +151,7 @@ describe("signing in with a verification link and the answer", () => {
   it("never signs in a family member, even one promoted from supporter", async () => {
     const { family, token } = await setUp();
     const ana = await db.person.findFirstOrThrow({ where: { familyId: family.id, role: "family" } });
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Friend", email: "sam@example.com" });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Friend", email: "sam@example.com", admin: true });
 
     const sessions = await db.session.count();
     expect(await verifyEmail(db, family.slug, token)).toEqual({ canSignIn: false });
@@ -177,7 +177,7 @@ describe("signing in with a verification link and the answer", () => {
       const supporter = await sam();
       await Promise.allSettled([
         signInWithVerifyLink(db, family, phone, token, "Biscuit"),
-        addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Friend", email: "sam@example.com" }),
+        addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Friend", email: "sam@example.com", admin: true }),
       ]);
       // Promotion signs Sam out; a family-member session only ever comes from promotion's own email.
       expect(await db.session.count({ where: { personId: supporter.id } })).toBe(0);

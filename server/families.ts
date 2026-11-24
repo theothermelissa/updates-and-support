@@ -63,6 +63,7 @@ export async function createFamily(db: Db, input: NewFamily) {
       people: {
         create: input.members.map((m) => ({
           role: "family" as const,
+          isAdmin: true,
           name: m.name.trim(),
           email: normalizeEmail(m.email),
         })),

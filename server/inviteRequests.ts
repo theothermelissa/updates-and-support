@@ -5,7 +5,7 @@ import { RequestError } from "./errors.js";
 import { validNameAndEmail } from "./families.js";
 import type { Client } from "./gate.js";
 import type { Family, Person } from "./generated/prisma/client.js";
-import { createSupporter, inviteRequestCutoff, requireFamilyMember, sendSupporterWelcome } from "./people.js";
+import { createSupporter, inviteRequestCutoff, requireAdmin, sendSupporterWelcome } from "./people.js";
 
 export const NETWORK_LIMIT_PER_HOUR = 5;
 export const PENDING_CAP = 50;
@@ -73,11 +73,11 @@ export async function requestInvite(
   return "thanks";
 }
 
-// Tells the family's active, opted-in family members that someone asked to join. Nothing
+// Tells the family's active, opted-in admins that someone asked to join. Nothing
 // about the requester goes in the email.
 export async function notifyInviteRequest(db: Db, sendMany: SendEmails, family: Family): Promise<void> {
   const members = await db.person.findMany({
-    where: { familyId: family.id, role: "family", removedAt: null, email: { not: null }, notificationsOn: true },
+    where: { familyId: family.id, role: "family", isAdmin: true, removedAt: null, email: { not: null }, notificationsOn: true },
     select: { email: true, unsubscribeToken: true },
   });
   const base = `${appUrl()}/f/${family.slug}`;
@@ -110,7 +110,7 @@ export async function approveInviteRequest(
   person: Person,
   id: string,
 ): Promise<ApproveResult> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   const family = await db.family.findUniqueOrThrow({ where: { id: person.familyId } });
   // Only invite-only families take requests; a row on any other family is not approvable.
   if (!family.inviteOnly) throw gone();
@@ -148,7 +148,7 @@ export async function approveInviteRequest(
 // Deletes a request in the family member's own family and tells no one. Another family's
 // requests behave like IDs that don't exist.
 export async function declineInviteRequest(db: Db, person: Person, id: string): Promise<void> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   const { count } = await db.inviteRequest.deleteMany({ where: { id, familyId: person.familyId } });
   if (count === 0) throw gone();
 }

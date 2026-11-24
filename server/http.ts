@@ -61,6 +61,7 @@ export function personView(person: Person) {
     email: person.email,
     phone: person.phone,
     role: person.role,
+    isAdmin: person.isAdmin,
     notificationsOn: person.notificationsOn,
     emailVerified: person.emailVerifiedAt !== null,
   };
