@@ -475,11 +475,11 @@ function FamilyMembers({
         <TableBody>
           {members.map((m) => (
             <TableRow key={m.id}>
-              <TableCell>{m.isYou ? `${m.name} (you)` : m.name}</TableCell>
-              <TableCell>{m.email}</TableCell>
-              <TableCell>
+              <TableCell className="whitespace-normal">
+                <div>{m.isYou ? `${m.name} (you)` : m.name}</div>
+                <div className="break-all text-muted-foreground">{m.email}</div>
                 {/* Controlled by the saved value, so a refused change leaves it where it was. */}
-                <Label className="whitespace-nowrap">
+                <Label className="mt-1 whitespace-nowrap">
                   <Checkbox checked={m.isAdmin} onCheckedChange={(checked) => toggleAdmin(m, checked === true)} />
                   Admin
                 </Label>
