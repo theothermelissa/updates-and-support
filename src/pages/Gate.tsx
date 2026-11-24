@@ -3,6 +3,7 @@ import { EmailInput, ErrorMessage, Field, PageShell } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "../api.js";
 
 type GateResult = { result?: "wrong" | "limited" | "joined"; error?: string };
@@ -61,11 +62,12 @@ export function Gate({ slug, onJoined }: { slug: string; onJoined: () => void })
   );
 }
 
-// An invite-only family's signed-out page: only "sign in with your email." It says the same
-// thing whether or not the email belongs to someone in the family.
+// An invite-only family's signed-out page: "sign in with your email," or ask the family for an
+// invite. Each says the same thing whether or not the email belongs to someone in the family.
 function InviteOnlyGate({ slug, displayName }: { slug: string; displayName: string }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"form" | "sending" | "sent" | "error">("form");
+  const [requesting, setRequesting] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -74,6 +76,7 @@ function InviteOnlyGate({ slug, displayName }: { slug: string; displayName: stri
     setState(status === 200 ? "sent" : "error");
   }
 
+  if (requesting) return <RequestInvite slug={slug} displayName={displayName} onBack={() => setRequesting(false)} />;
   return (
     <PageShell title={displayName}>
       {state === "sent" ? (
@@ -95,6 +98,84 @@ function InviteOnlyGate({ slug, displayName }: { slug: string; displayName: stri
             </CardContent>
           </Card>
           {state === "error" && <ErrorMessage>Something went wrong. Please try again.</ErrorMessage>}
+          <p className="text-sm">
+            <Button type="button" variant="link" className="h-auto p-0" onClick={() => setRequesting(true)}>
+              Request an invite
+            </Button>
+          </p>
+        </>
+      )}
+    </PageShell>
+  );
+}
+
+const MESSAGE_MAX = 500;
+
+// Asks the family for an invite. The reply is the same whoever the email belongs to.
+function RequestInvite({ slug, displayName, onBack }: { slug: string; displayName: string; onBack: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<"thanks" | "closed" | null>(null);
+  const [error, setError] = useState("");
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const { data } = await api<{ result?: "thanks" | "closed"; error?: string }>(slug, "invite-requests", {
+      method: "POST",
+      body: { name, email, message: note },
+    });
+    setBusy(false);
+    if (data?.result === "thanks" || data?.result === "closed") return setResult(data.result);
+    setError(data?.error ?? "Something went wrong. Please try again.");
+  }
+
+  return (
+    <PageShell title={displayName}>
+      {result ? (
+        <>
+          <p>
+            {result === "thanks"
+              ? "Thanks. If the family approves, you'll get an email at that address."
+              : "Requests are closed right now. Please contact the family."}
+          </p>
+          <p className="text-sm">
+            <Button type="button" variant="link" className="h-auto p-0" onClick={onBack}>
+              Back
+            </Button>
+          </p>
+        </>
+      ) : (
+        <>
+          <p>Ask the family for an invite. If they approve, we'll email you a link to sign in.</p>
+          <Card>
+            <CardContent>
+              <form onSubmit={submit} className="space-y-4">
+                <Field label="Name">
+                  <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+                </Field>
+                <Field label="Email">
+                  <EmailInput required value={email} onChange={(e) => setEmail(e.target.value)} />
+                </Field>
+                <Field label="Message (optional)">
+                  <Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={MESSAGE_MAX} rows={4} />
+                </Field>
+                <p className="text-sm text-muted-foreground">
+                  {note.length} / {MESSAGE_MAX}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={busy}>Send request</Button>
+                  <Button type="button" variant="outline" onClick={onBack}>
+                    Back
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+          {error && <ErrorMessage>{error}</ErrorMessage>}
         </>
       )}
     </PageShell>
