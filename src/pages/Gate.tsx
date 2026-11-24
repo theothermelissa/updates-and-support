@@ -93,16 +93,16 @@ function InviteOnlyGate({ slug, displayName }: { slug: string; displayName: stri
                 <Field label="Email">
                   <EmailInput required value={email} onChange={(e) => setEmail(e.target.value)} />
                 </Field>
-                <Button disabled={state === "sending"}>Send me a sign-in link</Button>
+                <Button variant="outline" disabled={state === "sending"}>
+                  Send me a sign-in link
+                </Button>
               </form>
             </CardContent>
           </Card>
           {state === "error" && <ErrorMessage>Something went wrong. Please try again.</ErrorMessage>}
-          <p className="text-sm">
-            <Button type="button" variant="link" className="h-auto p-0" onClick={() => setRequesting(true)}>
-              Request an invite
-            </Button>
-          </p>
+          <Button type="button" onClick={() => setRequesting(true)}>
+            Request an invite
+          </Button>
         </>
       )}
     </PageShell>
