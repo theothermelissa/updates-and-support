@@ -17,13 +17,15 @@ beforeEach(() => resetDb(db));
 
 const SECRET = "Biopsy results came back on Tuesday";
 
-type Options = { verified?: boolean; on?: boolean; removed?: boolean };
+type Options = { verified?: boolean; on?: boolean; removed?: boolean; isAdmin?: boolean };
 
 async function person(familyId: string, role: "family" | "supporter", name: string, options: Options = {}) {
   return db.person.create({
     data: {
       familyId,
       role,
+      // Family members are admins unless a test says otherwise; supporters never are.
+      isAdmin: role === "family" && (options.isAdmin ?? true),
       name,
       email: `${name.toLowerCase()}@example.com`,
       emailVerifiedAt: options.verified === false ? null : new Date(),

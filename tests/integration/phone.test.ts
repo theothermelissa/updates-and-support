@@ -64,7 +64,7 @@ describe("setting your own phone number", () => {
     await db.person.update({ where: { id: tess.id }, data: { removedAt: new Date() } });
     await expect(setOwnPhone(db, tess, PHONE)).rejects.toMatchObject({ status: 403 });
     // sam is the session's copy from before the promotion.
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Friend", email: sam.email });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Friend", email: sam.email, admin: true });
     await expect(setOwnPhone(db, sam, PHONE)).rejects.toMatchObject({ status: 403 });
     for (const person of [ana, sam, tess]) expect(await phoneOf(person)).toBeNull();
   });
@@ -105,7 +105,7 @@ describe("who sees a phone number", () => {
     await setOwnPhone(db, sam, PHONE);
     const request = await add(ana);
     await offerHelp(db, undefined, sam, request.id, { helping: true });
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Friend", email: sam.email });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Friend", email: sam.email, admin: true });
 
     expect(await phoneOf(sam)).toBeNull();
     expect((await listHelp(db, ana))[0]!.offers.map((o) => [o.name, o.phone])).toEqual([["Sam Friend", null]]);

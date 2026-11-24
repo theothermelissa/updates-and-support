@@ -30,7 +30,7 @@ export function FamilyHome({ slug, me, setMe, reloadMe, onSignedOut }: FamilyPag
               checked={me.person.notificationsOn}
               onCheckedChange={(checked) => setNotifications(checked === true)}
             />
-            {me.person.role === "family" && me.family.inviteOnly
+            {me.person.isAdmin && me.family.inviteOnly
               ? "Email me about new updates and requests to join"
               : "Email me when there's a new update"}
           </Label>

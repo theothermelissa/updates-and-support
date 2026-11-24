@@ -3,7 +3,7 @@ import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
 import { noteReactionSet, visibleNotes } from "./notes.js";
-import { requireFamilyMember } from "./people.js";
+import { requireAdmin } from "./people.js";
 import { inCatalogOrder, MAX_REACTIONS, reactionFor } from "../src/lib/reactionCatalog.js";
 
 // An update's set of reactions from a request: distinct catalog kinds, at most six, returned in
@@ -101,14 +101,14 @@ export async function setReaction(
   );
 }
 
-// A family member sets the emoji anyone may react with on their family's notes. Reactions
+// An admin sets the emoji anyone may react with on their family's notes. Reactions
 // already given stay, as when an update's set changes.
 export async function setNoteReactions(
   db: Db,
   person: Person,
   input: { reactions?: unknown },
 ): Promise<{ reactions: string[] }> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   const kinds = parseReactionSet(input.reactions);
   const family = await db.family.update({
     where: { id: person.familyId },

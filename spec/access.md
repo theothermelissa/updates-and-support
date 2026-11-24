@@ -41,7 +41,7 @@ An invite-only family has no community question and no anonymous readers. Every 
 - **Adding a supporter.** A family member adds supporters on the People page as described in "Added by a family member," with one difference: the welcome email carries a **sign-in link**, not a confirmation link. It says the family added them, with the link, and says that it works once and expires in 7 days, and that after that they can sign in any time at the family's address with their email. Using it signs them in and marks their email verified, like any magic link. Removing the supporter cancels it, as it does every unused link.
 - **The People page** has no community question section and no count of devices without a verified email. Removing a supporter's confirmation doesn't mention changing the answer, because removal alone keeps them out.
 - **Audiences.** An invite-only family always chooses who sees each update, including before it has any groups (see [updates.md](updates.md#audience)).
-- **Notifications.** Family members' notification checkbox covers requests to join too, and reads "Email me about new updates and requests to join" (see "Requesting an invite").
+- **Notifications.** An admin's notification checkbox covers requests to join too, and reads "Email me about new updates and requests to join" (see "Requesting an invite" and "Admins").
 
 ### Requesting an invite
 
@@ -64,7 +64,7 @@ A request is not a person: it has no record in the family's people, no session, 
 
 #### Telling the family
 
-When a request is stored, every family member of that family who hasn't been removed and has notifications on gets an email saying only that someone asked to join the family, with a link to the People page and one to turn notifications off. It carries no name, email, or message, since emails are forwarded and shown in lock-screen previews. If it can't be sent, the request is still stored.
+When a request is stored, every admin of that family who hasn't been removed and has notifications on gets an email saying only that someone asked to join the family, with a link to the People page and one to turn notifications off. It carries no name, email, or message, since emails are forwarded and shown in lock-screen previews. If it can't be sent, the request is still stored.
 
 #### Approving and declining
 
@@ -72,7 +72,7 @@ The People page of an invite-only family has a **Requests to join** section abov
 
 **Approve** adds them as a supporter exactly as "Added by a family member" does: the same record, the same welcome email with the 7-day sign-in link, in Everyone and in no groups, and the name they gave. The family adds them to groups afterward in the Groups section. The request is deleted. If the person has meanwhile been added by hand, or become a family member, or been removed, approving changes nothing about them, deletes the request, and says so, as the matching case in "Added by a family member" does. Approving and declining take turns: of two family members acting on the same request at once, one succeeds and the other is told the request is gone.
 
-Only a family member of that family can see, approve, or decline its requests; the server refuses anyone else, and another family's requests behave like IDs that don't exist.
+Only an admin of that family can see, approve, or decline its requests; the server refuses anyone else, and another family's requests behave like IDs that don't exist.
 
 ## Supporters
 
@@ -96,7 +96,7 @@ A supporter who already has an email can't change it this way.
 
 ### Added by a family member
 
-A family member can add a supporter directly, by name and email, on the People page, so the supporter never has to find the family's address and answer the question unprompted. The form reminds the family member to double-check the email.
+An admin can add a supporter directly, by name and email, on the People page, so the supporter never has to find the family's address and answer the question unprompted. The form reminds the family member to double-check the email.
 
 What happens depends on whom the email already belongs to in this family:
 
@@ -137,7 +137,7 @@ Answering the question on a new device gets a supporter reading there at once, a
 
 ### Signing out and notifications
 
-A signed-in supporter can sign out on the current device. Once they've given an email, they can turn notification emails off or back on, with "Email me when there's a new update" above the feed. Family members have the same checkbox, which on an invite-only family also covers requests to join (see "Invite-only families"). Every notification email lets its recipient, supporter or family member, turn notifications off without signing in (see [updates.md](updates.md#notifications)).
+A signed-in supporter can sign out on the current device. Once they've given an email, they can turn notification emails off or back on, with "Email me when there's a new update" above the feed. Family members have the same checkbox, which for an admin of an invite-only family also covers requests to join (see "Admins"). Every notification email lets its recipient, supporter or family member, turn notifications off without signing in (see [updates.md](updates.md#notifications)).
 
 ## Family members
 
@@ -151,20 +151,29 @@ Family members get notification emails for updates other family members post, fr
 
 ### Adding family members
 
-Any family member can add another family member by name and email, on the People page. The new family member gets an email saying they've been added to the family's updates, with a magic link to sign in (see "Magic links"). The email says that once the link expires, they can sign in any time with "Family sign-in." If the email can't be sent, they are still added.
+Any admin can add another family member by name and email, on the People page. The form has a **"Can manage people and settings"** checkbox, unchecked, which makes the new family member an admin (see "Admins"); the server refuses a request that doesn't say yes or no. The new family member gets an email saying they've been added to the family's updates, with a magic link to sign in (see "Magic links"). The email says that once the link expires, they can sign in any time with "Family sign-in." If the email can't be sent, they are still added.
 
 What happens depends on whom the email already belongs to in this family:
 
 - **No one:** a new family member is created.
-- **A supporter:** the supporter is **promoted**. The same record becomes a family member with the name just entered, and all of their sessions end, so they sign in again with a family member's session. If they had been removed, promotion also restores them. A promoted supporter leaves every group (see "Groups").
-- **A removed family member:** they are restored, with the name just entered.
-- **A current family member:** nothing changes and no email is sent; the page says they're already a family member.
+- **A supporter:** the supporter is **promoted**. The same record becomes a family member with the name just entered and the admin choice just made, and all of their sessions end, so they sign in again with a family member's session. If they had been removed, promotion also restores them. A promoted supporter leaves every group (see "Groups").
+- **A removed family member:** they are restored, with the name just entered and the admin choice just made.
+- **A current family member:** nothing changes, including whether they're an admin, and no email is sent; the page says they're already a family member.
 
 ### Removing family members
 
-Any family member can remove another family member from the People page, after confirming. A family member cannot remove themselves, and a family always keeps at least one family member: the server refuses a removal that would leave none, even if two removals happen at the same moment.
+Any admin can remove another family member from the People page, after confirming. A family member cannot remove themselves, and a family always keeps at least one admin: the server refuses a removal or demotion that would leave none, even if two happen at the same moment.
 
 Removal works as it does for supporters: it ends the person's sessions, cancels their unused sign-in links, and keeps the record, marked removed, so their email can't sign in or be given by a supporter. Updates they wrote stay, still showing their name. Removed family members aren't listed; adding their email again restores them.
+
+### Admins
+
+A family member is either an **admin** or not. Admins manage the family: they do everything on the People page that changes anything, which is adding, removing, restoring, and verifying people, choosing who is an admin, groups, the community question, the privacy banner, the note reaction set, and "New updates allow notes," and they see and answer requests to join (see "Requesting an invite"). A family member who isn't an admin can do everything else a family member can: see every update, post, edit, and delete any update, leave and delete notes, post and resolve requests on How to help, remove offers, and write the family's message there. Their notes are marked "Family," and they sign in and get notification emails like any family member, except the email about requests to join, which only admins get.
+
+- **At least one admin.** A family always keeps one: the server refuses a removal or demotion that would leave none, even if two happen at the same moment.
+- **Who is an admin.** Family members the operator's script creates are admins. An admin chooses it when adding a family member (see "Adding family members"), and can change it for any family member, themselves included, with an **Admin** switch on that person's row on the People page, which only admins see. A change applies to the person's next request: they stay signed in, and an admin who turns off their own switch finds the People page read-only when it next loads.
+- **What a non-admin sees on the People page.** Read-only lists of the family's family members (name and email) and of its supporters who have an email (name, email, phone number, whether the email is verified, whether notifications are on, and when they joined). No forms, buttons, removed list, device count, groups, community question, privacy banner, or settings. The server doesn't send them those things and refuses the actions. The menu still links to the page. They still choose audiences when posting, so the post form lists the family's groups for them as it does for admins.
+- **Notifications.** Their notification checkbox reads "Email me when there's a new update," as every other reader's does. An admin's, on an invite-only family, also covers requests to join (see "Notifications" under "Invite-only families").
 
 ## Magic links
 
@@ -205,13 +214,13 @@ A phone number is kept as typed, after trimming. It can contain only digits, spa
 
 ## Managing supporters
 
-Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. It lists the family's family members (name and email), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, phone number, when they have one, as a link that calls it on a phone, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. On an invite-only family, the "Requests to join" section sits above the lists (see "Requesting an invite"). Below the lists is the Groups section (see "Groups").
+Family members have a **People** page, at `/f/<slug>/people` and linked from the navigation bar's menu. What follows is what an admin sees; a family member who isn't an admin sees only read-only lists (see "Admins"). It lists the family's family members (name and email), each with an Admin switch (see "Admins"), with a form to add one (see "Adding family members"), and the family's supporters who have an email, with a form to add one (see "Added by a family member"): name, email, phone number, when they have one, as a link that calls it on a phone, whether the email is verified, whether notifications are on, and when they joined. Removed supporters are listed separately. On an invite-only family, the "Requests to join" section sits above the lists (see "Requesting an invite"). Below the lists is the Groups section (see "Groups").
 
 Supporters without an email aren't listed, even when they've given a name with a note. Instead the page shows how many devices are signed in without a verified email. Each device counts separately, so one person reading on a phone and a laptop counts twice, and listed supporters who haven't verified yet count too.
 
-Supporters never see this page, the list, the count, or each other's details; the server refuses them to anyone but a family member of that family. Supporters never see each other's phone numbers. The one thing supporters see of each other is the name on a reaction or a note (see [updates.md](updates.md#reactions) and [updates.md](updates.md#notes)). Supporters never see who else offered to help (see [updates.md](updates.md#how-to-help)).
+Supporters never see this page, the list, the count, or each other's details; the server refuses them to anyone but a family member of that family, and refuses every change on it to anyone but an admin. Supporters never see each other's phone numbers. The one thing supporters see of each other is the name on a reaction or a note (see [updates.md](updates.md#reactions) and [updates.md](updates.md#notes)). Supporters never see who else offered to help (see [updates.md](updates.md#how-to-help)).
 
-A family member can **remove** a supporter after confirming. Removal:
+An admin can **remove** a supporter after confirming. Removal:
 
 - ends all of the supporter's sessions immediately,
 - cancels any unused sign-in links already sent to them,
@@ -222,9 +231,9 @@ A removed supporter cannot sign in by email: "Already joined? Sign in by email" 
 
 Removal doesn't stop someone who knows the answer from reading without an email. The removal confirmation says so, and that changing the answer keeps them out (see "Changing the community question").
 
-A family member can **restore** a removed supporter. Restoring lets them sign in by email again and leaves their notifications **off**; they can turn notifications back on themselves once signed in. Restoring does not sign them in anywhere.
+An admin can **restore** a removed supporter. Restoring lets them sign in by email again and leaves their notifications **off**; they can turn notifications back on themselves once signed in. Restoring does not sign them in anywhere.
 
-A family member can **verify** a listed supporter whose email isn't verified yet, for supporters who never manage the emailed confirmation. A "Verify" button appears only on those rows, and only the server's check decides who may use it. Pressing it verifies the email at once, without a confirmation step. Verifying:
+An admin can **verify** a listed supporter whose email isn't verified yet, for supporters who never manage the emailed confirmation. A "Verify" button appears only on those rows, and only the server's check decides who may use it. Pressing it verifies the email at once, without a confirmation step. Verifying:
 
 - marks the email verified, exactly as confirming it would: notifications start if they're on, and the supporter stays signed in when an accepted answer changes,
 - leaves their sessions and notification setting as they are, so no one is signed out,
@@ -240,7 +249,7 @@ A family can sort its supporters into **groups**, such as "Investors" or "Neighb
 
 ### Managing groups
 
-The People page has a **Groups** section, after the supporter lists. Any family member can:
+The People page has a **Groups** section, after the supporter lists. Any admin can:
 
 - **create** a group by name. A name is 1 to 50 characters after trimming, and no two groups in a family share a name, ignoring capitals. A family can have at most 50 groups.
 - **rename** a group, under the same rules.
@@ -281,7 +290,7 @@ Deleting asks for confirmation on the page. When some updates are shared only wi
 
 ### Who may manage groups
 
-Only a family member of that family can create, rename, or delete a group, change its members, or see any of it; the server refuses anyone else, and accepts only that family's own groups and supporters.
+Only an admin of that family can create, rename, or delete a group, change its members, or see any of it on the People page; the server refuses anyone else, and accepts only that family's own groups and supporters.
 
 ## Reactions on notes
 
@@ -289,7 +298,7 @@ The People page has a **Reactions on notes** section, above the community questi
 
 The control is the one from Post settings: a **"Use the usual reactions"** checkbox, checked when the set is exactly the usual six, and, when unchecked, the tray preview and the whole catalog as one grid, allowing up to six and as few as none. Nothing changes until the family member presses **Save reactions**; the new set then applies to every note at once. When two family members save at about the same time, the later save wins.
 
-Only a family member of that family can change the set; the server refuses anyone else, and accepts only up to six distinct emoji from the catalog. Supporters see the set only as the emoji offered when they react to a note.
+Only an admin of that family can change the set; the server refuses anyone else, and accepts only up to six distinct emoji from the catalog. Supporters see the set only as the emoji offered when they react to a note.
 
 ## Notes on new updates
 
@@ -297,7 +306,7 @@ The People page has a **Notes on new updates** section, beside "Reactions on not
 
 The checkbox saves as soon as it's changed, and says "Saved" beside it. If saving fails, it returns to the saved value and says so. When two family members change it at about the same time, the later change wins.
 
-Only a family member of that family can change it; the server refuses anyone else. Supporters never see it.
+Only an admin of that family can change it; the server refuses anyone else. Supporters never see it.
 
 ## The privacy banner
 
@@ -313,11 +322,11 @@ The banner is always shown; a family can reword it but not turn it off. It is a 
 
 To back the request up, the Updates, How to help, and Notes pages discourage copying. Their text can't be selected, and copying, right-clicking, long-pressing for the phone's menu, and dragging images out of the page do nothing. Text boxes and the update editor are exempt, so people can still select, copy, and paste in what they're writing. The People page is exempt as well: only family members see it, and they may need to copy a supporter's email or phone number. This only slows a reader down; a screenshot, the browser's reader mode, or its developer tools still get the text.
 
-Only a family member of that family can change the wording; the server refuses anyone else.
+Only an admin of that family can change the wording; the server refuses anyone else.
 
 ## Changing the community question
 
-The People page also shows the community question and its accepted answers, and a family member can change them at any time. A question must not be empty and needs at least one non-empty accepted answer; answers are entered one per line.
+The People page also shows the community question and its accepted answers, and an admin can change them at any time. A question must not be empty and needs at least one non-empty accepted answer; answers are entered one per line.
 
 Removing or changing an accepted answer signs out every supporter in the family who doesn't have a verified email, including everyone reading without one, so whoever got in with the old answer has to answer again. Supporters with a verified email and family members stay signed in: the family can see them in its lists and remove them one by one.
 
@@ -334,6 +343,8 @@ So the app doesn't add friction, such as confirmation steps or forced sign-outs,
 A slug chosen without the random suffix, such as `for-sam`, can be guessed, and the family shown at the site's root can be found by anyone who knows the site's address. Either way, the finder sees the family's display name and question, and can try answers within the wrong-answer limits. At an invite-only family's address, they see only its display name.
 
 Anyone can ask an invite-only family for an invite, with any name and message, and each request tells the family to look. The limits (5 an hour per network, 50 pending, 30-day expiry) keep that from becoming a flood or from filling the family's list for good, but a person with many networks can still send a few. The reply never says whether the email was known, but how long it takes can: a known email waits on a sign-in email, and a new request on the family's. The sign-in form has the same limit. A request grants nothing until a family member approves it, and approval sends the sign-in link only to the email typed in, so someone who types another person's email gets that person an unexpected welcome email and nothing more. Declining deletes the request, so someone the family declines can ask again; the family just declines again.
+
+A family member who isn't an admin is not a lesser-trusted member: they see every update and every supporter's name, email, and phone number, and can delete any update or note. Being an admin only adds managing the family.
 
 An invite-only family's welcome email signs in whoever uses its link, once, for 7 days. Forwarded in that week, it lets the recipient read as that supporter instead, until the family removes them. This trades a little safety for a single step, since many supporters are elderly; the 15-minute link from "Sign in by email" is the safer path after that.
 

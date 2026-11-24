@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { listPeople, setPrivacyNotice } from "../../server/people.js";
+import { setPrivacyNotice } from "../../server/people.js";
 import { createTestDb } from "./db.js";
-import { joinWithEmail, makeFamily, resetDb } from "./fixtures.js";
+import { listAdminPeople, joinWithEmail, makeFamily, resetDb } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -21,7 +21,7 @@ describe("the privacy banner's wording", () => {
   it("is saved by a family member for their own family only", async () => {
     const { family, okafor, ana } = await setUp();
     await setPrivacyNotice(db, ana, { privacyNotice: "Please keep Sam's news private." });
-    expect((await listPeople(db, ana)).privacyNotice).toBe("Please keep Sam's news private.");
+    expect((await listAdminPeople(db, ana)).privacyNotice).toBe("Please keep Sam's news private.");
     expect(await noticeOf(family.id)).toBe("Please keep Sam's news private.");
     expect(await noticeOf(okafor.id)).toBeNull();
   });

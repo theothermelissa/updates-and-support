@@ -72,6 +72,9 @@ model Person {
   // Supporters only, kept as typed: for the family to call or text them. Only family members
   // see it. A database check keeps it null for family members.
   phone            String?
+  // Family members only. Admins manage the family (see spec/access.md "Admins"); a database
+  // check keeps it false for supporters.
+  isAdmin          Boolean   @default(false)
   createdAt        DateTime  @default(now())
 
   family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)

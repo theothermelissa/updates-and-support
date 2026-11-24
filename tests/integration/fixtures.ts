@@ -2,8 +2,8 @@ import type { Db } from "../../server/db.js";
 import type { Email, SendEmail, SendEmails } from "../../server/email.js";
 import { createFamily } from "../../server/families.js";
 import { addEmail, answerGate, type Client } from "../../server/gate.js";
-import { addSupporter, verifySupporter } from "../../server/people.js";
-import type { Family } from "../../server/generated/prisma/client.js";
+import { addFamilyMember, addSupporter, listPeople, verifySupporter } from "../../server/people.js";
+import type { Family, Person } from "../../server/generated/prisma/client.js";
 import type { VideoStore } from "../../server/videos.js";
 
 export async function resetDb(db: Db) {
@@ -27,6 +27,24 @@ export async function makeFamily(db: Db, surname: string, firstNames = ["Ana"], 
   });
   const people = await db.person.findMany({ where: { familyId: family.id }, orderBy: { name: "asc" } });
   return { family, people };
+}
+
+// A family member without admin rights, such as "ben@example.com" for "Ben", added through the
+// real add form.
+export async function makeNonAdmin(db: Db, family: Family, name: string) {
+  const admin = await db.person.findFirstOrThrow({
+    where: { familyId: family.id, role: "family", isAdmin: true, removedAt: null },
+  });
+  const email = `${name.toLowerCase()}@example.com`;
+  await addFamilyMember(db, fakeMailer().send, admin, { name, email, admin: false });
+  return db.person.findUniqueOrThrow({ where: { familyId_email: { familyId: family.id, email } } });
+}
+
+// The People page as an admin sees it. Throws if the person isn't one.
+export async function listAdminPeople(db: Db, person: Person) {
+  const people = await listPeople(db, person);
+  if (!people.admin) throw new Error("Expected the admin People page");
+  return people;
 }
 
 // Answers makeFamily's question correctly, as a new reader with no name or email. Returns

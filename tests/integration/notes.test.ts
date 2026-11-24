@@ -155,14 +155,14 @@ describe("removal", () => {
     const { family, update } = await setUp();
     const { people } = { people: await db.person.findMany({ where: { familyId: family.id, role: "family" } }) };
     const ana = people[0]!;
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Bea Rivera", email: "bea@example.com" });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Bea Rivera", email: "bea@example.com", admin: true });
     const bea = await db.person.findFirstOrThrow({ where: { email: "bea@example.com" } });
     await leave(bea, update.id, "From Bea");
 
     await setRemoved(db, ana, bea.id, true);
     expect(await listNotes(db, ana)).toEqual([]);
 
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Bea Rivera", email: "bea@example.com" });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Bea Rivera", email: "bea@example.com", admin: true });
     expect((await listNotes(db, ana)).map((n) => n.body)).toEqual(["From Bea"]);
   });
 });
@@ -241,7 +241,7 @@ describe("flows that keep notes", () => {
   it("keeps a promoted supporter's notes, signed with the name given at promotion", async () => {
     const { ana, sam, update } = await setUp();
     await leave(sam, update.id);
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Rivera", email: sam.email! });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam Rivera", email: sam.email!, admin: true });
     const promoted = await reload(sam);
     const [note] = await listNotes(db, promoted);
     expect(note).toMatchObject({ authorName: "Sam Rivera", mine: true, authorIsFamily: true });
