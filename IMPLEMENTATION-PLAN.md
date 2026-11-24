@@ -41,11 +41,11 @@ model InviteRequest {
 }
 ```
 
-Add `inviteRequests InviteRequest[]` to `Family`. Follow `claude/lessons.md` → "Commands that fail in an agent's shell" to check there's no drift. Add `"InviteRequest"` to `resetDb` in `tests/integration/fixtures.ts` only if truncating `Family ... CASCADE` doesn't already reach it.
+Add `inviteRequests InviteRequest[]` to `Family`. Follow `claude/lessons.md` → "Commands that fail in an agent's shell" to check there's no drift. `resetDb` already reaches the new table through `TRUNCATE ... "Family" CASCADE`; leave it alone.
 
 ## Server: `server/inviteRequests.ts`
 
-Constants: `NETWORK_LIMIT_PER_HOUR = 5`, `PENDING_CAP = 50`, `EXPIRY = 30 days`, `MESSAGE_MAX = 500`. Name and email validation reuse `validNameAndEmail` from `server/people.ts` (export it if needed).
+Constants: `NETWORK_LIMIT_PER_HOUR = 5`, `PENDING_CAP = 50`, `EXPIRY = 30 days`, `MESSAGE_MAX = 500`. Name and email validation reuse `validNameAndEmail` from `server/families.ts`.
 
 ### `requestInvite(db, send, sendMany, family, client, input): Promise<"thanks" | "closed">`
 
@@ -66,39 +66,38 @@ The cap and network limit are plain counts without a lock: two simultaneous requ
 
 ### Telling the family
 
-`notifyInviteRequest(db, sendMany, family)`: the family's family members with `removedAt: null`, an email, and `notificationsOn: true` each get `inviteRequestEmail(...)` from `server/email.ts`:
+`notifyInviteRequest(db, sendMany, family)`: selects `{ email, unsubscribeToken }` of the family's people with `role: "family"`, `removedAt: null`, an email, and `notificationsOn: true` (inline, not shared with `notifyNewUpdate`); each gets `inviteRequestEmail(...)` from `server/email.ts`:
 
 - subject `Someone asked to join ${familyName}`;
 - body names the family, says someone asked to join, links to `${appUrl()}/f/${slug}/people`, and links to turn notifications off, with `List-Unsubscribe` headers, built exactly as `notifyNewUpdate` builds them;
 - **no name, email, or message of the requester.**
 
-### Listing, approving, declining
+### Approving and declining
 
-All three call `requireFamilyMember(person)` first.
+Both call `requireFamilyMember(person)` first. (Listing is in `listPeople`, below.)
 
-- `listInviteRequests(db, person)`: this family's requests, oldest first, `{ id, name, email, message, createdAt }`, only for an invite-only family (empty otherwise); expired ones are filtered out by `createdAt` in the query.
-- `approveInviteRequest(db, send, person, id)`: in one transaction, (a) `deleteMany({ where: { id, familyId: person.familyId, createdAt: { gt: <30 days ago> } } })`, count 0 → `RequestError(404, "That request is gone.")`; (b) look up `(familyId, email)`: if a person exists (supporter, family member, or removed), return `{ added: false, reason: "supporter" | "family" | "removed" }` and keep the delete; (c) otherwise create the supporter and welcome link as `addSupporter` does. After the transaction commits, send the invite-only welcome email with the 7-day sign-in link (a failed email is logged, not thrown) and return `{ added: true }`. To share the code, split `addSupporter` into a function that creates the supporter and its link inside a given transaction, and the part that sends the email; `addSupporter` keeps its behavior and its tests.
+- `approveInviteRequest(db, send, person, id)`: in one `$transaction`: (a) `findFirst` the request with `{ id, familyId: person.familyId, createdAt: { gt: <30 days ago> } }`, null → `RequestError(404, "That request is gone.")`; (b) claim it with `deleteMany` using the same filter, count 0 → 404 (another action won the race); (c) look up `(familyId, email)`: if a person exists (supporter, family member, or removed), return `{ added: false, reason: "supporter" | "family" | "removed" }` and keep the delete; (d) otherwise create the supporter and welcome link as `addSupporter` does. A unique violation (`P2002`) aborts the transaction and un-deletes the request, so catch it **outside** the transaction (as `addFamilyMember` does), look the person up again, delete the request, and return `{ added: false, reason }`. After the transaction commits, send the invite-only welcome email with the 7-day sign-in link (a failed email is logged, not thrown) and return `{ added: true }`. To share code, split `addSupporter` into a function that creates the supporter and its link inside a given transaction, and the part that sends the email; `addSupporter` keeps its behavior and tests.
 - `declineInviteRequest(db, person, id)`: `deleteMany` with the same `id` and `familyId` filter; count 0 → 404. Sends nothing.
 
-Because (a) happens before (c) in one transaction, a decline and an approve of the same request can't both win, and two approves can't both create.
+Because the claim (b) happens before the create (d), a decline and an approve of the same request can't both win, and two approves can't both create.
 
 ### Wiring
 
-- `server/people.ts` `listPeople`: add `inviteRequests` to its result, from `listInviteRequests`.
+- `server/people.ts` `listPeople` (it already calls `requireFamilyMember` and loads `family`): add `inviteRequests: { id: string; name: string; email: string; message: string | null; createdAt: Date }[]` to its result, read directly with `db.inviteRequest.findMany` (unexpired, oldest first) and empty unless `family.inviteOnly`. There is no separate listing function, which also avoids `people.ts` and `inviteRequests.ts` importing each other.
 - `server/email.ts`: `inviteRequestEmail`.
-- `api/f/[slug]/invite-requests/index.ts`: `POST`, no session. Uses `familyContext` and `clientOf` as `gate.ts` does, calls `requestInvite`, replies `200 { result: "thanks" | "closed" }`; errors go through `sendRequestError`.
-- `api/f/[slug]/invite-requests/[id].ts`: `POST` approves (`200 { added: true } | { added: false, reason }`) and `DELETE` declines (`200 { ok: true }`), both for a signed-in family member, shaped like `api/f/[slug]/people/[id].ts`.
+- `api/f/[slug]/invite-requests/index.ts`: `POST`, no session. Calls `jsonBody` (the codebase's cross-site-form defense), then `familyContext` and `clientOf` as `gate.ts` does, calls `requestInvite`, replies `200 { result: "thanks" | "closed" }`; errors go through `sendRequestError`.
+- `api/f/[slug]/invite-requests/[id].ts`: `POST` approves (`200 { added: true } | { added: false, reason }`) and `DELETE` declines (`200 { ok: true }`), both for a signed-in family member, shaped like `api/f/[slug]/people/[id].ts`. `POST` calls `jsonBody`, so the front end sends `body: {}`; `DELETE` needs no body.
 - Restart `npm start` after adding API files (`claude/lessons.md`).
 
 ## Front end
 
 - **Signed-out page** (`src/pages/Gate.tsx`, `InviteOnlyGate`): a "Request an invite" link under the email box swaps the page's card for the request form: name, email, optional message (a textarea, with a 500-character limit shown), "Send request" and "Back." `thanks` replaces the form with "Thanks. If the family approves, you'll get an email at that address." `closed` shows "Requests are closed right now. Please contact the family." A 400 shows its message. No `confirm()` or `alert()`.
 - **People page** (`src/pages/People.tsx` and a new `src/components/inviteRequests.tsx`): "Requests to join" above the supporter lists, drawn only when there are requests. Each shows name, email, message (as text), and when it was made, with Approve and Decline. Decline asks "Yes / Cancel" inline. After either, reload the page's data. For `added: false`, say so in the section's message line ("That person is already a supporter," and so on).
-- **Notification checkbox** (`src/pages/FamilyHome.tsx`): family members of an invite-only family see "Email me about new updates and requests to join." Everyone else keeps the current label. Check that `me` already carries `inviteOnly`; add it to `api/f/[slug]/me.ts` if not.
+- **Notification checkbox** (`src/pages/FamilyHome.tsx`): family members of an invite-only family see "Email me about new updates and requests to join." Everyone else keeps the current label. `me` already carries `inviteOnly`.
 
 ## Tests
 
-Integration tests against real Postgres, in a new `tests/integration/inviteRequests.test.ts`, plus a small unit test for input validation. Each access test gets its rule removed to prove it fails (copy the file to the scratchpad first; `claude/lessons.md` → "Patterns that hide a removed access rule").
+Integration tests against real Postgres, in a new `tests/integration/inviteRequests.test.ts`, plus a small unit test for input validation. Each access test gets its rule removed to prove it fails (copy the file to the scratchpad first; `claude/lessons.md` → "Patterns that hide a removed access rule"). Remove each of these separately: the `familyId` filter in approve, in decline, and in the `listPeople` query; the `inviteOnly` guard in `requestInvite` and in `listPeople`; `requireFamilyMember` in approve and decline; the cap check; the network limit; the expiry filter.
 
 1. **Stored, and the family told without the details.** A request for an unknown email stores one row, and emails only family members with notifications on and not removed. The email's subject and body contain none of the name, email, or message. No supporter is emailed.
 2. **No leak between cases.** For an active supporter, a family member, a removed supporter, a removed family member, and an unknown email, `requestInvite` returns `"thanks"` each time. Only the unknown one stores a row. Active people get a sign-in link and email; removed people get neither a row, a link, nor an email.
@@ -106,9 +105,10 @@ Integration tests against real Postgres, in a new `tests/integration/inviteReque
 4. **Network limit.** The sixth stored request from one network in an hour stores nothing and still replies `"thanks"`; another network is unaffected; rows older than an hour don't count.
 5. **Cap and expiry.** With 50 pending, `"closed"` comes back, nothing is stored, nothing is emailed, and a current member's email gets no sign-in link either. A request 31 days old is deleted by the next request and doesn't count toward the cap, and `listInviteRequests` and `approveInviteRequest` treat an expired row as gone.
 6. **Only invite-only families.** On a family with a community question, `requestInvite` throws 403 and stores nothing.
-7. **Who may act.** A supporter, a family member of another family, and a request id from another family each fail (403 or 404) for list, approve, and decline, and change nothing. `listPeople` for a supporter-facing call and for a non-invite-only family returns no requests.
-8. **Approve.** Creates one supporter in Everyone with no groups, with a 7-day `sign_in` link and the invite-only welcome email, deletes the request, and the supporter can sign in with the link. When the email has since become a supporter, a family member, or a removed person, nothing about them changes, the request is deleted, and the reason is returned.
-9. **Approve and decline race.** Decline then approve of the same request → 404 and no `Person`. Two simultaneous approves → one `added: true`, one 404, and one `Person`.
+7. **Who may act.** For `listPeople`, approve, and decline: a supporter (403), a removed family member (rejected; their session is gone), a family member of another family, and a request id from another family each fail (403 or 404) and change nothing. `listPeople` on a non-invite-only family returns `inviteRequests: []` even with a row planted directly in the database.
+7b. **Nowhere else.** A stored request's name, email, and message appear in no response but `listPeople`'s: `me` and `personView` carry none of them.
+8. **Approve.** Creates one supporter in Everyone with no groups, with a 7-day `sign_in` link and the invite-only welcome email, deletes the request, and the supporter, whose `emailVerifiedAt` is null until the link is used, signs in with it and is then verified. When the email has since become a supporter, a family member, or a removed person, nothing about them changes, the request is deleted, and the reason is returned.
+9. **Approve and decline race.** Decline then approve of the same request → 404 and no `Person`. Two simultaneous approves → one `added: true`, one 404, and one `Person`. An approve racing `addSupporter` for the same email → one `Person`, no 500, and the request deleted.
 10. **Decline.** Deletes the request and sends no email.
 11. **Validation.** Name length, a bad email, and a message over 500 characters each give 400 and store nothing.
 
@@ -117,7 +117,7 @@ The existing `addSupporter` tests must still pass unchanged.
 ## Order of work (subagents)
 
 1. **Builder A, in the main checkout:** schema and migration, `server/`, `api/`, and the integration and unit tests, then the mutation proofs. It commits its own finished work.
-2. **Builder B, in a worktree, in parallel:** `src/` against the API shapes above. It can't run the server's tests; it type-checks against the shapes.
+2. **Builder B, in a worktree, in parallel:** `src/` against the API shapes above, including the `listPeople` type under Wiring. It can't run the server's tests; it type-checks against the shapes.
 3. **Verifier C, after both:** independent. Audits that nothing but `listPeople`, `listInviteRequests`, and the People page carries a request's fields; re-runs the mutation proofs; checks the browser flow at 360px and desktop in its own worktree with its own databases.
 4. I check the claims that matter, run `npm run typecheck` and `npm test`, open the PR, and give you the preview steps.
 

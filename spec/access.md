@@ -57,7 +57,7 @@ Whatever the email belongs to, the reply is the same: "Thanks. If the family app
 Requests are limited, and refused with the same reply as any other except where noted:
 
 - **Per network:** 5 stored requests an hour from one network (see "Wrong-answer limits" for what a network is). Beyond that, nothing is stored and the reply is the same as above.
-- **Pending cap:** at most 50 requests wait at once. When the family is at the cap, the form says "Requests are closed right now. Please contact the family." and stores nothing. That reply doesn't depend on the email, so it reveals nothing about who is known.
+- **Pending cap:** at most 50 requests wait at once. When the family is at the cap, the form says "Requests are closed right now. Please contact the family." and stores nothing. That reply doesn't depend on the email, so it reveals nothing about who is known. A current member who types their own email there gets the same reply and no sign-in link; the regular sign-in box still works.
 - **Expiry:** a request is deleted 30 days after it was made. Expired requests are cleared whenever a new request is made, so they never count toward the cap, and approving, declining, or listing never shows one.
 
 A request is not a person: it has no record in the family's people, no session, and no groups, so it can read nothing and appears nowhere except the People page's "Requests to join" section. Only family members ever see a request's name, email, or message; the server sends them to no one else. Only an invite-only family takes requests; the server refuses the form for any other family.
