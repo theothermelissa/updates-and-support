@@ -288,6 +288,13 @@ describe("approving", () => {
     }
   });
 
+  it("refuses a request planted on a family that isn't invite-only", async () => {
+    const { family, people } = await makeFamily(db, "Rivera");
+    const request = await plant(family.id, "plant@example.com");
+    expect(await status(approveInviteRequest(db, fakeMailer().send, people[0]!, request.id))).toBe(404);
+    expect(await db.person.count({ where: { email: "plant@example.com" } })).toBe(0);
+  });
+
   it("treats an expired request as gone", async () => {
     const { family, ana } = await setUp();
     const request = await plant(family.id, "old@example.com", { createdAt: new Date(Date.now() - 31 * DAY) });

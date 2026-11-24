@@ -112,6 +112,8 @@ export async function approveInviteRequest(
 ): Promise<ApproveResult> {
   requireFamilyMember(person);
   const family = await db.family.findUniqueOrThrow({ where: { id: person.familyId } });
+  // Only invite-only families take requests; a row on any other family is not approvable.
+  if (!family.inviteOnly) throw gone();
   const mine = { id, familyId: person.familyId, createdAt: { gt: inviteRequestCutoff() } };
   let link;
   let email = "";
