@@ -6,8 +6,8 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 Decided with Melissa for her own family's site; each becomes its own spec, plan, and PR after group management ships. The existing family's site keeps its community question and sees none of this.
 
-- **2026-11-23** — "Request an invite" on invite-only sites.
-  Invite-only families shipped without it: the signed-out page offers only "sign in with your email," and the family adds every supporter on the People page. Agreed design: a name, email, and optional message form; requests stored in their own table, never as `Person` rows; the same thanks whoever the email belongs to (a current member gets a sign-in link, a removed one nothing); rate limits per email and network, and a pending cap; family members with notifications on get an email saying only "Someone asked to join," with no name or message; approving creates the supporter in Everyone, groups optional, and emails the 7-day sign-in link; declining deletes silently.
+- **2026-11-24** — Tidy the invite-request flow after seeing it used.
+  Cut for speed when "Request an invite" shipped: choosing groups while approving (today the family adds them afterward in Groups), a navigation-bar badge for pending requests (today only the email and the People page tell them), bulk decline, and batching the "someone asked to join" email. Add whichever real use shows to be missing.
 - **2026-11-23** — Non-admin family members.
   A family member who can post, leave notes, and see supporters, but doesn't manage people, groups, or settings, and doesn't get invite-request emails. Until this exists, Melissa will turn off that family member's notifications by hand.
 - **2026-11-23** — Notes and reactions per group.
