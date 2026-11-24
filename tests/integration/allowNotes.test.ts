@@ -19,7 +19,7 @@ async function setUp() {
 }
 
 function leave(person: Person, updateId: string) {
-  return createNote(db, person, { updateId, body: "Thinking of you", color: "sky" });
+  return createNote(db, person, { updateId, body: "Thinking of you", color: "sky", ...(person.role === "family" ? { audience: "everyone" } : {}) });
 }
 
 const allowNotesOf = async (id: string) => (await db.update.findUniqueOrThrow({ where: { id } })).allowNotes;

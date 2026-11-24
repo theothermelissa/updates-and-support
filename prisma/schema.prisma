@@ -246,6 +246,9 @@ model Note {
   videoId   String?   @unique
   color     NoteColor
   createdAt DateTime  @default(now())
+  // Only a family member's note can be for family members only; the server enforces it (a
+  // supporter's is always false). A supporter never sees one.
+  familyOnly Boolean  @default(false)
 
   update    Update         @relation(fields: [updateId], references: [id], onDelete: Cascade)
   author    Person         @relation(fields: [authorId], references: [id], onDelete: Cascade)

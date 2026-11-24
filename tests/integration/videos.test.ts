@@ -40,7 +40,7 @@ async function upload(videos: Videos, person: Person, seconds = 30) {
 }
 
 function attach(videos: Videos, person: Person, updateId: string, video: string, extra: Record<string, unknown> = {}) {
-  return createNote(db, person, { updateId, video, color: "rose", ...extra }, videos.store);
+  return createNote(db, person, { updateId, video, color: "rose", ...(person.role === "family" ? { audience: "everyone" } : {}), ...extra }, videos.store);
 }
 
 // Calls to the video host other than signing uploads.

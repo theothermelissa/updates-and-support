@@ -203,6 +203,11 @@ export async function addFamilyMember(
       await tx.session.deleteMany({ where: { personId: existing.id } });
       // Family members are never in a group: they see every update.
       await tx.groupMember.deleteMany({ where: { personId: existing.id } });
+      // A supporter's notes were written for their group's eyes; now they'd reach every reader
+      // of the update, so they become family-only.
+      if (existing.role === "supporter") {
+        await tx.note.updateMany({ where: { authorId: existing.id }, data: { familyOnly: true } });
+      }
       return existing.role === "supporter" ? "promoted" : "restored";
     });
   } catch (err) {

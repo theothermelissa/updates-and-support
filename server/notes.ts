@@ -5,6 +5,7 @@ import { validName } from "./families.js";
 import { NoteColor, type Person, type Prisma } from "./generated/prisma/client.js";
 import { requireAdmin } from "./people.js";
 import { reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
+import { authorScope, readerScope, type ReaderScope } from "./readerScope.js";
 import { cloudinaryStore, newPublicId, type VideoStore } from "./videos.js";
 
 const COLORS = Object.values(NoteColor);
@@ -32,14 +33,22 @@ export type NoteView = {
   authorIsFamily: boolean;
   createdAt: Date;
   mine: boolean;
+  // Only for a family member viewing: whether the note is for family members only.
+  familyOnly?: boolean;
 } & ReactionsView;
 
 // The notes this person may see: on updates they may see (see visibleUpdates), by their
 // family's people, and not by someone removed. Filtered by the author's family too, rather than
-// trusting how notes were written. The wall, the feed, reactions, and deletion all use it, so
-// they can't drift apart.
-export function visibleNotes(person: Person): Prisma.NoteWhereInput {
-  return { update: visibleUpdates(person), author: { familyId: person.familyId, removedAt: null } };
+// trusting how notes were written. A supporter also sees only notes by people in their scope
+// (see readerScope) and none that are for family members only. The wall, the feed, reactions,
+// and deletion all use it, so they can't drift apart.
+export function visibleNotes(person: Person, scope: ReaderScope): Prisma.NoteWhereInput {
+  const base: Prisma.NoteWhereInput = {
+    update: visibleUpdates(person),
+    author: { familyId: person.familyId, removedAt: null },
+  };
+  if (scope.isFamily) return base;
+  return { AND: [base, { familyOnly: false }, { authorId: { in: [...scope.seenIds] } }] };
 }
 
 // What to load for a note's view, including reactions from this family's people who haven't
@@ -52,6 +61,7 @@ export function noteSelect(familyId: string) {
     videoId: true,
     color: true,
     createdAt: true,
+    familyOnly: true,
     authorId: true,
     author: { select: { name: true, role: true } },
     reactions: {
@@ -72,7 +82,13 @@ export async function noteReactionSet(db: Pick<Db, "family">, familyId: string):
 }
 
 // `allowed` is the family's note set, from noteReactionSet.
-export function noteView(note: LoadedNote, viewerId: string, store: VideoStore, allowed: readonly string[]): NoteView {
+export function noteView(
+  note: LoadedNote,
+  viewerId: string,
+  store: VideoStore,
+  allowed: readonly string[],
+  scope: ReaderScope,
+): NoteView {
   return {
     id: note.id,
     updateId: note.updateId,
@@ -84,7 +100,8 @@ export function noteView(note: LoadedNote, viewerId: string, store: VideoStore, 
     authorIsFamily: note.author.role === "family",
     createdAt: note.createdAt,
     mine: note.authorId === viewerId,
-    ...reactionsView(note.reactions, viewerId, allowed),
+    ...(scope.isFamily ? { familyOnly: note.familyOnly } : {}),
+    ...reactionsView(note.reactions, viewerId, allowed, scope),
   };
 }
 
@@ -147,10 +164,18 @@ async function fromHost<T>(call: () => T | Promise<T>): Promise<T> {
 export async function createNote(
   db: Db,
   person: Person,
-  input: { updateId?: unknown; body?: unknown; video?: unknown; color?: unknown; name?: unknown },
+  input: { updateId?: unknown; body?: unknown; video?: unknown; color?: unknown; name?: unknown; audience?: unknown },
   store: VideoStore = cloudinaryStore,
 ): Promise<{ note: NoteView; name: string }> {
   const { updateId, color } = input;
+  // A family member must choose, so a slip in the form can't widen a note; a supporter can't.
+  if (person.role === "family") {
+    if (input.audience !== "everyone" && input.audience !== "family") {
+      throw new RequestError(400, "Choose who sees this note.");
+    }
+  } else if (input.audience !== undefined) {
+    throw new RequestError(400, "Only family members choose who sees a note.");
+  }
   if (typeof updateId !== "string") throw new RequestError(400, "Expected an updateId");
   if (input.video !== undefined && input.body !== undefined) {
     throw new RequestError(400, "A note has a body or a video, not both");
@@ -193,11 +218,11 @@ export async function createNote(
       if (name !== author.name) await tx.person.update({ where: { id: person.id }, data: { name } });
 
       const note = await tx.note.create({
-        data: { updateId, authorId: person.id, body, videoId, color: color as NoteColor },
+        data: { updateId, authorId: person.id, body, videoId, color: color as NoteColor, familyOnly: input.audience === "family" },
         select: noteSelect(person.familyId),
       });
       const allowed = await noteReactionSet(tx, person.familyId);
-      return { note: noteView(note, person.id, store, allowed), name };
+      return { note: noteView(note, person.id, store, allowed, authorScope(person)), name };
     });
   } catch (err) {
     // Caught outside the transaction, which these errors have already aborted. P2003: the
@@ -258,21 +283,23 @@ export async function lockUnusedVideo(tx: Prisma.TransactionClient, personId: st
 
 // Every visible note in the person's family, newest first, for the wall.
 export async function listNotes(db: Db, person: Person, store: VideoStore = cloudinaryStore): Promise<NoteView[]> {
+  const scope = await readerScope(db, person);
   const notes = await db.note.findMany({
-    where: visibleNotes(person),
+    where: visibleNotes(person, scope),
     orderBy: { createdAt: "desc" },
     select: noteSelect(person.familyId),
   });
   const allowed = await noteReactionSet(db, person.familyId);
-  return notes.map((n) => noteView(n, person.id, store, allowed));
+  return notes.map((n) => noteView(n, person.id, store, allowed, scope));
 }
 
 // A family member may delete any note in their family; anyone else only their own. A note
 // they can't delete behaves like one that doesn't exist. A video note's video is deleted
 // first, so a failure there leaves the note to try again rather than a video nobody can delete.
 export async function deleteNote(db: Db, person: Person, id: string, store: VideoStore = cloudinaryStore): Promise<void> {
+  const scope = await readerScope(db, person);
   const where: Prisma.NoteWhereInput = {
-    AND: [{ id }, visibleNotes(person), person.role === "family" ? {} : { authorId: person.id }],
+    AND: [{ id }, visibleNotes(person, scope), person.role === "family" ? {} : { authorId: person.id }],
   };
   const note = await db.note.findFirst({ where, select: { videoId: true } });
   if (!note) throw new RequestError(404, "Note not found");

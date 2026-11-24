@@ -29,7 +29,7 @@ async function setUp() {
 }
 
 function leave(person: Person, updateId: string, body = "Thinking of you", extra: Record<string, unknown> = {}) {
-  return createNote(db, person, { updateId, body, color: "sky", ...extra });
+  return createNote(db, person, { updateId, body, color: "sky", ...(person.role === "family" ? { audience: "everyone" } : {}), ...extra });
 }
 
 async function feedNotes(person: Person) {
