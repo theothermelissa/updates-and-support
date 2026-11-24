@@ -43,29 +43,32 @@ New `server/readerScope.ts` (so `notes.ts` and `reactions.ts`, which import each
 ```ts
 export type ReaderScope = {
   isFamily: boolean;
-  // Supporters whose notes this reader sees, and whom they see named: the reader themself,
-  // supporters sharing a group, or both in no group. Empty for a family member (unused).
-  peerIds: Set<string>;
-  // Everyone this reader may see named on a reaction: peerIds plus the family's members.
-  // Unused for a family member, who sees every name.
-  namedIds: Set<string>;
+  // Everyone whose notes this reader sees, and whom they see named on reactions: the reader
+  // themself, the family's members, and the supporters who share a group with them (or, for a
+  // reader in no group, who are also in none). One set, so the notes rule and the names rule
+  // can't drift apart. Empty and unused for a family member, who sees everyone.
+  seenIds: Set<string>;
 };
 export async function readerScope(db: Db, person: Person): Promise<ReaderScope>;
 ```
 
-For a family member it returns `{ isFamily: true, … empty }` without querying. For a supporter, one query of the family's non-removed people with `role`, `emailVerifiedAt`, and `groupMemberships: { select: { groupId, group: { select: { familyId } } } }` (filtered to the person's family). In memory: each supporter's **effective groups** are their memberships when `emailVerifiedAt` is set, else none; the reader's peers are the supporters who share an effective group with them, or, when the reader has no effective groups, the supporters who also have none; plus the reader. Always read from the database, never from the session's `Person` (same as `visibleUpdates`).
+For a family member it returns `{ isFamily: true, seenIds: new Set() }` without querying. For a supporter, one `findMany` of the family's non-removed people selecting only `id`, `role`, `emailVerifiedAt`, and `groupMemberships: { select: { groupId, group: { select: { familyId } } } }` (memberships of groups in the person's family). In memory: each supporter's **effective groups** are their memberships when `emailVerifiedAt` is set, else none. `seenIds` is the reader, every family member, and the supporters who share an effective group with the reader or, when the reader has none, who also have none. Always read from the database, never from the session's `Person` (same as `visibleUpdates`).
 
 ### Notes
 
-- `visibleNotes(person, scope)` replaces `visibleNotes(person)` and stays synchronous. For a family member it returns today's filter. For a supporter, `{ AND: [today's filter, { familyOnly: false }, { OR: [{ author: { role: "family" } }, { authorId: { in: [...scope.peerIds] } }] }] }` (the `AND` form, so a caller's own `OR` can't replace it). Every caller awaits `readerScope` first: `listUpdates` (`server/updates.ts`), `listNotes`, `deleteNote`, and `setReaction`'s note branch (`server/reactions.ts`). Grep `visibleNotes(` for any other caller.
-- `createNote`: input gains `audience`. A family member must send `"everyone"` or `"family"`, else 400 "Choose who sees this note." (checked before any lookup); a supporter who sends the field gets 400 "Only family members choose who sees a note." Stores `familyOnly: audience === "family"`. The note it returns goes through `noteView` for the author, who always sees it.
+- `visibleNotes(person, scope)` replaces `visibleNotes(person)` and stays synchronous. For a family member it returns today's filter. For a supporter, `{ AND: [today's filter, { familyOnly: false }, { authorId: { in: [...scope.seenIds] } }] }` (the `AND` form, so a caller's own `OR` can't replace it). Family members' notes match because family members are in `seenIds`. Every caller awaits `readerScope` first: `listUpdates` (`server/updates.ts`), `listNotes`, `deleteNote`, and `setReaction`'s note branch (`server/reactions.ts`). Grep `visibleNotes(` for any other caller.
+- `createNote`: input gains `audience`. A family member must send `"everyone"` or `"family"`, else 400 "Choose who sees this note." (checked before any lookup); a supporter who sends the field gets 400 "Only family members choose who sees a note." Stores `familyOnly: audience === "family"`. The note it returns goes through `noteView` with a scope of just the author (`{ isFamily: person.role === "family", seenIds: new Set([person.id]) }`): a new note has no reactions, so nothing is named, and no extra query runs.
 - `NoteView` gains `familyOnly: boolean`, set only when the viewer is a family member (omitted for supporters).
 
 ### Reactions
 
-`reactionsView(loaded, viewerId, allowed, scope)`: `count`, `kinds`, and `mine` use every reaction, as today. `named` includes a reactor only when `scope.isFamily || scope.namedIds.has(reactorId)`. `noteView` and the feed's update reactions both take the scope. No client change is needed for the "and N others" line: it is `count` minus the lines shown (`src/reactions.ts`).
+`reactionsView(loaded, viewerId, allowed, scope)`: `count`, `kinds`, and `mine` use every reaction, as today. `named` includes a reactor only when `scope.isFamily || scope.seenIds.has(reactorId)`. `noteView` and the feed's update reactions both take the scope; every caller passes one explicitly, with no default. No client change is needed for the "and N others" line: it is `count` minus the lines shown (`src/reactions.ts`).
 
 `setReaction` on an update is unchanged (the update's visibility is the only rule there); on a note it uses the scoped `visibleNotes`, so a note the reader can't see is a 404.
+
+### Promotion keeps old notes private
+
+`addFamilyMember`'s promotion path (`server/people.ts`, where it deletes the person's group memberships) also runs `tx.note.updateMany({ where: { authorId: existing.id }, data: { familyOnly: true } })` in the same transaction. Without it, a supporter's old notes, written for their group's eyes, would become family notes and reach every reader of the update. A restored removed supporter is unaffected (restoring a family member brings back their own settings).
 
 ### Call sites to touch
 
@@ -85,19 +88,21 @@ Grep `reactionsView(`, `noteView(`, `visibleNotes(`, `noteSelect(`, and every `F
 
 ## Tests
 
-Integration tests in a new `tests/integration/noteScope.test.ts`. Existing tests that call `createNote` as a family member (14 call sites across `reactions`, `audience`, `admins`, `allowNotes`, `name`, `videos`, `notes`) pass `audience: "everyone"`.
+Integration tests in a new `tests/integration/noteScope.test.ts`. Existing tests that call `createNote` as a family member (14 call sites across `reactions`, `audience`, `admins`, `allowNotes`, `name`, `videos`, `notes`) pass `audience: "everyone"`; the supporter-authored calls must not pass it (a supporter sending it is now a 400).
+
+**Audit the existing name assertions, and change the fixture, not the assertion, wherever a name now disappears unintentionally.** `tests/integration/audience.test.ts` around lines 327-345 (the group member who leaves a note, then asserts a reactor's name appears in her response) depends on the two sharing a group or both being in none. `tests/integration/reactions.test.ts` has `named` expectations at about lines 62, 113, 210, 224, 237, 313, 356, 383 and 472 where supporters name each other. Re-check each against the new rule.
 
 Prove each access rule fails with the rule removed (copy the file to the scratchpad first; `claude/lessons.md` → "Patterns that hide a removed access rule"). Fixture: a family with groups A and B, family member F; supporters `a1`, `a2` (in A), `b1` (in B), `ab` (in A and B), `u1`, `u2` (in no group), `unv` (in A, email not verified), and one reading without an email; each leaves a note on an Everyone update.
 
 1. **Who sees what, as a table.** For every reader, the exact set of authors whose notes appear in `listUpdates` and in the wall's `listNotes` (both, since they share the rule): F sees all; `a1` sees F, `a1`, `a2`, `ab`; `b1` sees F, `b1`, `ab`; `ab` sees F, `a1`, `a2`, `b1`, `ab`; `u1` sees F, `u1`, `u2`, `unv`, and the reader without an email; `unv` sees the same as `u1`. Mutation proofs: drop the peer filter; drop the "both in no group" branch; drop the verified-email condition from effective groups (then `unv` would see group A's notes and A would see theirs).
 2. **No groups at all.** A family with none shows every supporter every note, as before. Mutation: treat "no group" as peerless.
-3. **Family notes.** A family note for everyone reaches `a1`, `b1`, and `u1`; a family-only one reaches only F (as a family member sees it, with `familyOnly: true`) and never a supporter, including one who is the update's whole audience. Mutation: drop `familyOnly: false` from `visibleNotes`; separately, send `familyOnly` to supporters in `noteView` and assert they never get the key.
+3. **Family notes.** A family note for everyone reaches `a1`, `b1`, and `u1`; a family-only one reaches only F (as a family member sees it, with `familyOnly: true`) and never a supporter, including one who is the update's whole audience. Mutation: drop `familyOnly: false` from `visibleNotes`. Separately assert that a supporter's `NoteView` has no `familyOnly` key (`Object.keys`), though a supporter can't see a family-only note at all.
 4. **`createNote` audience.** A family member's missing or invalid `audience` is 400 and creates nothing; `"everyone"` and `"family"` are stored; a supporter sending `audience` is 400. Mutation: remove each check.
 5. **Live.** After `a1` is removed from A, `a2` no longer sees `a1`'s notes on the next load and `a1` is in no group; deleting group A moves `a1` and `a2` into the pool; verifying `unv` brings A's notes. Each is the next request, no new session.
-6. **Hidden notes are 404s.** `setReaction` on a note the reader can't see is "Note not found", the same as for a note that doesn't exist; `deleteNote` by a supporter on another group's note is also 404. Mutation: use the unscoped filter in `setReaction`'s note branch (`deleteNote`'s `authorId` check would mask a missing scope there, so assert the reaction path, and assert directly that a family member can delete a note and a supporter can delete only their own).
-7. **Reaction names.** On an update and on a visible note, with reactions from F, `a2`, `b1`, `u1` and the reader's own: reader `a1` sees `named` = F and `a2`, `count` includes everyone, and `b1`'s and `u1`'s names appear nowhere in the serialized response (assert on `JSON.stringify` of the whole feed, including no group names and no IDs of people not named). Reader `u2` is named `u1` and F, not `a2`. F sees all names. Mutations: drop the `namedIds` filter; make `namedIds` include everyone.
+6. **Hidden notes are 404s.** A supporter's `setReaction` and `deleteNote` on a family-only note, and `setReaction` on a note by a supporter in another group, are each "Note not found", the same as for a note that doesn't exist. `deleteNote`'s `authorId` check masks a missing scope for supporters, and nothing masks it for family members (their filter doesn't change), so the `setReaction` cases carry the proof; mutation: use the unscoped filter in `setReaction`'s note branch. Also assert that an author who moved to a different group can still delete their own note (`seenIds` includes the reader), and that a family member can delete any visible note.
+7. **Reaction names.** On an update and on a visible note, with reactions from F, `a2`, `b1`, `u1` and the reader's own: reader `a1` sees `named` = F and `a2`, `count` includes everyone, and `b1`'s and `u1`'s names appear nowhere in the serialized response (assert on `JSON.stringify` of the whole feed, including no group names and no IDs of people not named). Reader `u2` is named `u1` and F, not `a2`. F sees all names. Mutations: drop the `seenIds` filter on `named`; make `seenIds` include everyone.
 8. **Counts leak nothing.** `notes.length` per update, the wall, and the reaction `count`/`kinds` summary for a note never include a hidden note or a reaction on one. Mutation: load notes unscoped for the feed.
-9. **Removed supporters** still vanish (existing behavior), and a restored one's notes return. No new test unless one breaks.
+9. **Promotion.** A supporter with notes is promoted by `addFamilyMember`: their old notes are `familyOnly`, so a supporter who saw them before no longer does and a family member still does; a note they leave afterward with `audience: "everyone"` reaches everyone. Mutation: drop the `updateMany`.
 10. **Migration.** The suite migrates once, so check the column by hand on a scratch database that has a note from before: its `familyOnly` is false. Record the result in the PR description.
 
 ## Order of work (subagents)
