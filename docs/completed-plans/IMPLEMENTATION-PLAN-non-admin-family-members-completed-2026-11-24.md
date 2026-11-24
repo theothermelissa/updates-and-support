@@ -118,3 +118,11 @@ Environment is set up as before: Node 24 at `/opt/node24/bin`, Postgres on local
 2. **Builder B, in a worktree, in parallel:** Front end, against the API shapes above (`listPeople`'s two forms, `PATCH people/<id> { admin }`, `POST` family-member add with `admin`, `me.person.isAdmin`).
 3. **Verifier C, after both:** independent. Greps every `requireFamilyMember` and `requireAdmin` and checks each against the list; checks that nothing outside `listPeople`'s admin branch returns the gated data; re-runs one mutation proof per class (a gated function, the read-only list shape, the last-admin lock); one browser pass (360px and 1280px) of an admin's and a non-admin's People page, the Admin switch, the add form, the last-admin refusal, and a non-admin posting and leaving a note.
 4. I check the claims that matter, run `npm run typecheck` and `npm test`, open the PR, and give Melissa the preview steps: add a family member without the checkbox, sign in as them (a `+` address), confirm the People page is read-only and the feed works.
+
+## Outcome
+
+Built as planned. Two things the build showed:
+
+- Removing `requireAdmin` from `addFamilyMember`, `setAdmin`, or `setRemoved`'s family-member path didn't fail the plain non-admin test, because each re-checks the actor in its transaction and returns the same 403. Three extra table rows pass an object that disagrees with the database (`{ ...admin, isAdmin: false }`), so each first-line rule fails its own row when removed.
+- When two admins demote each other at once, the loser gets 403 (the actor re-check), not 409. The 409 is reachable only when the last admin demotes themselves.
+- The family-members table was wider than a 360px screen and pushed the Admin switch off-screen, so the row stacks name, email, and switch in one cell.
