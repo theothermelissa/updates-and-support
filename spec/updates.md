@@ -138,7 +138,7 @@ The React button and the summary work the same way on an update and on a note.
 
 On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the note, with either **Delete** and the time, or the author control holding **Delete** (see "Reacting to a note").
 
-**The server enforces the set.** A new reaction is accepted only when its emoji is in the update's current set, or, for a note, the family's current note set. Removing one's own reaction is always accepted. Only family members choose an update's set or the family's note set.
+**The server enforces the set.** A new reaction is accepted only when its emoji is in the update's current set, or, for a note, the family's current note set. Removing one's own reaction is always accepted. Only family members choose an update's set, and only admins choose the family's note set.
 
 **Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it, and a later change of name shows there too (see [access.md](access.md#changing-your-name)).
 
@@ -172,7 +172,7 @@ Each update either allows notes or doesn't, set by "Allow notes" in Post setting
 
 **The family's default.** The People page has a "New updates allow notes" setting (see [access.md](access.md#notes-on-new-updates)). It decides only whether "Allow notes" starts checked in Post settings. Changing it never changes an update already posted. It's on unless the family turned it off, and updates posted before it existed allow notes.
 
-Only family members can set "Allow notes" on an update or change the family's default; the server refuses anyone else.
+Only family members can set "Allow notes" on an update, and only admins can change the family's default; the server refuses anyone else.
 
 ### Video notes
 

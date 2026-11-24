@@ -10,7 +10,7 @@ The app hosts many families. Each family has its own private site, its own suppo
 
 ## People
 
-- **Family Member**: posts, edits, and deletes updates, and manages the family's supporters, family members, and groups. Every family member has the same permissions; the person the updates are about is simply one of the family members.
+- **Family Member**: posts, edits, and deletes updates, leaves notes, and posts ways to help. Some family members are **admins**, who also manage the family's supporters, family members, groups, and settings. The person the updates are about is simply one of the family members.
 - **Supporter**: someone in the family's support network. Reads the updates shared with them, reacts and leaves notes, and can get an email when a new one is posted.
 - **Operator**: the person running the app (Melissa). Creates and renames families with command-line scripts. The operator is not a role inside the app.
 
@@ -22,19 +22,19 @@ A person who is both a supporter and a family member of different families has a
 
 - Operator creates and renames families with scripts. → [access.md](access.md)
 - A family can be created invite-only: no community question, no anonymous readers, only supporters the family adds, who sign in by email, and a "Family members only" audience choice alongside Everyone and groups. Visitors can request an invite, and family members approve or decline requests on the People page. → [access.md](access.md#invite-only-families), [access.md](access.md#requesting-an-invite), [updates.md](updates.md#audience)
-- Family members sign in with magic links and can add and remove other family members. → [access.md](access.md)
+- Family members sign in with magic links. Admins add and remove family members, and choose which of them are admins; a family member who isn't an admin posts and reads like any family member but manages nothing. → [access.md](access.md), [access.md](access.md#admins)
 - Supporters read the updates as soon as they answer the family's community question. Giving a name and email, to get notifications, is a separate, optional step. → [access.md](access.md)
-- Family members add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
+- Admins add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
 - Family members post, edit, and delete updates with simple formatting (bold, italic, strikethrough, links, lists, and quotes); everyone they're shared with reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
-- Family members sort supporters into groups on the People page, and share an update with everyone (the default) or with one or more groups. Supporters never learn that groups, or updates outside their audience, exist. → [access.md](access.md#groups), [updates.md](updates.md#audience)
+- Admins sort supporters into groups on the People page, and family members share an update with everyone (the default) or with one or more groups. Supporters never learn that groups, or updates outside their audience, exist. → [access.md](access.md#groups), [updates.md](updates.md#audience)
 - Photos in updates, with optional captions, up to six per update, once the operator turns photos on; test sites can use grey placeholder photos instead. → [updates.md](updates.md#photos)
 - A family member posts an update as a video of any length, up to 100 MB, with the same recorder as a video note. A video update has no text and can't be edited. → [updates.md](updates.md#video-updates)
-- Everyone who can see an update can give it and each of its notes one reaction, and sees who reacted. Each update allows up to six emoji from the app's catalog, chosen by the family when posting (the usual six by default, or none); notes share one set the family chooses on the People page, the usual six by default. → [updates.md](updates.md#reactions)
+- Everyone who can see an update can give it and each of its notes one reaction, and sees who reacted. Each update allows up to six emoji from the app's catalog, chosen by the family when posting (the usual six by default, or none); notes share one set an admin chooses on the People page, the usual six by default. → [updates.md](updates.md#reactions)
 - Everyone who can see an update can leave colored notes of support on it, written or as a video of up to 60 seconds, and reads its notes under it and together on the family's wall. → [updates.md](updates.md#notes)
-- Family members can turn off new notes on any update, and choose on the People page whether new updates allow notes by default. → [updates.md](updates.md#allowing-notes)
+- Family members can turn off new notes on any update, and admins choose on the People page whether new updates allow notes by default. → [updates.md](updates.md#allowing-notes)
 - Family members post ways to help, each with a formatted description, an optional date and time and a choice of whether offers need a name or an email, and anyone signed in can offer to take one. A numbered request shows a check once enough people have offered, and a family member can mark any request resolved, which shows the same check and stops new offers while keeping the ones made. → [updates.md](updates.md#resolving-a-request)
 - Family members can keep a formatted message at the top of How to help, with an introduction and optional "Do" and "Don't" lists, for everyone signed in to read. → [updates.md](updates.md#the-familys-message)
-- A privacy banner across the top of every page asks readers not to copy or screenshot what they read; family members can reword it for their own family. → [access.md](access.md#the-privacy-banner)
+- A privacy banner across the top of every page asks readers not to copy or screenshot what they read; admins can reword it for their own family. → [access.md](access.md#the-privacy-banner)
 - Supporters can keep a phone number on their record for the family to reach them; only family members see it. → [access.md](access.md#your-phone-number)
 - Family members, and supporters with a verified email in the update's audience, get a notification email when a new update is posted; the family member who posted it doesn't. → [updates.md](updates.md#notifications)
 
