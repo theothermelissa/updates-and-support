@@ -173,7 +173,7 @@ A family member is either an **admin** or not. Admins manage the family: they do
 - **At least one admin.** A family always keeps one: the server refuses a removal or demotion that would leave none, even if two happen at the same moment.
 - **Who is an admin.** Family members the operator's script creates are admins. An admin chooses it when adding a family member (see "Adding family members"), and can change it for any family member, themselves included, with an **Admin** switch on that person's row on the People page, which only admins see. A change applies to the person's next request: they stay signed in, and an admin who turns off their own switch finds the People page read-only when it next loads.
 - **What a non-admin sees on the People page.** Read-only lists of the family's family members (name and email) and of its supporters who have an email (name, email, phone number, whether the email is verified, whether notifications are on, and when they joined). No forms, buttons, removed list, device count, groups, community question, privacy banner, or settings. The server doesn't send them those things and refuses the actions. The menu still links to the page. They still choose audiences when posting, so the post form lists the family's groups for them as it does for admins.
-- **Notifications.** Their notification checkbox reads "Email me about new updates." An admin's, on an invite-only family, also covers requests to join (see "Notifications" under "Invite-only families").
+- **Notifications.** Their notification checkbox reads "Email me when there's a new update," as every other reader's does. An admin's, on an invite-only family, also covers requests to join (see "Notifications" under "Invite-only families").
 
 ## Magic links
 
