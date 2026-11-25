@@ -34,13 +34,24 @@ export function requireFamilyMember(person: Person) {
   if (person.role !== "family") throw new RequestError(403, "Only family members can do this");
 }
 
-// The People page: the family's members, its supporters with an email (active and removed,
-// newest first), how many devices are signed in without a verified email, the community
-// question, the family's note reactions, whether new updates allow notes, the family's privacy
-// banner wording (null for the standard wording), and its groups. Family members only;
-// supporters never see each other or any group.
+const ONLY_ADMINS = "Only admins can do this";
+
+// Managing the family (the People page's changes, the family's settings, requests to join) is
+// for admins. `person` comes from getSession, loaded fresh each request, so a demotion applies
+// on the next request.
+export function requireAdmin(person: Person) {
+  if (person.role !== "family" || !person.isAdmin) throw new RequestError(403, ONLY_ADMINS);
+}
+
+// The People page, for family members only; supporters never see each other or any group.
+// A non-admin gets a read-only list: the family's members and its active supporters with
+// their contact details, and nothing else. An admin also gets the removed supporters (newest
+// first), how many devices are signed in without a verified email, the community question,
+// the family's note reactions, whether new updates allow notes, the family's privacy banner
+// wording (null for the standard wording), its groups, and its requests to join.
 export async function listPeople(db: Db, person: Person) {
   requireFamilyMember(person);
+  if (!person.isAdmin) return listPeopleReadOnly(db, person);
   const family = await db.family.findUniqueOrThrow({
     where: { id: person.familyId },
     include: { people: { where: { email: { not: null } }, orderBy: { createdAt: "desc" } } },
@@ -48,7 +59,7 @@ export async function listPeople(db: Db, person: Person) {
   const familyMembers = family.people
     .filter((p) => p.role === "family" && !p.removedAt)
     .reverse()
-    .map((p) => ({ id: p.id, name: p.name, email: p.email, isYou: p.id === person.id }));
+    .map((p) => ({ id: p.id, name: p.name, email: p.email, isAdmin: p.isAdmin, isYou: p.id === person.id }));
   const supporters = family.people.filter((p) => p.role === "supporter").map(supporterView);
   const devicesWithoutVerifiedEmail = await db.session.count({ where: unverifiedSessions(person.familyId) });
   // Pending requests to join, oldest first. Only an invite-only family takes them. Expired ones
@@ -61,6 +72,7 @@ export async function listPeople(db: Db, person: Person) {
       })
     : [];
   return {
+    admin: true as const,
     familyMembers,
     supporters: supporters.filter((s) => !s.removedAt),
     removed: supporters.filter((s) => s.removedAt),
@@ -72,6 +84,22 @@ export async function listPeople(db: Db, person: Person) {
     privacyNotice: family.privacyNotice,
     groups: await groupsView(db, person.familyId),
     inviteRequests,
+  };
+}
+
+// A non-admin's People page. Runs no query for anything else, so nothing else can leak.
+async function listPeopleReadOnly(db: Db, person: Person) {
+  const people = await db.person.findMany({
+    where: { familyId: person.familyId, email: { not: null }, removedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+  return {
+    admin: false as const,
+    familyMembers: people
+      .filter((p) => p.role === "family")
+      .reverse()
+      .map((p) => ({ id: p.id, name: p.name, email: p.email, isYou: p.id === person.id })),
+    supporters: people.filter((p) => p.role === "supporter").map(supporterView),
   };
 }
 
@@ -125,14 +153,20 @@ function unverifiedSessions(familyId: string) {
 // Adds a family member to the signed-in family member's family and emails them a sign-in
 // link. An email already in the family promotes a supporter or restores a removed person,
 // keeping their record; their sessions end so they sign in again as a family member.
-// Family members keep no phone number, so a promoted supporter's is cleared.
+// Family members keep no phone number, so a promoted supporter's is cleared. `admin` is
+// required, and sets whether the new, promoted, or restored family member is an admin; a
+// current family member's admin status is never touched here.
 export async function addFamilyMember(
   db: Db,
   send: SendEmail,
   person: Person,
-  input: { name?: unknown; email?: unknown },
+  input: { name?: unknown; email?: unknown; admin?: unknown },
 ): Promise<{ name: string; outcome: "added" | "promoted" | "restored" }> {
-  requireFamilyMember(person);
+  requireAdmin(person);
+  if (typeof input.admin !== "boolean") {
+    throw new RequestError(400, "Choose whether they can manage people and settings.");
+  }
+  const admin = input.admin;
   const { name, email } = validNameAndEmail(input.name, input.email);
   const family = await db.family.findUniqueOrThrow({ where: { id: person.familyId } });
   const link = newSignInLink();
@@ -140,11 +174,16 @@ export async function addFamilyMember(
   let outcome: "added" | "promoted" | "restored";
   try {
     outcome = await db.$transaction(async (tx) => {
+      // An admin demoted a moment ago can't mint one: the admin check reads the database, not `person`.
+      const actor = await tx.person.findFirst({
+        where: { id: person.id, role: "family", removedAt: null, isAdmin: true },
+      });
+      if (!actor) throw new RequestError(403, ONLY_ADMINS);
       const existing = await tx.person.findUnique({ where: { familyId_email: { familyId: family.id, email } } });
       if (existing?.role === "family" && !existing.removedAt) throw alreadyFamily();
       if (!existing) {
         await tx.person.create({
-          data: { familyId: family.id, role: "family", name, email, magicLinks: { create: link.data } },
+          data: { familyId: family.id, role: "family", isAdmin: admin, name, email, magicLinks: { create: link.data } },
         });
         return "added";
       }
@@ -153,6 +192,7 @@ export async function addFamilyMember(
         // Removing a supporter turned their notifications off; a family member gets them again.
         data: {
           role: "family",
+          isAdmin: admin,
           name,
           phone: null,
           removedAt: null,
@@ -201,7 +241,7 @@ export async function addSupporter(
   person: Person,
   input: { name?: unknown; email?: unknown },
 ): Promise<{ name: string }> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   const { name, email } = validNameAndEmail(input.name, input.email);
   const family = await db.family.findUniqueOrThrow({ where: { id: person.familyId } });
 
@@ -261,7 +301,7 @@ export async function sendSupporterWelcome(send: SendEmail, family: Family, emai
 // Removes or restores a supporter, or removes a family member, in the signed-in family
 // member's own family. Another family's people behave like IDs that don't exist.
 export async function setRemoved(db: Db, person: Person, id: string, removed: unknown): Promise<void> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   if (typeof removed !== "boolean") throw new RequestError(400, "Expected removed: true or false");
   const target = await db.person.findFirst({ where: { id, familyId: person.familyId } });
   if (!target) throw new RequestError(404, "Person not found");
@@ -285,15 +325,17 @@ async function setSupporterRemoved(db: Db, familyId: string, id: string, removed
   });
 }
 
-// A family always keeps at least one family member. Removals in one family take turns on
-// the family's row, and each re-checks that the remover is still an active family member:
+// A family always keeps at least one admin. Removals and admin changes in one family take
+// turns on the family's row, and each re-checks that the actor is still an active admin:
 // since no one can remove themselves, the remover always remains. That also stops a request
-// from someone removed a moment ago.
+// from someone removed or demoted a moment ago.
 async function removeFamilyMember(db: Db, person: Person, id: string) {
   await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT 1 FROM "Family" WHERE id = ${person.familyId} FOR UPDATE`;
-    const remover = await tx.person.findFirst({ where: { id: person.id, role: "family", removedAt: null } });
-    if (!remover) throw new RequestError(403, "Only family members can do this");
+    const remover = await tx.person.findFirst({
+      where: { id: person.id, role: "family", removedAt: null, isAdmin: true },
+    });
+    if (!remover) throw new RequestError(403, ONLY_ADMINS);
     const { count } = await tx.person.updateMany({
       where: { id, familyId: person.familyId, role: "family", removedAt: null },
       data: { removedAt: new Date() },
@@ -303,11 +345,35 @@ async function removeFamilyMember(db: Db, person: Person, id: string) {
   });
 }
 
+// An admin makes a family member an admin or not, themselves included. Takes turns with
+// removals on the family's row, re-checks that the actor is still an active admin, and
+// refuses (undoing the change) if no active admin would remain.
+export async function setAdmin(db: Db, person: Person, id: string, admin: unknown): Promise<void> {
+  requireAdmin(person);
+  if (typeof admin !== "boolean") throw new RequestError(400, "Expected admin: true or false");
+  await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT 1 FROM "Family" WHERE id = ${person.familyId} FOR UPDATE`;
+    const actor = await tx.person.findFirst({
+      where: { id: person.id, role: "family", removedAt: null, isAdmin: true },
+    });
+    if (!actor) throw new RequestError(403, ONLY_ADMINS);
+    const { count } = await tx.person.updateMany({
+      where: { id, familyId: person.familyId, role: "family", removedAt: null },
+      data: { isAdmin: admin },
+    });
+    if (count === 0) throw new RequestError(404, "Person not found");
+    const admins = await tx.person.count({
+      where: { familyId: person.familyId, role: "family", removedAt: null, isAdmin: true },
+    });
+    if (admins === 0) throw new RequestError(409, "A family needs at least one admin.");
+  });
+}
+
 // Marks an active supporter's email verified on a family member's word, for supporters who
 // never manage the emailed confirmation. Their sessions and any confirmation link stay as they are.
 // The update's filter is the whole rule; the lookup after it only tells a repeat from a refusal.
 export async function verifySupporter(db: Db, person: Person, id: string, verified: unknown): Promise<void> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   if (verified !== true) throw new RequestError(400, "Expected verified: true");
   const active = { id, familyId: person.familyId, role: "supporter" as const, email: { not: null }, removedAt: null };
   const { count } = await db.person.updateMany({
@@ -331,7 +397,7 @@ export async function setPrivacyNotice(
   person: Person,
   input: { privacyNotice?: unknown },
 ): Promise<{ privacyNotice: string | null }> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   if (typeof input.privacyNotice !== "string") throw new RequestError(400, "Expected privacyNotice as text.");
   const text = input.privacyNotice.replace(/\s+/g, " ").trim();
   if (text.length > MAX_PRIVACY_NOTICE) {
@@ -354,7 +420,7 @@ export async function changeQuestion(
   person: Person,
   input: { question?: unknown; answers?: unknown },
 ): Promise<{ question: string; acceptedAnswers: string[]; signedOut: number }> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   const { inviteOnly } = await db.family.findUniqueOrThrow({ where: { id: person.familyId } });
   if (inviteOnly) throw new RequestError(403, "This family is invite-only.");
   const question = typeof input.question === "string" ? input.question.trim() : "";

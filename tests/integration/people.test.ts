@@ -21,6 +21,7 @@ import {
   queuedOrDone,
   resetDb,
   tokenFrom,
+  listAdminPeople,
 } from "./fixtures.js";
 
 const db = createTestDb();
@@ -51,7 +52,7 @@ function markRemoved(person: Person) {
 describe("who may see and change", () => {
   it("lists only the family member's own family's supporters, with the question", async () => {
     const { ana, sam } = await setUp();
-    const people = await listPeople(db, ana);
+    const people = await listAdminPeople(db, ana);
     expect(people.supporters.map((s) => s.email)).toEqual([sam.email]);
     expect(people.removed).toEqual([]);
     expect(people.question).toBe("What is the dog's name?");
@@ -69,7 +70,7 @@ describe("who may see and change", () => {
       data: { personId: reader.person.id, tokenHash: hashToken(newToken()), expiresAt: new Date(Date.now() - 1000) },
     });
 
-    const people = await listPeople(db, ana);
+    const people = await listAdminPeople(db, ana);
     expect(people.supporters.map((s) => s.email).sort()).toEqual([sam.email, vera.email]);
     // The reader without an email and Sam, whose email isn't verified yet.
     expect(people.devicesWithoutVerifiedEmail).toBe(2);
@@ -112,7 +113,7 @@ describe("removal", () => {
     expect(await getSession(db, family.slug, sam.sessionToken)).toBeNull();
     expect(await db.magicLink.count({ where: { personId: sam.person.id, usedAt: null } })).toBe(0);
     expect(await signInWithLink(db, family.slug, tokenFrom(mail.sent[0]!))).toBeNull();
-    const people = await listPeople(db, ana);
+    const people = await listAdminPeople(db, ana);
     expect(people.supporters).toEqual([]);
     expect(people.removed).toMatchObject([{ id: sam.person.id, notificationsOn: false }]);
   });
@@ -191,7 +192,7 @@ describe("verifying a supporter's email", () => {
     await setRemoved(db, ana, tess.person.id, true);
     const reader = await answerCorrectly(db, family);
     const ben = await db.person.create({
-      data: { familyId: family.id, role: "family", name: "Ben Rivera", email: "ben.rivera@example.com" },
+      data: { familyId: family.id, role: "family", isAdmin: true, name: "Ben Rivera", email: "ben.rivera@example.com" },
     });
 
     for (const id of [tess.person.id, reader.person.id, ben.id]) {
@@ -329,7 +330,7 @@ describe("adding family members", () => {
   it("creates a new family member and emails a link that signs them in as one", async () => {
     const { family, ana } = await setUp();
     const mail = fakeMailer();
-    const result = await addFamilyMember(db, mail.send, ana, { name: " Bea Rivera ", email: "Bea@Example.com" });
+    const result = await addFamilyMember(db, mail.send, ana, { name: " Bea Rivera ", email: "Bea@Example.com", admin: true });
 
     expect(result).toEqual({ name: "Bea Rivera", outcome: "added" });
     expect(mail.sent.map((e) => e.to)).toEqual(["bea@example.com"]);
@@ -342,7 +343,7 @@ describe("adding family members", () => {
   it("promotes a supporter: same record, new name, old session ended, family session from the link", async () => {
     const { family, ana, sam } = await setUp();
     const mail = fakeMailer();
-    const result = await addFamilyMember(db, mail.send, ana, { name: "Samuel Friend", email: sam.email });
+    const result = await addFamilyMember(db, mail.send, ana, { name: "Samuel Friend", email: sam.email, admin: true });
 
     expect(result.outcome).toBe("promoted");
     expect(await db.person.findUniqueOrThrow({ where: { id: sam.person.id } })).toMatchObject({
@@ -357,14 +358,14 @@ describe("adding family members", () => {
   it("promotes and restores a removed supporter, and restores a removed family member", async () => {
     const { ana, sam } = await setUp();
     await setRemoved(db, ana, sam.person.id, true);
-    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email })).outcome).toBe(
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email, admin: true })).outcome).toBe(
       "promoted",
     );
     expect(await active(sam.person.id)).toMatchObject({ role: "family" });
 
     await setRemoved(db, ana, sam.person.id, true);
     expect(await active(sam.person.id)).toBeNull();
-    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email })).outcome).toBe(
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email, admin: true })).outcome).toBe(
       "restored",
     );
     expect(await active(sam.person.id)).toMatchObject({ role: "family" });
@@ -376,8 +377,8 @@ describe("adding family members", () => {
     await db.person.update({ where: { id: otto.person.id }, data: { notificationsOn: false } });
     await setRemoved(db, ana, sam.person.id, true);
 
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email });
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Otto", email: otto.email });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Sam", email: sam.email, admin: true });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Otto", email: otto.email, admin: true });
 
     expect(await db.person.findUniqueOrThrow({ where: { id: sam.person.id } })).toMatchObject({ notificationsOn: true });
     expect(await db.person.findUniqueOrThrow({ where: { id: otto.person.id } })).toMatchObject({ notificationsOn: false });
@@ -387,7 +388,7 @@ describe("adding family members", () => {
     const { ana } = await setUp();
     const links = await db.magicLink.count();
     const mail = fakeMailer();
-    await expect(addFamilyMember(db, mail.send, ana, { name: "Someone Else", email: ana.email })).rejects.toMatchObject({
+    await expect(addFamilyMember(db, mail.send, ana, { name: "Someone Else", email: ana.email, admin: true })).rejects.toMatchObject({
       status: 409,
     });
     expect(mail.sent).toHaveLength(0);
@@ -398,10 +399,10 @@ describe("adding family members", () => {
   it("is refused to supporters, and only ever adds to the adder's own family", async () => {
     const { family, okafor, ana, sam, olu } = await setUp();
     await expect(
-      addFamilyMember(db, fakeMailer().send, sam.person, { name: "Mallory", email: "mallory@example.com" }),
+      addFamilyMember(db, fakeMailer().send, sam.person, { name: "Mallory", email: "mallory@example.com", admin: true }),
     ).rejects.toMatchObject({ status: 403 });
 
-    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Olu", email: olu.email })).outcome).toBe(
+    expect((await addFamilyMember(db, fakeMailer().send, ana, { name: "Olu", email: olu.email, admin: true })).outcome).toBe(
       "added",
     );
     expect(await db.person.findUniqueOrThrow({ where: { id: olu.person.id } })).toMatchObject({
@@ -414,7 +415,11 @@ describe("adding family members", () => {
 
   it("rejects an invalid name or email", async () => {
     const { ana } = await setUp();
-    for (const input of [{ name: " ", email: "x@example.com" }, { name: "X", email: "not-an-email" }, {}]) {
+    for (const input of [
+      { name: " ", email: "x@example.com", admin: true },
+      { name: "X", email: "not-an-email", admin: true },
+      {},
+    ]) {
       await expect(addFamilyMember(db, fakeMailer().send, ana, input)).rejects.toMatchObject({ status: 400 });
     }
   });
@@ -424,7 +429,7 @@ describe("adding family members", () => {
     const failing = async () => {
       throw new Error("Resend is down");
     };
-    await addFamilyMember(db, failing, ana, { name: "Bea", email: "bea@example.com" });
+    await addFamilyMember(db, failing, ana, { name: "Bea", email: "bea@example.com", admin: true });
     expect(await db.person.count({ where: { email: "bea@example.com", role: "family" } })).toBe(1);
   });
 });
@@ -454,7 +459,7 @@ describe("adding supporters", () => {
 
   it("refuses an email already in the family, sending and changing nothing", async () => {
     const { family, ana, sam } = await setUp();
-    await addFamilyMember(db, fakeMailer().send, ana, { name: "Bea", email: "bea@example.com" });
+    await addFamilyMember(db, fakeMailer().send, ana, { name: "Bea", email: "bea@example.com", admin: true });
     const bea = await db.person.findFirstOrThrow({ where: { email: "bea@example.com" } });
     await setRemoved(db, ana, bea.id, true);
     const tess = await join(family, "Tess");
@@ -494,7 +499,11 @@ describe("adding supporters", () => {
 
   it("rejects an invalid name or email", async () => {
     const { ana } = await setUp();
-    for (const input of [{ name: " ", email: "x@example.com" }, { name: "X", email: "not-an-email" }, {}]) {
+    for (const input of [
+      { name: " ", email: "x@example.com", admin: true },
+      { name: "X", email: "not-an-email", admin: true },
+      {},
+    ]) {
       await expect(addSupporter(db, fakeMailer().send, ana, input)).rejects.toMatchObject({ status: 400 });
     }
   });

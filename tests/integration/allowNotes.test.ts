@@ -1,11 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Person } from "../../server/generated/prisma/client.js";
 import { createNote, deleteNote, setAllowNotesByDefault } from "../../server/notes.js";
-import { listPeople } from "../../server/people.js";
 import { setReaction } from "../../server/reactions.js";
 import { createUpdate, editUpdate, listUpdates, newUpdateDefaults } from "../../server/updates.js";
 import { createTestDb } from "./db.js";
-import { joinWithEmail, makeFamily, queuedOrDone, resetDb } from "./fixtures.js";
+import { listAdminPeople, joinWithEmail, makeFamily, queuedOrDone, resetDb } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -111,7 +110,7 @@ describe("the family's default", () => {
     expect(await setAllowNotesByDefault(db, ana, { allowNotesByDefault: false })).toEqual({ allowNotesByDefault: false });
     expect((await db.family.findUniqueOrThrow({ where: { id: family.id } })).allowNotesByDefault).toBe(false);
     expect((await db.family.findUniqueOrThrow({ where: { id: okafor.id } })).allowNotesByDefault).toBe(true);
-    expect((await listPeople(db, ana)).allowNotesByDefault).toBe(false);
+    expect((await listAdminPeople(db, ana)).allowNotesByDefault).toBe(false);
   });
 
   it("refuses a value that isn't true or false", async () => {

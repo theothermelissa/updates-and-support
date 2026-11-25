@@ -20,6 +20,7 @@ import {
   queuedOrDone,
   resetDb,
   verifiedSupporter,
+  listAdminPeople,
 } from "./fixtures.js";
 
 const db = createTestDb();
@@ -140,13 +141,13 @@ describe("who may manage groups", () => {
     const id = s.neighbors.id;
 
     // A supporter, even a member of the group, gets 403 on everything.
-    const forbidden = { status: 403, message: "Only family members can do this" };
-    expect(await refusal(createGroup(db, s.gia, { name: "Friends" }))).toEqual(forbidden);
-    expect(await refusal(renameGroup(db, s.gia, id, "Friends"))).toEqual(forbidden);
-    expect(await refusal(addGroupMember(db, s.gia, id, s.hal.id))).toEqual(forbidden);
-    expect(await refusal(removeGroupMember(db, s.gia, id, s.gia.id))).toEqual(forbidden);
-    expect(await refusal(deleteGroup(db, s.gia, id, []))).toEqual(forbidden);
-    expect(await refusal(listPeople(db, s.gia))).toEqual(forbidden);
+    const notAdmin = { status: 403, message: "Only admins can do this" };
+    expect(await refusal(createGroup(db, s.gia, { name: "Friends" }))).toEqual(notAdmin);
+    expect(await refusal(renameGroup(db, s.gia, id, "Friends"))).toEqual(notAdmin);
+    expect(await refusal(addGroupMember(db, s.gia, id, s.hal.id))).toEqual(notAdmin);
+    expect(await refusal(removeGroupMember(db, s.gia, id, s.gia.id))).toEqual(notAdmin);
+    expect(await refusal(deleteGroup(db, s.gia, id, []))).toEqual(notAdmin);
+    expect(await refusal(listPeople(db, s.gia))).toEqual({ status: 403, message: "Only family members can do this" });
 
     // Another family's family member gets what a nonexistent id gets.
     const missing = await refusal(renameGroup(db, s.chidi, "no-such-group", "Friends"));
@@ -318,7 +319,7 @@ describe("an edit and a group deletion at the same moment", () => {
 describe("the People page's groups", () => {
   it("lists each group's members and how many updates are shared only with it", async () => {
     const s = await setUp();
-    const { groups } = await listPeople(db, s.ana);
+    const { groups } = await listAdminPeople(db, s.ana);
     expect(groups).toEqual([
       { id: s.cousins.id, name: "Cousins", members: [], onlyHere: 0 },
       {

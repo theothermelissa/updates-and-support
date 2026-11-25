@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { PageTitle } from "@/components/familyShell";
-import { Groups, type PeopleGroup } from "@/components/groups";
-import { InviteRequests, type InviteRequest } from "@/components/inviteRequests";
+import { Groups } from "@/components/groups";
+import { InviteRequests } from "@/components/inviteRequests";
 import { Confirm, EmailInput, ErrorMessage, Field, PhoneLink } from "@/components/page";
 import { ReactionChooser } from "@/components/postSettings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,39 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "../api.js";
+import { api, type PeopleData, type PeopleFamilyMember, type PeopleSupporter } from "../api.js";
 import { MAX_PRIVACY_NOTICE, STANDARD_PRIVACY_NOTICE } from "../lib/privacyNotice.js";
 import { isUsual } from "../lib/reactionCatalog.js";
 import { followLink } from "../navigate.js";
 import type { FamilyPageProps } from "./FamilyFrame.js";
 import { NotFound } from "./NotFound.js";
 
-type Supporter = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  emailVerified: boolean;
-  notificationsOn: boolean;
-  joinedAt: string;
-  removedAt: string | null;
-};
-type FamilyMember = { id: string; name: string; email: string; isYou: boolean };
-type People = {
-  familyMembers: FamilyMember[];
-  supporters: Supporter[];
-  removed: Supporter[];
-  devicesWithoutVerifiedEmail: number;
-  question: string;
-  acceptedAnswers: string[];
-  noteReactions: string[];
-  allowNotesByDefault: boolean;
-  privacyNotice: string | null;
-  // Sorted by name.
-  groups: PeopleGroup[];
-  // Invite-only families only; empty otherwise. Oldest first.
-  inviteRequests: InviteRequest[];
-};
+type Supporter = PeopleSupporter;
+type FamilyMember = PeopleFamilyMember & { isAdmin?: boolean };
 
 function date(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -59,7 +35,7 @@ function devices(count: number) {
 // has no community question, so nothing about it shows.
 export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
   const inviteOnly = me.family.inviteOnly;
-  const [people, setPeople] = useState<People | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
+  const [people, setPeople] = useState<PeopleData | "loading" | "forbidden" | "signed-out" | "not-found">("loading");
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState("");
   const [noteReactions, setNoteReactions] = useState<string[]>([]);
@@ -73,9 +49,10 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
   const [privacyNoticeStatus, setPrivacyNoticeStatus] = useState<{ text: string; error: boolean } | null>(null);
 
   function load() {
-    return api<People>(slug, "people").then(({ status, data }) => {
+    return api<PeopleData>(slug, "people").then(({ status, data }) => {
       if (status === 200) {
         setPeople(data);
+        if (!data.admin) return;
         setQuestion(data.question);
         setAnswers(data.acceptedAnswers.join("\n"));
         setNoteReactions(data.noteReactions);
@@ -101,6 +78,20 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
     load();
   }
 
+  // Returns the server's refusal, or null once saved.
+  async function setAdmin(person: { id: string }, admin: boolean): Promise<string | null> {
+    const { status, data } = await api<{ error?: string }>(slug, `people/${person.id}`, {
+      method: "PATCH",
+      body: { admin },
+    });
+    if (status !== 200) return data?.error ?? "Something went wrong. Please try again.";
+    setMessage(null);
+    // Your own switch changes what you can do, and the notification checkbox's wording.
+    reloadMe();
+    load();
+    return null;
+  }
+
   async function verify(s: Supporter) {
     const { status, data } = await api<{ error?: string }>(slug, `people/${s.id}`, {
       method: "PATCH",
@@ -114,10 +105,10 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
     if (status === 200) load();
   }
 
-  async function addFamilyMember(name: string, email: string): Promise<boolean> {
+  async function addFamilyMember(name: string, email: string, admin: boolean): Promise<boolean> {
     const { status, data } = await api<{ name: string; outcome: string; error?: string }>(slug, "people", {
       method: "POST",
-      body: { name, email },
+      body: { name, email, admin },
     });
     if (status !== 200) {
       setMessage({ text: data?.error ?? "Something went wrong. Please try again.", error: true });
@@ -230,6 +221,24 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
       </>
     );
   }
+  if (!people.admin) {
+    // Any other family member sees who is here and nothing to change.
+    return (
+      <>
+        <PageTitle>People</PageTitle>
+        <Section title={`Family members (${people.familyMembers.length})`}>
+          <FamilyMemberTable members={people.familyMembers} />
+        </Section>
+        <Section title={`Supporters (${people.supporters.length})`}>
+          {people.supporters.length === 0 ? (
+            <p className="text-muted-foreground">No supporters have given an email yet.</p>
+          ) : (
+            <SupporterTable rows={people.supporters} />
+          )}
+        </Section>
+      </>
+    );
+  }
   return (
     <>
       <PageTitle>People</PageTitle>
@@ -245,6 +254,7 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
       <FamilyMembers
         members={people.familyMembers}
         onRemove={(m) => setRemoved(m, true)}
+        onSetAdmin={setAdmin}
         onAdd={addFamilyMember}
       />
 
@@ -410,26 +420,52 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+function FamilyMemberTable({ members }: { members: FamilyMember[] }) {
+  return (
+    <Table>
+      <TableBody>
+        {members.map((m) => (
+          <TableRow key={m.id}>
+            <TableCell>{m.isYou ? `${m.name} (you)` : m.name}</TableCell>
+            <TableCell>{m.email}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
 function FamilyMembers({
   members,
   onRemove,
+  onSetAdmin,
   onAdd,
 }: {
-  members: FamilyMember[];
+  members: (PeopleFamilyMember & { isAdmin: boolean })[];
   onRemove: (m: FamilyMember) => void;
-  onAdd: (name: string, email: string) => Promise<boolean>;
+  onSetAdmin: (m: FamilyMember, admin: boolean) => Promise<string | null>;
+  onAdd: (name: string, email: string, admin: boolean) => Promise<boolean>;
 }) {
   const [removing, setRemoving] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [admin, setAdmin] = useState(false);
   const [confirmingAdd, setConfirmingAdd] = useState(false);
+  // The server's refusal to a switch, shown under the table; the switch itself shows the saved value.
+  const [adminError, setAdminError] = useState<string | null>(null);
 
   async function add() {
     setConfirmingAdd(false);
-    if (await onAdd(name, email)) {
+    if (await onAdd(name, email, admin)) {
       setName("");
       setEmail("");
+      setAdmin(false);
     }
+  }
+
+  async function toggleAdmin(m: FamilyMember, next: boolean) {
+    setAdminError(null);
+    setAdminError(await onSetAdmin(m, next));
   }
 
   const removingMember = members.find((m) => m.id === removing);
@@ -439,8 +475,15 @@ function FamilyMembers({
         <TableBody>
           {members.map((m) => (
             <TableRow key={m.id}>
-              <TableCell>{m.isYou ? `${m.name} (you)` : m.name}</TableCell>
-              <TableCell>{m.email}</TableCell>
+              <TableCell className="whitespace-normal">
+                <div>{m.isYou ? `${m.name} (you)` : m.name}</div>
+                <div className="break-all text-muted-foreground">{m.email}</div>
+                {/* Controlled by the saved value, so a refused change leaves it where it was. */}
+                <Label className="mt-1 whitespace-nowrap">
+                  <Checkbox checked={m.isAdmin} onCheckedChange={(checked) => toggleAdmin(m, checked === true)} />
+                  Admin
+                </Label>
+              </TableCell>
               <TableCell className="text-right">
                 {!m.isYou && (
                   <Button variant="ghost" size="sm" onClick={() => setRemoving(m.id)}>
@@ -452,6 +495,7 @@ function FamilyMembers({
           ))}
         </TableBody>
       </Table>
+      {adminError && <ErrorMessage>{adminError}</ErrorMessage>}
       {removingMember && (
         <Confirm
           yes="Yes, remove"
@@ -483,10 +527,15 @@ function FamilyMembers({
             <Field label="Email">
               <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} required />
             </Field>
+            <Label>
+              <Checkbox checked={admin} onCheckedChange={(checked) => setAdmin(checked === true)} />
+              Can manage people and settings
+            </Label>
             {confirmingAdd ? (
               <Confirm yes="Yes, add" onYes={add} onCancel={() => setConfirmingAdd(false)}>
-                Add {name} ({email}) as a family member? They'll be able to post, edit, and delete updates and see all
-                supporters.
+                Add {name} ({email}) as a family member
+                {admin ? " who can manage people and settings" : ""}? They'll be able to post, edit, and delete updates
+                and see all supporters.
               </Confirm>
             ) : (
               <Button>Add</Button>
@@ -543,9 +592,10 @@ function SupporterTable({
   onVerify,
 }: {
   rows: Supporter[];
-  action: string;
+  // Without an action, the table is read-only.
+  action?: string;
   confirm?: (s: Supporter) => string;
-  onAction: (s: Supporter) => void;
+  onAction?: (s: Supporter) => void;
   onVerify?: (s: Supporter) => void;
 }) {
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -565,7 +615,7 @@ function SupporterTable({
             <TableHead>Notifications</TableHead>
             <TableHead>Joined</TableHead>
             {showRemoved && <TableHead>Removed</TableHead>}
-            <TableHead />
+            {action && <TableHead />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -591,21 +641,23 @@ function SupporterTable({
               <TableCell>{s.notificationsOn ? "On" : "Off"}</TableCell>
               <TableCell>{date(s.joinedAt)}</TableCell>
               {s.removedAt && <TableCell>{date(s.removedAt)}</TableCell>}
-              <TableCell className="text-right">
-                <Button variant="ghost" size="sm" onClick={() => (confirm ? setConfirming(s.id) : onAction(s))}>
-                  {action}
-                </Button>
-              </TableCell>
+              {action && (
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="sm" onClick={() => (confirm ? setConfirming(s.id) : onAction?.(s))}>
+                    {action}
+                  </Button>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      {confirm && confirmingRow && (
+      {action && confirm && confirmingRow && (
         <Confirm
           yes={`Yes, ${action.toLowerCase()}`}
           onYes={() => {
             setConfirming(null);
-            onAction(confirmingRow);
+            onAction?.(confirmingRow);
           }}
           onCancel={() => setConfirming(null)}
         >

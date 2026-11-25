@@ -13,6 +13,40 @@ export async function api<T>(
   return { status: res.status, data: data as T };
 }
 
+import type { PeopleGroup } from "@/components/groups";
+import type { InviteRequest } from "@/components/inviteRequests";
+
+export type PeopleSupporter = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  emailVerified: boolean;
+  notificationsOn: boolean;
+  joinedAt: string;
+  removedAt: string | null;
+};
+export type PeopleFamilyMember = { id: string; name: string; email: string; isYou: boolean };
+// What GET people returns. An admin gets everything; any other family member gets only the two lists.
+export type PeopleData =
+  | {
+      admin: true;
+      familyMembers: (PeopleFamilyMember & { isAdmin: boolean })[];
+      supporters: PeopleSupporter[];
+      removed: PeopleSupporter[];
+      devicesWithoutVerifiedEmail: number;
+      question: string;
+      acceptedAnswers: string[];
+      noteReactions: string[];
+      allowNotesByDefault: boolean;
+      privacyNotice: string | null;
+      // Sorted by name.
+      groups: PeopleGroup[];
+      // Invite-only families only; empty otherwise. Oldest first.
+      inviteRequests: InviteRequest[];
+    }
+  | { admin: false; familyMembers: PeopleFamilyMember[]; supporters: PeopleSupporter[] };
+
 // A supporter who has only answered the question has no name or email yet.
 export type PersonView = {
   id: string;
@@ -21,6 +55,8 @@ export type PersonView = {
   // Supporters only; only ever sent to its own person and to family members.
   phone: string | null;
   role: "family" | "supporter";
+  // Family members only; admins manage people and settings (spec/access.md "Admins").
+  isAdmin: boolean;
   notificationsOn: boolean;
   emailVerified: boolean;
 };

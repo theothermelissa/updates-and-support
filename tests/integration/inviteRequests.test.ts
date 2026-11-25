@@ -13,7 +13,7 @@ import {
 } from "../../server/inviteRequests.js";
 import { addFamilyMember, addSupporter, listPeople, setRemoved } from "../../server/people.js";
 import { createTestDb } from "./db.js";
-import { fakeMailer, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
+import { listAdminPeople, fakeMailer, makeFamily, resetDb, tokenFrom } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -47,7 +47,7 @@ async function setUp() {
   const { family, people: [ana] } = await makeFamily(db, "Rivera", ["Ana"], { inviteOnly: true });
   const mail = fakeMailer();
   for (const first of ["Ben", "Cara", "Dan"]) {
-    await addFamilyMember(db, mail.send, ana!, { name: `${first} Rivera`, email: `${first}.rivera@example.com` });
+    await addFamilyMember(db, mail.send, ana!, { name: `${first} Rivera`, email: `${first}.rivera@example.com`, admin: true });
   }
   await db.person.updateMany({ where: { familyId: family.id, email: "cara.rivera@example.com" }, data: { notificationsOn: false } });
   await db.person.updateMany({ where: { familyId: family.id, email: "dan.rivera@example.com" }, data: { removedAt: new Date() } });
@@ -194,12 +194,12 @@ describe("who may see and act on requests", () => {
     await plant(family.id, "early@example.com", { createdAt: new Date(Date.now() - DAY) });
     await plant(family.id, "old@example.com", { createdAt: new Date(Date.now() - 31 * DAY) });
     await plant(okafor.id, "other@example.com");
-    expect((await listPeople(db, ana)).inviteRequests.map((r) => r.email)).toEqual(["early@example.com", "late@example.com"]);
-    expect((await listPeople(db, chidi)).inviteRequests.map((r) => r.email)).toEqual(["other@example.com"]);
+    expect((await listAdminPeople(db, ana)).inviteRequests.map((r) => r.email)).toEqual(["early@example.com", "late@example.com"]);
+    expect((await listAdminPeople(db, chidi)).inviteRequests.map((r) => r.email)).toEqual(["other@example.com"]);
     // A family that isn't invite-only lists none, even with a row planted directly.
     await plant(lopez.id, "planted@example.com");
     const lopezMember = await db.person.findFirstOrThrow({ where: { familyId: lopez.id, role: "family" } });
-    expect((await listPeople(db, lopezMember)).inviteRequests).toEqual([]);
+    expect((await listAdminPeople(db, lopezMember)).inviteRequests).toEqual([]);
   });
 
   it("refuses a supporter, and treats another family's request id as not found", async () => {
@@ -218,7 +218,7 @@ describe("who may see and act on requests", () => {
   it("turns away a family member once removed, because their session is gone", async () => {
     const { family, ana, byEmail } = await setUp();
     const mail = fakeMailer();
-    await addFamilyMember(db, mail.send, ana, { name: "Eli Rivera", email: "eli.rivera@example.com" });
+    await addFamilyMember(db, mail.send, ana, { name: "Eli Rivera", email: "eli.rivera@example.com", admin: true });
     const signedIn = await signInWithLink(db, family.slug, tokenFrom(await lastEmailTo(mail, "eli")));
     expect(signedIn).not.toBeNull();
     const eli = await byEmail("eli.rivera@example.com");

@@ -2,9 +2,9 @@ import { GROUP_GONE, lockGroups, sharedOnlyWith } from "./audience.js";
 import type { Db } from "./db.js";
 import { RequestError } from "./errors.js";
 import type { Person, Prisma } from "./generated/prisma/client.js";
-import { requireFamilyMember } from "./people.js";
+import { requireAdmin } from "./people.js";
 
-// A family's groups, managed by its family members on the People page. Every write here takes
+// A family's groups, managed by its admins on the People page. Every write here takes
 // the family's groups lock first (see lockGroups), so it takes turns with every other group
 // write and every audience write, and none of them can act on a group that's changing under it.
 
@@ -12,7 +12,7 @@ const MAX_NAME = 50;
 const MAX_GROUPS = 50;
 
 export async function createGroup(db: Db, person: Person, input: { name?: unknown }): Promise<{ id: string; name: string }> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   const name = validName(input.name);
   return db.$transaction(async (tx) => {
     await lockGroups(tx, person.familyId);
@@ -25,7 +25,7 @@ export async function createGroup(db: Db, person: Person, input: { name?: unknow
 }
 
 export async function renameGroup(db: Db, person: Person, id: string, name: unknown): Promise<{ id: string; name: string }> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   const newName = validName(name);
   return db.$transaction(async (tx) => {
     await lockGroups(tx, person.familyId);
@@ -39,7 +39,7 @@ export async function renameGroup(db: Db, person: Person, id: string, name: unkn
 // isn't removed. Their row is locked, so a promotion at the same moment takes turns with this.
 // Adding someone already in the group changes nothing.
 export async function addGroupMember(db: Db, person: Person, id: string, personId: unknown): Promise<void> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   if (typeof personId !== "string") throw new RequestError(400, "Expected a person's id");
   await db.$transaction(async (tx) => {
     await lockGroups(tx, person.familyId);
@@ -56,7 +56,7 @@ export async function addGroupMember(db: Db, person: Person, id: string, personI
 
 // Takes effect on the member's next request. Removing someone who isn't in the group changes nothing.
 export async function removeGroupMember(db: Db, person: Person, id: string, personId: unknown): Promise<void> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   if (typeof personId !== "string") throw new RequestError(400, "Expected a person's id");
   await db.$transaction(async (tx) => {
     await lockGroups(tx, person.familyId);
@@ -70,7 +70,7 @@ export async function removeGroupMember(db: Db, person: Person, id: string, pers
 // groups too just loses this one, by the cascade. Applies to the updates shared only with it
 // when the deletion happens, which the groups lock holds still.
 export async function deleteGroup(db: Db, person: Person, id: string, moveTo: unknown): Promise<void> {
-  requireFamilyMember(person);
+  requireAdmin(person);
   const targets = parseMoveTo(moveTo);
   await db.$transaction(async (tx) => {
     await lockGroups(tx, person.familyId);

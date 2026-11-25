@@ -165,3 +165,11 @@ The repo has no prettier config, and default prettier reformats whole files to 8
 **Why:** a note card's tail, added inside the card, put 12px of extra space under the React row.
 
 **How to apply:** put decorations beside a spaced container, in a wrapper, not inside it.
+
+### Check new controls on a table row at 360px
+
+A control added as another column of a table row can land off-screen on a phone, where the table scrolls sideways and nothing says it's there.
+
+**Why:** the Admin switch on the People page's family-members table sat beyond the viewport at 360px, and only the browser pass showed it.
+
+**How to apply:** put a new per-row control in the first cell (stacked under the name), or confirm it's visible at 360px before calling the UI done.

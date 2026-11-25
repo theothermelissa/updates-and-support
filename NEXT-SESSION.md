@@ -6,10 +6,10 @@ Deferred ideas and follow-ups, highest priority first. Claude maintains this lis
 
 Decided with Melissa for her own family's site; each becomes its own spec, plan, and PR after group management ships. The existing family's site keeps its community question and sees none of this.
 
+- **2026-11-24** — Follow-ups cut from non-admin family members.
+  No record of who changed someone's admin status; non-admins aren't shown who the admins are; the operator's `family:create` script makes every member an admin without asking; the preview seed has no non-admin family member (Melissa makes one with the add form). Add whichever real use shows to be missing.
 - **2026-11-24** — Tidy the invite-request flow after seeing it used.
   Cut for speed when "Request an invite" shipped: choosing groups while approving (today the family adds them afterward in Groups), a navigation-bar badge for pending requests (today only the email and the People page tell them), bulk decline, and batching the "someone asked to join" email. Add whichever real use shows to be missing.
-- **2026-11-23** — Non-admin family members.
-  A family member who can post, leave notes, and see supporters, but doesn't manage people, groups, or settings, and doesn't get invite-request emails. Until this exists, Melissa will turn off that family member's notifications by hand.
 - **2026-11-23** — Notes and reactions per group.
   Each group sees only notes left by its own members; family members see every note together. A family member's note is seen by the update's whole audience. Reactions: a reader sees names for reactions from their own group and anonymous counts for other groups; family members see every name.
 - **2026-11-24** — Public updates, readable without signing in.

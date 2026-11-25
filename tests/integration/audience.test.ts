@@ -533,7 +533,7 @@ describe("promotion", () => {
     const s = await setUp();
     await db.groupMember.create({ data: { groupId: s.investors.id, personId: s.gia.id } });
     expect(await db.groupMember.count({ where: { personId: s.gia.id } })).toBe(2);
-    const result = await addFamilyMember(db, fakeMailer().send, s.ana, { name: "Gia Rivera", email: "gia@example.com" });
+    const result = await addFamilyMember(db, fakeMailer().send, s.ana, { name: "Gia Rivera", email: "gia@example.com", admin: true });
     expect(result.outcome).toBe("promoted");
     expect(await db.groupMember.count({ where: { personId: s.gia.id } })).toBe(0);
     expect(await db.groupMember.count({ where: { personId: s.pia.id } })).toBe(1);

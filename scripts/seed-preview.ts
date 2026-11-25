@@ -34,8 +34,8 @@ async function main() {
   });
   await db.person.upsert({
     where: { familyId_email: { familyId: family.id, email } },
-    update: {},
-    create: { familyId: family.id, role: "family", name: "Test Family Member", email },
+    update: { isAdmin: true },
+    create: { familyId: family.id, role: "family", isAdmin: true, name: "Test Family Member", email },
   });
   console.log(`Test family ready at /f/${TEST_SLUG} (answer: Biscuit; family member: ${email})`);
 
@@ -52,8 +52,8 @@ async function main() {
   });
   await db.person.upsert({
     where: { familyId_email: { familyId: inviteOnly.id, email } },
-    update: {},
-    create: { familyId: inviteOnly.id, role: "family", name: "Test Family Member", email },
+    update: { isAdmin: true },
+    create: { familyId: inviteOnly.id, role: "family", isAdmin: true, name: "Test Family Member", email },
   });
   console.log(`Invite-only test family ready at /f/${INVITE_ONLY_SLUG} (family member: ${email})`);
   await db.$disconnect();
