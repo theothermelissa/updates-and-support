@@ -47,6 +47,13 @@ By hand in the browser (the form is UI): check the box with a dated photo, an un
 - **Date and time, not date only.** `datetime-local` is native and needs no extra logic.
 - **No placeholder-photo dates.** Placeholders upload nothing, so there is nothing to read.
 
+## Discoveries
+
+- The lite build of `exifr` has no tag names, so `readPhotoDate` asks for tag numbers and parses the raw text itself (see `claude/lessons.md`). `exifr` loads on the first photo read, as its own 15 KB chunk, so readers never download it.
+- The Posted field's "no photo has a date" note also shows when no photo has been added yet.
+- Browser check (Chromium, 390px, Cloudinary mocked): the checkbox, the earliest-date rule, removing a photo, a hand-set date surviving new photos, the email box, an undated photo, the empty-date guard, the Video tab, editing a date, and no sideways scroll all behave as specified.
+- Adding a second photo replaced the first in that test, on the unmodified editor too, until the cursor was moved below the first photo. Not changed here; it's in `NEXT-SESSION.md`.
+
 ## Order of work
 
 Server and its tests, then `photoDate.ts` and its tests, then the form, then the browser check, then the PR.

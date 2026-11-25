@@ -98,6 +98,14 @@ Melissa may ask for implementation by subagents so the main session stays free t
 
 CLAUDE.md requires proving each access test fails with its rule removed. Three patterns hide a removed rule. A test can take a path that never reaches the rule: the check that a bad link costs no gate attempt passed with the order reversed, because it sent the *correct* answer, which never records an attempt. Next, a backstop check can mask the cleanup it backs up: removal's session and link deletion passed its test with the deletion gone, because `getSession` and `spendLink` refuse removed people anyway, so assert the cleanup directly. Last, a single concurrent race can come out right by timing alone: the family-member lock's test passed without the lock until it repeated the race 20 times. Where the rule is a lock, make the race deterministic instead: hold the lock in a test transaction, start the competing work, wait until it's queued in `pg_locks` (`queuedOrDone` in the test fixtures), then act and commit. The gate-lock tests work this way, and each one fails every time its lock is removed. Holding the lock in the test doesn't work when the unfixed code would also block on it, for example at a foreign-key check on a row the test locked; then pause the code mid-transaction instead, with a Prisma query extension that waits after the step in question (the magic-link removal race in `tests/integration/auth.test.ts`).
 
+### exifr's small build knows tags only by number
+
+`exifr/dist/lite.esm.mjs` (JPEG and HEIC) has no tag-name dictionary, so asking for `["DateTimeOriginal"]` throws "undefined is not iterable".
+
+**Why:** it's why `src/photoDate.ts` passes tag numbers and parses the raw "YYYY:MM:DD HH:MM:SS" text itself. The library's types don't list numbers there either.
+
+**How to apply:** read dates with `{ tiff: false, exif: [0x9003, 0x9004], translateKeys: false, translateValues: false, reviveValues: false }`, and import it dynamically so readers who never add a photo don't download it. Use the full build only if more tags are needed.
+
 ### Never let a missing value default to a wider audience
 
 When the server fills in an omitted field, the default must be the narrowest safe choice, or the field must be required.
