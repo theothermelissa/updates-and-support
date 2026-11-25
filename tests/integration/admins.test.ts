@@ -191,7 +191,7 @@ describe("a non-admin does everything else a family member does", () => {
   it("leaves and deletes notes, and runs How to help", async () => {
     const s = await setUp();
     const update = await createUpdate(db, s.ben, { body: "News" });
-    const { note } = await createNote(db, s.ben, { updateId: update.id, body: "Thinking of you", color: "sky" });
+    const { note } = await createNote(db, s.ben, { updateId: update.id, body: "Thinking of you", color: "sky", audience: "everyone" });
     const theirs = await createNote(db, s.sam, { updateId: update.id, body: "Hello", color: "sky" });
     await deleteNote(db, s.ben, note.id);
     // A family member deletes anyone's note.

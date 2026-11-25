@@ -51,7 +51,8 @@ export function Groups({
     <>
       <p className="text-muted-foreground">
         Share an update with only some supporters by choosing groups in Post settings. Supporters never see group
-        names or which groups they're in, and aren't told when they're added or removed.
+        names or which groups they're in, and aren't told when they're added or removed. Groups also decide
+        whose notes a supporter sees.
       </p>
       {message &&
         (message.error ? (

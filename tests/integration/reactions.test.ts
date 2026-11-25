@@ -250,7 +250,7 @@ describe("setting a reaction", () => {
 });
 
 async function leaveNote(person: Person, updateId: string) {
-  const { note } = await createNote(db, person, { updateId, body: "With you", color: "sky" });
+  const { note } = await createNote(db, person, { updateId, body: "With you", color: "sky", ...(person.role === "family" ? { audience: "everyone" } : {}) });
   return note;
 }
 

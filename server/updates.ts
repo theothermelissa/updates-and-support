@@ -20,6 +20,7 @@ import { notifyNewUpdate } from "./notifications.js";
 import { parsePostedAt } from "./postedAt.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
+import { readerScope } from "./readerScope.js";
 import { parseReactionSet, reactionsView, visibleReactors, type ReactionsView } from "./reactions.js";
 import { contentFrom, photoCount, shownContent, type PhotoCheck } from "./richText.js";
 import { USUAL_REACTIONS } from "../src/lib/reactionCatalog.js";
@@ -64,6 +65,7 @@ export async function listUpdates(
   settings: PhotoSettings = NO_PHOTOS,
 ): Promise<FeedUpdate[]> {
   const isFamily = person.role === "family";
+  const scope = await readerScope(db, person);
   const updates = await db.update.findMany({
     where: visibleUpdates(person),
     orderBy: { createdAt: "desc" },
@@ -77,7 +79,7 @@ export async function listUpdates(
         orderBy: { createdAt: "asc" },
         select: { kind: true, personId: true, person: { select: { name: true } } },
       },
-      notes: { where: visibleNotes(person), orderBy: { createdAt: "desc" }, select: noteSelect(person.familyId) },
+      notes: { where: visibleNotes(person, scope), orderBy: { createdAt: "desc" }, select: noteSelect(person.familyId) },
     },
   });
   const noteReactions = await noteReactionSet(db, person.familyId);
@@ -86,8 +88,8 @@ export async function listUpdates(
     return {
       ...shown,
       content: withPhotoLinks(shown.content, person.familyId, new Set(u.photos.map((p) => p.publicId)), settings.cloudinary ?? null),
-      ...reactionsView(u.reactions, person.id, u.reactionKinds),
-      notes: u.notes.map((n) => noteView(n, person.id, store, noteReactions)),
+      ...reactionsView(u.reactions, person.id, u.reactionKinds, scope),
+      notes: u.notes.map((n) => noteView(n, person.id, store, noteReactions, scope)),
       // Prisma can't type an include that depends on the role; groups are loaded when isFamily.
       ...(isFamily ? { audience: audienceView(u as typeof u & LoadedAudience) } : {}),
     };

@@ -280,7 +280,13 @@ A supporter is never shown a group's name, which groups exist or which they belo
 - Its notification email isn't sent to them (see [updates.md](updates.md#notifications)).
 - Every request that names it, or one of its notes, gets the same "not found" as for one that doesn't exist: fetching it, reacting to it or its notes, leaving a note, and deleting a note, even the supporter's own.
 
+The same holds inside an update a supporter may read: a note they aren't to see (see "Groups and notes") is treated like a note that doesn't exist, and a reactor they aren't to see by name is only counted.
+
 The server sends an update's audience, and any group's name, only to family members. All of this is enforced on the server.
+
+### Groups and notes
+
+A group also decides whose notes a supporter reads: supporters who share a group see each other's notes, and supporters in no group see each other's (see [updates.md](updates.md#who-sees-a-note)). Family members see every note, and a family member's note reaches every reader of the update unless it's for family members only. This follows membership as it is on each page load, so sorting a supporter into their first group stops them seeing the notes of supporters in no group, and stops those supporters seeing theirs, and removing a member or deleting a group changes it the same way. Adding or removing members sends no emails and shows no one anything, as above. The People page's Groups section says this where an admin adds members: "Groups also decide whose notes a supporter sees."
 
 ### Deleting a group
 

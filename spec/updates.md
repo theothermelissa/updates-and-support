@@ -65,7 +65,7 @@ Each update has an **audience**, the people who can see it:
 
 On an invite-only family (see [access.md](access.md#invite-only-families)), "Everyone" means every supporter the family has added, since no one can read there without being added.
 
-Family members see every update, whatever its audience. Everything on an update stays inside its audience: its photos, its video, its notes, and the reactions on it and on its notes are seen only by people who can see the update, and only they can react or leave a note. To anyone else the update doesn't exist (see [access.md](access.md#groups-are-invisible-to-supporters)).
+Family members see every update, whatever its audience. Everything on an update stays inside its audience: its photos, its video, its notes, and the reactions on it and on its notes are seen only by people who can see the update, and only they can react or leave a note. Within an audience, a supporter still sees only some of its notes (see "Who sees a note"). To anyone else the update doesn't exist (see [access.md](access.md#groups-are-invisible-to-supporters)).
 
 **Choosing it.** Once the family has at least one group, Post settings starts with **"Who can see this"**: **Everyone**, selected by default, or **Only these groups**, which shows a checkbox for each of the family's groups, at least one of which must be checked to post. Post settings' button then shows the audience as its first icon: two people for Everyone, or a padlock otherwise, which screen readers hear as "Everyone," "Only some groups," or "Family members only." While the audience is groups, "Notify everyone by email" reads "Notify these groups by email," and its bell is heard as "Emails these groups." A family without groups sees none of this.
 
@@ -149,13 +149,13 @@ Each person has at most one reaction on a given update, and at most one on a giv
 The React button and the summary work the same way on an update and on a note.
 
 - **A React button.** It's round and shows a heart with a plus until the viewer has reacted, then shows their emoji. On a computer, resting the pointer on it briefly opens a tray of the allowed emoji, in catalog order, which stays open while the pointer moves onto it; clicking the button opens it too. On a phone, tapping the button opens the tray. The tray floats above the button, or just below it when there isn't room above. Tapping an emoji picks it and closes the tray; the viewer's current emoji is highlighted in the tray, and is in the tray even when it's no longer allowed, so it can be removed. Pressing Escape or tapping elsewhere closes the tray. The button and emoji are large enough to tap easily, work from the keyboard, and are described for screen readers. On an update or note that allows no reactions, the button is hidden, except for a viewer who already reacted, whose button shows their emoji and opens a tray of just that one, to remove it.
-- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, with ties in catalog order, a little smaller than the button's emoji. It's shown even on an update or note that allows no reactions. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and readers without a name counted at the end, as in "and 2 others."
+- **A summary** in plain text next to the React button, once anyone has reacted, such as "❤️🤗👏": up to three of the emoji used, most-used first, with ties in catalog order, a little smaller than the button's emoji. It's shown even on an update or note that allows no reactions. Screen readers also hear how many people reacted. On a computer, resting the pointer on it shows who reacted. Tapping it shows the same list under that row, and tapping again hides it. The list has one line per person with their emoji, such as "Ana Rivera ❤️", with the viewer first as "You ❤️" and everyone who isn't named to the viewer counted at the end, as in "and 2 others."
 
 On an update, that row is the footer's, with **Leave a note**, and for family members **Edit** and **Delete** (see "The feed"). On a note, it sits under the note, with either **Delete** and the time, or the author control holding **Delete** (see "Reacting to a note").
 
 **The server enforces the set.** A new reaction is accepted only when its emoji is in the update's current set, or, for a note, the family's current note set. Removing one's own reaction is always accepted. Only family members choose an update's set, and only admins choose the family's note set.
 
-**Everyone who can see an update or a note sees who reacted to it.** This is a deliberate choice: the families this serves are small communities where supporters know one another, and seeing who is thinking of the family is part of the support. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it, and a later change of name shows there too (see [access.md](access.md#changing-your-name)).
+**A reader sees who reacted only among the people they can see notes from.** Every reaction on an update or a note is counted, and the summary and the total include all of them, but a reactor is named only to a reader who sees that person's notes (see "Who sees a note"): family members are named to everyone, and a family member sees every name. A supporter sees the names of family members, of supporters who share a group with them, of other supporters in no group when they're in none themselves, and their own. Every other reactor is counted without a name, under "and 2 others." The server never sends a name the reader isn't to see, and never a group. Only names are shown, never emails. Family members and supporters appear under the name on their record. A reader who hasn't given a name is never named, only counted; once they give a name, their earlier reaction shows it to the readers who may see it, and a later change of name shows there too (see [access.md](access.md#changing-your-name)). Who may be named is decided when the page loads, from the groups as they are then.
 
 A removed person's reactions are neither shown nor counted, and a removed person can't react, since they can't sign in. Restoring a supporter brings their reactions back.
 
@@ -163,7 +163,7 @@ Reacting never asks for confirmation, and reactions send no emails or notificati
 
 ## Notes
 
-Everyone who can see an update, family members and supporters alike, can leave notes of support on it and reads every note on it (see "Audience"). Sharing them is the point: the family and its support network get through this together.
+Everyone who can see an update, family members and supporters alike, can leave notes of support on it (see "Audience"). A reader sees the notes their family and their own part of the support network leave (see "Who sees a note"): sharing them is the point, and keeping each group's notes among its own lets people write freely.
 
 A note is either a written note or a video note. It has:
 
@@ -173,11 +173,28 @@ A note is either a written note or a video note. It has:
 - its **author**. A video note shows the author's name as a signature, such as "— Ana Rivera." A written note doesn't, because people sign their written notes themselves; its author and when it was left are behind a small author control instead (see "The written note's author"). A family member's note is always marked "Family," on the card itself, so a supporter can't pass as a family member by signing a name in their text.
 - when it was **left**
 
+### Who sees a note
+
+A note is seen only by someone who can see its update (see "Audience"), and then only if one of these is true:
+
+- The reader is a **family member**. Family members see every note on every update they can see, including notes for family members only.
+- The reader is the note's **author**.
+- The note's author is a family member, and the note is shared with the update's audience (see "Leaving a note"). Every reader of the update sees it.
+- The reader and the author are both supporters, and they **share a group**, or both are **in no group**.
+
+A supporter's groups are the groups they belong to (see [access.md](access.md#groups)), counted only while their email is verified and they haven't been removed, as when a group's updates are shown to them. A supporter with none, including one in a group whose email isn't verified yet, and anyone who reads without an email, is **in no group**. Supporters in no group see each other's notes, as everyone did before a family had groups, so a family with no groups sees no difference. A supporter in several groups sees the notes of everyone they share any of them with.
+
+This is decided for each note at the moment a page is loaded, from the groups as they are then, not as they were when the note was left: adding a supporter to a group, removing them, or deleting a group changes who sees their notes, and what they see, on the next page load. Their notes stay on the update and no one is told. An author always sees their own notes and can delete them, even when no other supporter can see them. When a supporter becomes a family member, the notes they left before stay on their updates but become notes for family members only, so what was written for a group's eyes never reaches everyone.
+
+A reader who can't see a note never learns it exists. It isn't in the feed, the wall, or a "See all 14 notes" count, no reaction on it is shown or counted, a request that names it gets the same "not found" as a note that doesn't exist (reacting to it, deleting it), and nothing says why some notes aren't shown. The server decides this on every request and never sends a note, or an author's groups, that the reader isn't to see.
+
 ### Leaving a note
 
 Each update's footer has a round "Leave a note" button showing a speech bubble with a heart, in the same row as React. It opens a dialog with two tabs, "Written note" and "Video note," starting on "Written note," which has a text box. Below either tab are a row of the palette's colors with one chosen at random and the name, then "Leave note" for a written note or "Post" for a video. The dialog shows the note in its chosen color as it's written, and picking a different color changes it at once. "Cancel" closes the dialog and discards the note.
 
 A note needs a name. The dialog shows "Your name", filled in with the name on their record, or empty if they haven't given one, and they can change it. Leaving the note saves that name on their record (see [access.md](access.md#changing-your-name)). Cancelling, or a note that isn't saved, leaves the name as it was. The dialog never asks for an email.
+
+**A family member also chooses who sees the note.** Under the name and color, the dialog asks "Who sees this note?" with two choices: **Everyone who can see this update**, selected to begin with, and **Family members only**, which shows a padlock on the note. The server requires the choice from a family member and refuses it from anyone else; a supporter's note is seen as set out under "Who sees a note." A note for family members only is seen only by family members, and so is every reaction on it. Family members see it with a small padlock and "Family only" beside the "Family" mark. The choice can't be changed later: delete the note and leave another.
 
 A person can leave any number of notes on an update that allows notes, up to 20 notes an hour across the family, written and video notes together, so one person can't flood the wall. Notes send no emails or notifications. Others' new notes appear when the page is reloaded.
 
@@ -207,13 +224,13 @@ Video notes are stored and delivered by Cloudinary, which also converts them to 
 
 ### Notes beside an update
 
-An update's notes are always shown, newest first, as colored cards: beside the update's card on a wide screen, and below it on a phone. Up to six are shown; when there are more, a "See all 14 notes" link opens the wall showing only that update's notes.
+The notes the reader sees (see "Who sees a note") on an update are always shown, newest first, as colored cards: beside the update's card on a wide screen, and below it on a phone. Up to six are shown; when there are more, a "See all 14 notes" link opens the wall showing only that update's notes.
 
-On a wide screen, an update with no notes that allows notes has a round "Leave a note" button beside it instead, at the top, filled with the palette's Oak color. It opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an extra button under every note-less update would crowd the feed; the footer's button serves instead. The button goes away when the update's first note appears, including when that note arrives through the feed's regular check, and when the update stops allowing notes.
+On a wide screen, an update with no notes shown to the reader that allows notes has a round "Leave a note" button beside it instead, at the top, filled with the palette's Oak color. It opens the same dialog as the footer's. A phone doesn't show it, because there notes stack below the update and an extra button under every note-less update would crowd the feed; the footer's button serves instead. The button goes away when the update's first note appears, including when that note arrives through the feed's regular check, and when the update stops allowing notes.
 
 ### The wall
 
-The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is headed "Notes of support." It shows every note on the updates the reader can see, newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note as described under "Notes": a video note with its signature and when it was left, a written note with its author control. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Filtered to an update outside the reader's audience, it shows what it shows for an update that doesn't exist. Everyone signed in to the family can open it; anyone else sees the gate.
+The wall, at `/f/<slug>/wall` and linked from "Notes" in the navigation bar, is headed "Notes of support." It shows every note the reader sees (see "Who sees a note"), newest first, as colored cards in columns of uneven heights: one column on a phone, up to three on a computer. Each card shows the note as described under "Notes": a video note with its signature and when it was left, a written note with its author control. Opened from an update's "See all" link, it shows only that update's notes, under a bar that says so, naming the update by its author, date, and first line, with a "Show all notes" button that clears the filter. Filtered to an update outside the reader's audience, it shows what it shows for an update that doesn't exist. Everyone signed in to the family can open it; anyone else sees the gate.
 
 ### Reacting to a note
 
