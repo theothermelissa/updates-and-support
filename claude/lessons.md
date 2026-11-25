@@ -106,6 +106,14 @@ CLAUDE.md requires proving each access test fails with its rule removed. Three p
 
 **How to apply:** read dates with `{ tiff: false, exif: [0x9003, 0x9004], translateKeys: false, translateValues: false, reviveValues: false }`, and import it dynamically so readers who never add a photo don't download it. Use the full build only if more tags are needed.
 
+### Seed what a reader can no longer reach directly in tests
+
+A test that needs a reaction (or note) from someone who can't see its target now can't create it through `setReaction`: the server refuses it.
+
+**Why:** the per-group name tests needed reactions from people outside the reader's groups, and the real path returned 404.
+
+**How to apply:** insert the row with `db.noteReaction.create` or `db.reaction.create`, as `noteScope.test.ts` does; the read path is what's under test. A cloud session's integration run also needs a `dev` superuser role and `uas_test` created first, with a gitignored `.env`.
+
 ### Never let a missing value default to a wider audience
 
 When the server fills in an omitted field, the default must be the narrowest safe choice, or the field must be required.
