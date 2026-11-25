@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { allowedHref } from "../lib/links.js";
 import { DOC_CLASSES } from "../richText.js";
 import { readPhotoDate } from "../photoDate.js";
-import { photoSizeMessage, uploadPhoto } from "../photos.js";
+import { preparePhoto, uploadPhoto } from "../photos.js";
 import { cleanDoc, extensions } from "./extensions.js";
 import { MAX_PHOTOS, setPhotoAttrs } from "./photo.js";
 import { toggleQuote } from "./quote.js";
@@ -109,9 +109,9 @@ function Toolbar({
       editor.chain().focus().insertContent({ type: "photo", attrs: { caption: "", placeholder: true } }).run();
       return;
     }
-    const tooBig = photoSizeMessage(file);
-    if (tooBig) {
-      setPhotoError(tooBig);
+    const prepared = await preparePhoto(file);
+    if ("error" in prepared) {
+      setPhotoError(prepared.error);
       return;
     }
     setPhotoError("");
@@ -121,7 +121,7 @@ function Toolbar({
     // Read from the file as chosen, while it uploads; Cloudinary keeps none of its details.
     const taken = readPhotoDate(file);
     try {
-      const publicId = await uploadPhoto(slug, file);
+      const publicId = await uploadPhoto(slug, prepared.photo);
       onPhotoDate?.(publicId, await taken);
       setPhotoAttrs(editor, clientId, { publicId, uploading: false, error: null });
     } catch (err) {

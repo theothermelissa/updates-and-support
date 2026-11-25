@@ -1,14 +1,46 @@
 import { api } from "./api.js";
 
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const MAX_PHOTO_WIDTH = 1600;
+const TOO_LARGE = "This photo is too large for this browser. Try Safari, or choose a JPEG copy.";
 
-export function photoSizeMessage(file: { size: number }): string | null {
-  if (file.size > MAX_PHOTO_BYTES) return "That photo is over 10 MB. Please choose a smaller one.";
-  return null;
+// What to upload: the shrunk photo when there is one, otherwise the original if the photo host
+// will take it, otherwise a message to show. A GIF is never shrunk (it would stop moving).
+export function choosePhoto<T>(input: { isGif: boolean; size: number; shrunk: T | null; original: T }):
+  { photo: T } | { error: string } {
+  if (!input.isGif && input.shrunk) return { photo: input.shrunk };
+  if (input.size <= MAX_PHOTO_BYTES) return { photo: input.original };
+  return { error: TOO_LARGE };
+}
+
+// Shrinks a photo on the device to at most 1600 pixels wide, as a JPEG. Null when the browser
+// can't read the format (HEIC outside Safari) or runs out of memory.
+async function shrinkPhoto(file: Blob): Promise<Blob | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_PHOTO_WIDTH / bitmap.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+  } catch {
+    return null;
+  }
+}
+
+export async function preparePhoto(file: File): Promise<{ photo: Blob } | { error: string }> {
+  const isGif = file.type === "image/gif";
+  return choosePhoto<Blob>({
+    isGif,
+    size: file.size,
+    shrunk: isGif ? null : await shrinkPhoto(file),
+    original: file,
+  });
 }
 
 type Ticket = { url: string; fields: Record<string, string>; error?: string };
-
 // Asks for a signature, then uploads the file straight to Cloudinary. The file is sent without
 // its name. Resolves to the public id the server chose; Cloudinary's link to the file is ignored.
 export async function uploadPhoto(slug: string, file: Blob): Promise<string> {

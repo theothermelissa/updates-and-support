@@ -17,10 +17,10 @@ The decision in steps 1 and 3 is a small pure function, `choosePhoto({ isGif, si
 
 ## Steps
 
-- [ ] `choosePhoto` and `preparePhoto` in `src/photos.ts`; remove `photoSizeMessage`.
-- [ ] Use `preparePhoto` in `addPhoto`; the card's local preview stays the original file's object URL.
-- [ ] Unit tests for `choosePhoto`.
-- [ ] README: nothing to change (no new setting).
+- [x] `choosePhoto` and `preparePhoto` in `src/photos.ts`; remove `photoSizeMessage`.
+- [x] Use `preparePhoto` in `addPhoto`; the card's local preview stays the original file's object URL.
+- [x] Unit tests for `choosePhoto`.
+- [x] README: nothing to change (no new setting).
 
 ## Tests
 
