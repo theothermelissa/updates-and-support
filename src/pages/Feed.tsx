@@ -28,6 +28,8 @@ import { USUAL_REACTIONS } from "../lib/reactionCatalog.js";
 import type { Note } from "../notes.js";
 import type { Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
+import { toLocalInput } from "../photoDate.js";
+import { usePostedDate } from "../usePostedDate.js";
 import { uploadVideo } from "../videos.js";
 
 // Supporters never load the editor; family members load it when they first write or edit.
@@ -55,6 +57,8 @@ type PostSettingsValues = {
   notify: boolean;
   reactions: string[];
   allowNotes: boolean;
+  // Set only when the update is dated to something other than now.
+  postedAt?: string;
 };
 
 // The width of an update's card when its notes sit beside it on a wide screen.
@@ -207,8 +211,14 @@ export function Feed(props: {
           photos={props.photos}
           groups={groups}
           inviteOnly={props.inviteOnly}
-          onEdit={(content, reactions, allowNotes, audience) =>
-            change(`updates/${update.id}`, "PATCH", { content, reactions, allowNotes, ...(audience && { audience }) })
+          onEdit={(content, reactions, allowNotes, audience, postedAt) =>
+            change(`updates/${update.id}`, "PATCH", {
+              content,
+              reactions,
+              allowNotes,
+              ...(audience && { audience }),
+              ...(postedAt && { postedAt }),
+            })
           }
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
           onReact={(kind) => change("reactions", "POST", { updateId: update.id, kind })}
@@ -257,6 +267,7 @@ function PostForm({
   const [posting, setPosting] = useState(false);
   // Changing the key starts a fresh, empty editor after posting.
   const [editorKey, setEditorKey] = useState(0);
+  const dating = usePostedDate(content, null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -272,6 +283,7 @@ function PostForm({
       setNotify(true);
       setReactions([...USUAL_REACTIONS]);
       setChosenAllowNotes(null);
+      dating.reset();
       setSettingsKey((k) => k + 1);
       setMode("write");
     }
@@ -296,11 +308,14 @@ function PostForm({
     return onPost({ video: publicId }, settings());
   }
 
+  // A video can't be dated, so the date applies to the Write tab only.
   function settings(): PostSettingsValues {
-    return { audience: audienceBody(audience, groups), notify, reactions, allowNotes };
+    const postedAt = mode === "write" ? dating.postedAt() : undefined;
+    return { audience: audienceBody(audience, groups), notify, reactions, allowNotes, ...(postedAt && { postedAt }) };
   }
 
-  const ready = (mode === "write" ? content !== null : file !== null) && canShare(audience, groups);
+  const ready =
+    (mode === "write" ? content !== null && !dating.invalid : file !== null) && canShare(audience, groups);
   return (
     <Card>
       <CardHeader>
@@ -321,7 +336,13 @@ function PostForm({
           {/* Kept mounted while recording, so a draft and any photo upload survive a tab switch. */}
           <div hidden={mode !== "write"}>
             <EditorSlot>
-              <RichEditor key={editorKey} slug={slug} photos={photos} onChange={setContent} />
+              <RichEditor
+                key={editorKey}
+                slug={slug}
+                photos={photos}
+                onChange={setContent}
+                onPhotoDate={dating.onPhotoDate}
+              />
             </EditorSlot>
           </div>
           {mode === "video" && (
@@ -345,6 +366,22 @@ function PostForm({
             onReactions={setReactions}
             allowNotes={allowNotes}
             onAllowNotes={setChosenAllowNotes}
+            posted={
+              photos === "off" || mode === "video"
+                ? undefined
+                : {
+                    on: dating.on,
+                    // Dating an update to the past is rarely worth emailing everyone about.
+                    onOn: (on) => {
+                      dating.setOn(on);
+                      if (on) setNotify(false);
+                    },
+                    value: dating.value,
+                    onValue: dating.setValue,
+                    noneFound: dating.noneFound,
+                    showField: false,
+                  }
+            }
             disabled={posting}
           >
             <Button disabled={posting || !ready}>{mode === "video" && error ? "Try again" : "Post"}</Button>
@@ -361,8 +398,14 @@ function UpdateItem(props: {
   photos: PhotoMode;
   groups: Group[];
   inviteOnly: boolean;
-  // audience: undefined when it didn't change.
-  onEdit: (content: unknown, reactions: string[], allowNotes: boolean, audience: AudienceBody | undefined) => Promise<boolean>;
+  // audience and postedAt: undefined when they didn't change.
+  onEdit: (
+    content: unknown,
+    reactions: string[],
+    allowNotes: boolean,
+    audience: AudienceBody | undefined,
+    postedAt: string | undefined,
+  ) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
   slug: string;
@@ -385,16 +428,18 @@ function UpdateItem(props: {
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const label = props.canEdit ? audienceLabel(update.audience) : null;
+  const posted = usePostedDate(draft, toLocalInput(new Date(update.createdAt)));
 
   async function save() {
     if (draft === null) return;
     setSaving(true);
     const changed = changedAudience(startAudience, audience, props.groups);
-    if (await props.onEdit(draft, reactions, allowNotes, changed)) setEditing(false);
+    if (await props.onEdit(draft, reactions, allowNotes, changed, posted.postedAt())) setEditing(false);
     setSaving(false);
   }
 
   function startEditing() {
+    posted.reset();
     setDraft(update.content);
     setReactions(update.reactions.allowed);
     setAllowNotes(update.allowNotes);
@@ -421,7 +466,13 @@ function UpdateItem(props: {
             <VideoPlayer video={update.video} kind="update" authorName={update.authorName} />
           ) : editing ? (
             <EditorSlot>
-              <RichEditor initial={update.content} slug={props.slug} photos={props.photos} onChange={setDraft} />
+              <RichEditor
+                initial={update.content}
+                slug={props.slug}
+                photos={props.photos}
+                onChange={setDraft}
+                onPhotoDate={posted.onPhotoDate}
+              />
             </EditorSlot>
           ) : (
             <RichText doc={update.content} />
@@ -439,9 +490,24 @@ function UpdateItem(props: {
                 onReactions={setReactions}
                 allowNotes={allowNotes}
                 onAllowNotes={setAllowNotes}
+                posted={
+                  props.photos === "off"
+                    ? undefined
+                    : {
+                        on: posted.on,
+                        onOn: posted.setOn,
+                        value: posted.value,
+                        onValue: posted.setValue,
+                        noneFound: posted.noneFound,
+                        showField: true,
+                      }
+                }
                 disabled={saving}
               >
-                <Button onClick={save} disabled={saving || draft === null || !canShare(audience, props.groups)}>
+                <Button
+                  onClick={save}
+                  disabled={saving || draft === null || posted.invalid || !canShare(audience, props.groups)}
+                >
                   Save
                 </Button>
                 <Button variant="outline" onClick={() => setEditing(false)}>

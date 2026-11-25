@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { allowedHref } from "../lib/links.js";
 import { DOC_CLASSES } from "../richText.js";
+import { readPhotoDate } from "../photoDate.js";
 import { photoSizeMessage, uploadPhoto } from "../photos.js";
 import { cleanDoc, extensions } from "./extensions.js";
 import { MAX_PHOTOS, setPhotoAttrs } from "./photo.js";
@@ -26,6 +27,9 @@ export default function RichEditor(props: {
   // Grey hint text shown while the editor is empty.
   placeholder?: string;
   onChange: (doc: JSONContent | null) => void;
+  // Called for each uploaded photo, just before it appears in the document, with the date its
+  // embedded details give (null if none).
+  onPhotoDate?: (publicId: string, date: Date | null) => void;
 }) {
   const editor = useEditor({
     extensions: props.placeholder ? [...extensions, Placeholder.configure({ placeholder: props.placeholder })] : extensions,
@@ -43,7 +47,7 @@ export default function RichEditor(props: {
 
   return (
     <div className="space-y-2">
-      <Toolbar editor={editor} photos={props.photos} slug={props.slug} />
+      <Toolbar editor={editor} photos={props.photos} slug={props.slug} onPhotoDate={props.onPhotoDate} />
       <EditorContent editor={editor} />
     </div>
   );
@@ -71,7 +75,17 @@ function docToSend(editor: Editor): JSONContent | null {
   return cleanDoc(editor.getJSON());
 }
 
-function Toolbar({ editor, photos, slug }: { editor: Editor; photos: "real" | "placeholder" | "off"; slug: string }) {
+function Toolbar({
+  editor,
+  photos,
+  slug,
+  onPhotoDate,
+}: {
+  editor: Editor;
+  photos: "real" | "placeholder" | "off";
+  slug: string;
+  onPhotoDate?: (publicId: string, date: Date | null) => void;
+}) {
   const active = useEditorState({
     editor,
     selector: ({ editor }) => ({
@@ -104,8 +118,11 @@ function Toolbar({ editor, photos, slug }: { editor: Editor; photos: "real" | "p
     const clientId = crypto.randomUUID();
     const preview = URL.createObjectURL(file);
     editor.chain().focus().insertContent({ type: "photo", attrs: { caption: "", clientId, preview, uploading: true } }).run();
+    // Read from the file as chosen, while it uploads; Cloudinary keeps none of its details.
+    const taken = readPhotoDate(file);
     try {
       const publicId = await uploadPhoto(slug, file);
+      onPhotoDate?.(publicId, await taken);
       setPhotoAttrs(editor, clientId, { publicId, uploading: false, error: null });
     } catch (err) {
       setPhotoAttrs(editor, clientId, {

@@ -13,6 +13,7 @@ import {
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TRAY } from "@/components/reactions";
 import type { AudienceChoice, Group } from "../audience.js";
@@ -34,6 +35,8 @@ export function PostSettings(props: {
   onReactions: (kinds: string[]) => void;
   allowNotes: boolean;
   onAllowNotes: (allow: boolean) => void;
+  // The posted-date setting; absent while photos are off.
+  posted?: PostedDateProps;
   disabled?: boolean;
   children?: React.ReactNode;
 }) {
@@ -135,9 +138,57 @@ export function PostSettings(props: {
             />
             Allow notes
           </Label>
+          {props.posted && <PostedDate {...props.posted} disabled={disabled} />}
         </div>
       )}
     </>
+  );
+}
+
+// "Use the date from my photos", and the Posted date and time it fills in. The field shows
+// while the box is checked, and always when editing, since an update's date can be changed.
+export type PostedDateProps = {
+  on: boolean;
+  onOn: (on: boolean) => void;
+  // A datetime-local value.
+  value: string;
+  onValue: (value: string) => void;
+  noneFound: boolean;
+  showField: boolean;
+};
+
+function PostedDate(props: PostedDateProps & { disabled?: boolean }) {
+  const id = useId();
+  return (
+    <div className="space-y-2">
+      <Label>
+        <Checkbox
+          checked={props.on}
+          onCheckedChange={(checked) => props.onOn(checked === true)}
+          disabled={props.disabled}
+        />
+        Use the date from my photos
+      </Label>
+      {props.on && props.noneFound && (
+        <p className="text-sm text-muted-foreground" role="status">
+          No photo has a date yet. Set one below.
+        </p>
+      )}
+      {(props.on || props.showField) && (
+        <div className="space-y-1">
+          <Label htmlFor={id}>Posted</Label>
+          <Input
+            id={id}
+            type="datetime-local"
+            className="h-11 w-auto"
+            min="1900-01-01T00:00"
+            value={props.value}
+            onChange={(e) => props.onValue(e.target.value)}
+            disabled={props.disabled}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 

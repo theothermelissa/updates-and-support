@@ -15,7 +15,7 @@ An update is either formatted text, with optional photos, or a video (see "Video
   - photos, each with an optional **caption** of plain text up to 300 characters (see "Photos")
 - its **audience**: everyone signed in to the family, one or more groups, or family members only (see "Audience")
 - its **author**, a family member, shown by the name on their record (see [access.md](access.md#changing-your-name))
-- when it was **posted**, and when it was last **edited**, if ever
+- when it was **posted**, which is when it was written unless a family member chose an earlier date (see "Dating an update from its photos"), and when it was last **edited**, if ever
 
 There are no headings, colors, fonts, tables, code, or images from other websites. A text update can't be empty, and it has at most 20,000 characters of text, at most six photos, and lists nested at most three levels deep.
 
@@ -43,12 +43,13 @@ A family member writes the update and posts. The form has two tabs, **Write** an
 - **"Notify everyone by email,"** checked by default, so a small follow-up can go out without emailing everyone.
 - **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
 - **"Allow notes,"** which starts checked or unchecked according to the family's default (see "Allowing notes").
+- **"Use the date from my photos,"** once photos are on, unchecked by default (see "Dating an update from its photos").
 
 Posting resets the settings to their defaults.
 
 ## Editing
 
-A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with the reactions and "Allow notes" settings, showing the update's current ones: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"), and changing "Allow notes" keeps the notes already left (see "Allowing notes"). Post settings also shows "Who can see this" when the family has a group or the update isn't shared with everyone (see "Audience"). A video update can't be edited, so its reactions, "Allow notes," and audience stay as they were posted.
+A family member can edit any text update in their family, including one written by another family member. Editing can change anything in the content, including adding and removing photos and changing captions. It records the edit time and never sends notifications. The editor also has Post settings with the reactions and "Allow notes" settings, showing the update's current ones: "Use the usual reactions" is checked when they are exactly the usual six. Changing the reactions keeps the reactions already given (see "Reactions"), and changing "Allow notes" keeps the notes already left (see "Allowing notes"). Post settings also shows "Who can see this" when the family has a group or the update isn't shared with everyone (see "Audience"), and, once photos are on, a **Posted** date and time showing when the update is dated, which can be changed to any allowed date (see "Dating an update from its photos"), along with the "Use the date from my photos" checkbox. A video update can't be edited, so its reactions, "Allow notes," and audience stay as they were posted.
 
 ## Deleting
 
@@ -96,6 +97,20 @@ Photos are available once the operator turns them on with a setting (see the REA
 **Placeholder photos, for testing.** On test sites (previews and local development) where the operator has turned on placeholder photos with their own setting, choosing a photo uploads nothing: it is saved as a placeholder, shown as a plain grey box in a 4:3 shape with its caption beneath. Placeholders behave like photos in every other way: they count toward the six, take captions, can be removed, and count in notification subjects. The production site never accepts placeholders, whatever its settings. Where real photos are also turned on, new photos are real, and placeholders saved earlier stay grey boxes.
 
 There is no reordering, and supporters can't add photos. A video is its own kind of update (see "Video updates"), not a photo.
+
+## Dating an update from its photos
+
+A family member adding photos from the past can date the update to when they were taken instead of when it's posted. Under Post settings, once photos are on, **"Use the date from my photos"** is unchecked by default, so ordinary updates are dated when they're posted.
+
+- **Checking it** dates the update to the earliest date and time found in the embedded details of its photos, and unchecks "Notify everyone by email" so a post about the past doesn't email the network. The email box can be checked again. A **Posted** date and time field appears showing the chosen date; it can be changed by hand, and once it has been, adding or removing photos no longer changes it. While it hasn't been changed by hand, adding or removing photos updates it to the earliest date among the photos that remain.
+- **The date is read on the device**, from each photo as it's chosen, before it's uploaded. Cloudinary removes the embedded details when it stores the photo (see "Photos"), so nothing but the chosen date, as the update's posted date, is kept. Dates are read in the device's time zone, since photos record the camera's local time without one.
+- **When no photo has a date**, which is common for screenshots, photos forwarded through messaging apps, and scans, a note under the checkbox says so, and the Posted field starts at the current time, to be set by hand.
+- **Allowed dates** run from 1 January 1900 up to the current time. The server refuses anything outside them, and only family members can choose one. A date from a camera with a wrong clock, such as 1 January 1970, is allowed, so it's shown for the family member to correct.
+- **Editing** an update shows its Posted date and time, which can be changed to any allowed date. Changing it never sends emails.
+- **The feed** places an update by its posted date, so one dated in the past appears among the older updates, not at the top. For readers whose page is open it still counts as a new update (see "The feed"), and the "posted" time on it is the chosen date.
+- **Nothing requires text.** A photos-only update can be posted at any date, and edited later to add text.
+
+Placeholder photos have no embedded dates.
 
 ## Video updates
 

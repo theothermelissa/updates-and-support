@@ -17,6 +17,7 @@ import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
 import { claimVideo, destroyVideos, lockUnusedVideo, noteReactionSet, noteSelect, noteView, shownVideo, visibleNotes, type NoteView } from "./notes.js";
 import { notifyNewUpdate } from "./notifications.js";
+import { parsePostedAt } from "./postedAt.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
 import { readerScope } from "./readerScope.js";
@@ -49,6 +50,8 @@ type UpdateInput = {
   reactions?: unknown;
   allowNotes?: unknown;
   audience?: unknown;
+  // An ISO date the update is dated to instead of now (see parsePostedAt).
+  postedAt?: unknown;
 };
 
 // The updates the person may see (see visibleUpdates), newest first, with their reactions and
@@ -112,7 +115,9 @@ export async function createUpdate(
   if (parsed === undefined && family.inviteOnly) throw new RequestError(400, "Choose who can see this update.");
   const audience = parsed ?? "everyone";
   const allowNotes = allowNotesFrom(input) ?? (await allowNotesByDefault(db, person.familyId));
+  const postedAt = parsePostedAt(input.postedAt);
   if (input.video !== undefined) {
+    if (postedAt) throw new RequestError(400, "Only photo updates can be dated");
     return createVideoUpdate(db, person, input, reactionKinds, allowNotes, audience, notifyWith, store);
   }
   const { content, body } = contentFrom(input, settings, { familyId: person.familyId });
@@ -130,6 +135,7 @@ export async function createUpdate(
           reactionKinds,
           allowNotes,
           audience: audienceColumn(audience),
+          createdAt: postedAt,
         },
         include: { author: { select: { name: true } } },
       });
@@ -224,6 +230,7 @@ export async function editUpdate(
   // Absent leaves the update's set as it is.
   const reactionKinds = input.reactions === undefined ? undefined : parseReactionSet(input.reactions);
   const allowNotes = allowNotesFrom(input);
+  const postedAt = parsePostedAt(input.postedAt);
   // Absent keeps the update's audience, including family members only, and takes no groups lock.
   const audience = parseAudience(input.audience, await inviteOnlyOf(db, person.familyId));
   const { update, dropped } = await savePhoto(() =>
@@ -248,7 +255,7 @@ export async function editUpdate(
       if (audience !== undefined) await writeAudience(tx, person.familyId, id, audience);
       const updated = await tx.update.update({
         where: { id },
-        data: { content, body, reactionKinds, allowNotes, editedAt: new Date() },
+        data: { content, body, reactionKinds, allowNotes, createdAt: postedAt, editedAt: new Date() },
         include: { author: { select: { name: true } } },
       });
       return { update: updated, dropped: removed };

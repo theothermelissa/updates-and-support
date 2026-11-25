@@ -35,6 +35,10 @@ Decided with Melissa for her own family's site; each becomes its own spec, plan,
 
 ## Features and fixes
 
+- **2026-11-25** — Check whether adding a second photo replaces the first.
+  In a headless Chromium test on the unmodified editor, each "Add photo" replaced the previous photo until the cursor was moved below it (click in the text, Ctrl+End, Enter). A photo is inserted selected, so the next insert may overwrite it. Not confirmed in a real browser; if it's real, it blocks multi-photo updates.
+- **2026-11-25** — Read dates from photos already on an update when editing it.
+  "Use the date from my photos" only knows photos added in the current editing session, since an existing photo's details were removed when it was stored. Cut for speed; the Posted field can always be set by hand.
 - **2026-11-23** — Help group members get signed in by email.
   Group membership follows a supporter's record, so someone who only answered the question on a device sees just "Everyone" updates there until they sign in by email. A "you've been added" email with a sign-in link, or a prompt on the feed, would save the family explaining it. Came up while speccing groups.
 - **2026-10-17** — Let a family member change a video update's post settings.
@@ -53,8 +57,8 @@ Decided with Melissa for her own family's site; each becomes its own spec, plan,
   "Added Tess…" and add errors appear at the top of the page, out of view of the supporter form further down. Toasts (shadcn's `sonner`) are the natural fix.
 - **2026-11-23** — Keep the "new updates" button off the privacy banner on phones.
   At 360px the floating "1 new update" pill sits over the banner's text at the top of the page. Seen while checking group audiences in the browser.
-- **2026-11-23** — Bring an update that newly comes into a reader's audience to their attention.
-  Widening an older update's audience counts it in "new updates," but it appears at its original date below newer ones, where the button doesn't scroll. Accepted in the groups plan.
+- **2026-11-23** — Bring an update that newly comes into a reader's audience, or is dated in the past, to their attention.
+  Widening an older update's audience, or posting one dated to its photos, counts it in "new updates," but it appears at its date below newer ones, where the button doesn't scroll. Accepted in the groups plan and the photo-dating plan.
 - **2026-10-16** — Restore scroll position on Back, and show a light loading state under the nav bar.
   Back lands at the top of the feed rather than where the reader was, and the content area is briefly empty while a page fetches.
 - **2026-10-17** — Tidy the How to Help editors.
