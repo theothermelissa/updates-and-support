@@ -135,7 +135,7 @@ async function uploadedVideo(videos: ReturnType<typeof fakeVideoStore>, person: 
 }
 
 function note(person: Person, updateId: string, body = "Thinking of you") {
-  return createNote(db, person, { updateId, body, color: "sky" });
+  return createNote(db, person, { updateId, body, color: "sky", ...(person.role === "family" ? { audience: "everyone" } : {}) });
 }
 
 describe("who sees which updates", () => {
@@ -258,8 +258,9 @@ describe("an update outside the audience is not found everywhere", () => {
 
   it("leaves its notes off the wall", async () => {
     const s = await setUp();
-    await note(s.gia, s.n, "Gia on N");
-    await note(s.gia, s.ni, "Gia on NI");
+    // A family member's notes, so who sees the author doesn't hide them: only the update does.
+    await note(s.ana, s.n, "Ana on N");
+    await note(s.ana, s.ni, "Ana on NI");
     const halWall = await listNotes(db, s.hal);
     expect(halWall.map((n) => n.updateId)).toEqual([s.ni]);
     const giaWall = await listNotes(db, s.gia);

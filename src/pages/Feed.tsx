@@ -484,7 +484,7 @@ function UpdateItem(props: {
           )}
         </CardFooter>
       </Card>
-      <NoteDialog open={writing} onOpenChange={setWriting} slug={props.slug} name={props.name} onLeave={props.onLeaveNote} />
+      <NoteDialog open={writing} onOpenChange={setWriting} slug={props.slug} name={props.name} isFamily={props.canEdit} onLeave={props.onLeaveNote} />
       {/* Only the buttons go when notes are off: a dialog already open stays, and its post is refused. */}
       {noteCount === 0 && update.allowNotes && (
         // Only on a wide screen, where notes sit beside the update; on a phone it would crowd the feed.

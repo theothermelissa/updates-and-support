@@ -29,6 +29,8 @@ export type Note = {
   authorIsFamily: boolean;
   createdAt: string;
   mine: boolean;
+  // Only sent to family members: the note is for family members only.
+  familyOnly?: boolean;
   reactions: Reactions;
 };
 

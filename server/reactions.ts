@@ -4,6 +4,7 @@ import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
 import { noteReactionSet, visibleNotes } from "./notes.js";
 import { requireAdmin } from "./people.js";
+import { readerScope, type ReaderScope } from "./readerScope.js";
 import { inCatalogOrder, MAX_REACTIONS, reactionFor } from "../src/lib/reactionCatalog.js";
 
 // An update's set of reactions from a request: distinct catalog kinds, at most six, returned in
@@ -17,8 +18,9 @@ export function parseReactionSet(input: unknown): string[] {
 }
 
 // What a viewer sees of one update's or note's reactions: never other people's IDs or emails.
-// `named` lists the named people other than the viewer, oldest first; the viewer's own is
-// `mine`, and nameless readers are only counted. `allowed` is what anyone may pick here.
+// `named` lists the named people other than the viewer, oldest first, but only those the
+// viewer's scope sees (see readerScope); the viewer's own is `mine`, and everyone else, with
+// the nameless, is only counted. `allowed` is what anyone may pick here.
 export type ReactionsView = {
   reactions: {
     count: number;
@@ -81,8 +83,9 @@ export async function setReaction(
 
   // A note that isn't shown, including another family's or one on an update outside the
   // person's audience, behaves like one that doesn't exist.
+  const scope = await readerScope(db, person);
   const note = await db.note.findFirst({
-    where: { AND: [{ id: noteId as string }, visibleNotes(person)] },
+    where: { AND: [{ id: noteId as string }, visibleNotes(person, scope)] },
   });
   if (!note) throw new RequestError(404, "Note not found");
   // visibleNotes put the note in the person's family, so this is the note's family's set.
@@ -139,7 +142,12 @@ async function write(run: () => Promise<unknown>, missing: string): Promise<void
 
 // Shapes one update's or note's reactions, oldest first, for the viewer. The emoji used
 // are listed most-used first, ties in catalog order. `allowed` is the target's set.
-export function reactionsView(loaded: LoadedReaction[], viewerId: string, allowed: readonly string[]): ReactionsView {
+export function reactionsView(
+  loaded: LoadedReaction[],
+  viewerId: string,
+  allowed: readonly string[],
+  scope: ReaderScope,
+): ReactionsView {
   const used = (kind: string) => loaded.filter((r) => r.kind === kind).length;
   return {
     reactions: {
@@ -148,7 +156,7 @@ export function reactionsView(loaded: LoadedReaction[], viewerId: string, allowe
       mine: loaded.find((r) => r.personId === viewerId)?.kind ?? null,
       allowed: inCatalogOrder(allowed),
       named: loaded.flatMap((r) =>
-        r.personId !== viewerId && r.person.name ? [{ name: r.person.name, kind: r.kind }] : [],
+        r.personId !== viewerId && r.person.name && (scope.isFamily || scope.seenIds.has(r.personId)) ? [{ name: r.person.name, kind: r.kind }] : [],
       ),
     },
   };

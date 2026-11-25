@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { EllipsisIcon, MessageSquareHeartIcon } from "lucide-react";
+import { EllipsisIcon, LockIcon, MessageSquareHeartIcon } from "lucide-react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { cn } from "cn";
 import { Confirm, ErrorMessage, Field, LinkedText } from "@/components/page";
@@ -50,6 +50,13 @@ export function NoteCard(props: {
       Family
     </span>
   );
+  // Only family members are sent this, so a supporter's page never says a note exists for family.
+  const familyOnly = note.familyOnly && (
+    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs" style={{ borderColor: `${colors.text}66` }}>
+      <LockIcon className="size-3" aria-hidden />
+      Family only
+    </span>
+  );
   return (
     <Bubble
       color={note.color}
@@ -64,7 +71,7 @@ export function NoteCard(props: {
       <div className={cn("space-y-3", note.video && "px-2.5")}>
         {note.video && (
           <p className="text-sm">
-            — {note.authorName} {family}
+            — {note.authorName} {family} {familyOnly}
           </p>
         )}
         <ReactionControls
@@ -80,6 +87,7 @@ export function NoteCard(props: {
             ) : (
               <>
                 {family}
+                {familyOnly}
                 <Reveal
                   state={author}
                   setState={setAuthor}
@@ -165,7 +173,7 @@ function Bubble(props: {
 }
 
 // What the dialog leaves: a written note's body, or a posted video's public ID.
-export type NoteDraft = { body?: string; video?: string; color: NoteColor; name?: string };
+export type NoteDraft = { body?: string; video?: string; color: NoteColor; name?: string; audience?: "everyone" | "family" };
 
 // The "Leave a note" dialog. Starts in a random color. The name is filled in when they have
 // one, and they can change it; it's saved with the note.
@@ -175,6 +183,8 @@ export function NoteDialog(props: {
   onOpenChange: (open: boolean) => void;
   slug: string;
   name: string | null;
+  // A family member chooses who sees the note; for anyone else it's decided by their groups.
+  isFamily: boolean;
   onLeave: (draft: NoteDraft) => Promise<string | null>;
 }) {
   return (
@@ -190,6 +200,7 @@ export function NoteDialog(props: {
 function NoteForm(props: {
   slug: string;
   name: string | null;
+  isFamily: boolean;
   onOpenChange: (open: boolean) => void;
   onLeave: (draft: NoteDraft) => Promise<string | null>;
 }) {
@@ -203,6 +214,7 @@ function NoteForm(props: {
   const [progress, setProgress] = useState<number | null>(null);
   const [color, setColor] = useState<NoteColor>(() => randomColor());
   const [name, setName] = useState(props.name ?? "");
+  const [audience, setAudience] = useState<"everyone" | "family">("everyone");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const colors = PALETTE[color];
@@ -211,7 +223,7 @@ function NoteForm(props: {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const named = { name };
+    const named = { name, ...(props.isFamily ? { audience } : {}) };
     let failed: string | null;
     if (mode === "write") {
       failed = await props.onLeave({ body, color, ...named });
@@ -224,7 +236,7 @@ function NoteForm(props: {
     else props.onOpenChange(false);
   }
 
-  async function postVideo(named: { name?: string }): Promise<string | null> {
+  async function postVideo(named: { name?: string; audience?: "everyone" | "family" }): Promise<string | null> {
     if (!file) return "Choose a video first.";
     let publicId = uploaded?.file === file ? uploaded.publicId : null;
     if (!publicId) {
@@ -245,7 +257,7 @@ function NoteForm(props: {
     <form onSubmit={submit} className="grid gap-4">
       <DialogHeader>
         <DialogTitle>Leave a note</DialogTitle>
-        <DialogDescription>Everyone who reads these updates will see it, signed with your name.</DialogDescription>
+        <DialogDescription>People reading these updates may see it, signed with your name.</DialogDescription>
       </DialogHeader>
       <Tabs value={mode} onValueChange={(v) => setMode(v as "write" | "video")}>
         <TabsList className="w-full">
@@ -294,6 +306,34 @@ function NoteForm(props: {
       <Field label="Your name">
         <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
       </Field>
+      {props.isFamily && (
+        <RadioGroupPrimitive.Root
+          className="grid gap-2"
+          value={audience}
+          onValueChange={(v) => setAudience(v as "everyone" | "family")}
+          aria-label="Who sees this note?"
+        >
+          <p className="text-sm font-medium" aria-hidden>
+            Who sees this note?
+          </p>
+          {(
+            [
+              ["everyone", "Everyone who can see this update"],
+              ["family", "Family members only"],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value} className="flex min-h-11 items-center gap-3 text-sm">
+              <RadioGroupPrimitive.Item
+                value={value}
+                className="flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-foreground/60 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=checked]:border-foreground"
+              >
+                <RadioGroupPrimitive.Indicator className="size-2.5 rounded-full bg-foreground" />
+              </RadioGroupPrimitive.Item>
+              {label}
+            </label>
+          ))}
+        </RadioGroupPrimitive.Root>
+      )}
       {progress !== null && (
         <p className="text-sm text-muted-foreground" role="status">
           {progress < 1 ? `Uploading… ${Math.round(progress * 100)}%` : "Posting…"}
