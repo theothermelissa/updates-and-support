@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { choosePhoto, MAX_PHOTO_BYTES } from "./photos.js";
+import { choosePhoto, MAX_PHOTO_BYTES, needsShrink } from "./photos.js";
 
 const original = "original";
 const shrunk = "shrunk";
@@ -20,5 +20,17 @@ describe("choosePhoto", () => {
   });
   it("refuses a GIF over the limit", () => {
     expect(choosePhoto({ isGif: true, size: big, shrunk: null, original })).toHaveProperty("error");
+  });
+});
+
+describe("needsShrink", () => {
+  it("leaves a photo that is narrow and small as it is", () => {
+    expect(needsShrink(1600, 1000)).toBe(false);
+  });
+  it("shrinks a photo wider than 1600 pixels", () => {
+    expect(needsShrink(1601, 1000)).toBe(true);
+  });
+  it("shrinks a narrow photo that is over 10 MB", () => {
+    expect(needsShrink(800, MAX_PHOTO_BYTES + 1)).toBe(true);
   });
 });

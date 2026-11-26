@@ -7,7 +7,7 @@ Bridges the "Photos" section of `spec/updates.md` and the current code. Cloudina
 Add `preparePhoto(file)` to `src/photos.ts`, called by `addPhoto` in `src/editor/RichEditor.tsx` in place of `photoSizeMessage`. It resolves to the blob to upload, or a message to show.
 
 1. A GIF is returned as it is (a canvas would flatten the animation), still subject to the 10 MB limit.
-2. Otherwise decode with `createImageBitmap(file)` (applies EXIF orientation). Draw onto a canvas at `min(1600, width)` wide and export JPEG at quality 0.9 with `canvas.toBlob`.
+2. Otherwise decode with `createImageBitmap(file)` (applies EXIF orientation). If it is 1600 px wide or less and 10 MB or less, return the original (`needsShrink`). Else draw onto a canvas at 1600 wide and export JPEG at quality 0.9 with `canvas.toBlob`.
 3. If decoding or encoding fails (HEIC in desktop Chrome or Firefox, or out of memory): return the original when `size <= 10 MB`; otherwise return the message "This photo is too large for this browser. Try Safari, or choose a JPEG copy."
 4. `readPhotoDate` keeps reading the original `File`, as today, before upload.
 

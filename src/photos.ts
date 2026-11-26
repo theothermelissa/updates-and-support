@@ -13,11 +13,20 @@ export function choosePhoto<T>(input: { isGif: boolean; size: number; shrunk: T 
   return { error: TOO_LARGE };
 }
 
+// A photo already small enough is uploaded as it is, so it isn't re-encoded for nothing.
+export function needsShrink(width: number, size: number): boolean {
+  return width > MAX_PHOTO_WIDTH || size > MAX_PHOTO_BYTES;
+}
+
 // Shrinks a photo on the device to at most 1600 pixels wide, as a JPEG. Null when the browser
-// can't read the format (HEIC outside Safari) or runs out of memory.
+// can't read the format (HEIC outside Safari), runs out of memory, or the photo is small already.
 async function shrinkPhoto(file: Blob): Promise<Blob | null> {
   try {
     const bitmap = await createImageBitmap(file);
+    if (!needsShrink(bitmap.width, file.size)) {
+      bitmap.close();
+      return null;
+    }
     const scale = Math.min(1, MAX_PHOTO_WIDTH / bitmap.width);
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bitmap.width * scale);
