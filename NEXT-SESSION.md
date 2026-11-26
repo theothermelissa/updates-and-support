@@ -35,6 +35,8 @@ Decided with Melissa for her own family's site; each becomes its own spec, plan,
 
 ## Features and fixes
 
+- **2026-11-26** — Handle large HEIC photos in desktop browsers other than Safari.
+  Photos are shrunk on the device, but Chrome and Firefox on a computer can't decode HEIC, so one over 10 MB is refused ("too large for this browser"). Fixing it needs a server-side conversion or a paid Cloudinary plan. Also cut: an upload progress bar for photos. Add whichever real use shows to be missing.
 - **2026-11-25** — Check whether adding a second photo replaces the first.
   In a headless Chromium test on the unmodified editor, each "Add photo" replaced the previous photo until the cursor was moved below it (click in the text, Ctrl+End, Enter). A photo is inserted selected, so the next insert may overwrite it. Not confirmed in a real browser; if it's real, it blocks multi-photo updates.
 - **2026-11-25** — Read dates from photos already on an update when editing it.
