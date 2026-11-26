@@ -82,6 +82,9 @@ export async function listPeople(db: Db, person: Person) {
     noteReactions: family.noteReactionKinds,
     allowNotesByDefault: family.allowNotesByDefault,
     privacyNotice: family.privacyNotice,
+    publicUpdatesOn: family.publicUpdatesOn,
+    publicNotice: family.publicNotice,
+    publicUpdateCount: await db.update.count({ where: { familyId: person.familyId, audience: "public" } }),
     groups: await groupsView(db, person.familyId),
     inviteRequests,
   };
@@ -395,7 +398,17 @@ async function endAccess(tx: Prisma.TransactionClient, personId: string) {
   await tx.magicLink.deleteMany({ where: { personId, usedAt: null } });
 }
 
-// A family member rewords the privacy banner for everyone signed in to the family. It's kept on
+// A banner's wording as typed: kept on one line, up to the limit; empty means the standard wording (null).
+export function parseBanner(value: unknown, field: string): string | null {
+  if (typeof value !== "string") throw new RequestError(400, `Expected ${field} as text.`);
+  const text = value.replace(/\s+/g, " ").trim();
+  if (text.length > MAX_PRIVACY_NOTICE) {
+    throw new RequestError(400, `The banner can be up to ${MAX_PRIVACY_NOTICE} characters.`);
+  }
+  return text || null;
+}
+
+// An admin rewords the privacy banner for everyone signed in to the family. It's kept on
 // one line; an empty wording returns the family to the standard one.
 export async function setPrivacyNotice(
   db: Db,
@@ -403,14 +416,10 @@ export async function setPrivacyNotice(
   input: { privacyNotice?: unknown },
 ): Promise<{ privacyNotice: string | null }> {
   requireAdmin(person);
-  if (typeof input.privacyNotice !== "string") throw new RequestError(400, "Expected privacyNotice as text.");
-  const text = input.privacyNotice.replace(/\s+/g, " ").trim();
-  if (text.length > MAX_PRIVACY_NOTICE) {
-    throw new RequestError(400, `The banner can be up to ${MAX_PRIVACY_NOTICE} characters.`);
-  }
+  const text = parseBanner(input.privacyNotice, "privacyNotice");
   return db.family.update({
     where: { id: person.familyId },
-    data: { privacyNotice: text || null },
+    data: { privacyNotice: text },
     select: { privacyNotice: true },
   });
 }

@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PrivacyBanner } from "@/components/privacyBanner";
+import { PublicUpdates, type PublicUpdateData } from "@/components/publicUpdates";
+import { STANDARD_PUBLIC_NOTICE } from "../lib/privacyNotice.js";
 import { api } from "../api.js";
 
 type GateResult = { result?: "wrong" | "limited" | "joined"; error?: string };
@@ -16,9 +19,30 @@ const MESSAGES = {
   limited: "Too many attempts. Please try again later.",
 };
 
-// What a visitor who isn't signed in sees: the community question. A correct answer
-// goes straight to the updates. An invite-only family offers only a sign-in link instead.
+// What a visitor who isn't signed in sees: the gate, then the family's public updates, if any. The
+// banner above is the family's public wording while there are some, and the standard privacy banner otherwise.
 export function Gate({ slug, onJoined }: { slug: string; onJoined: () => void }) {
+  const [displayName, setDisplayName] = useState("");
+  const [shown, setShown] = useState<{ updates: PublicUpdateData[]; notice?: string | null }>({ updates: [] });
+  useEffect(() => {
+    api<{ updates: PublicUpdateData[]; notice?: string | null }>(slug, "public-updates").then(({ status, data }) => {
+      if (status === 200 && data) setShown(data);
+    });
+    api<GateInfo>(slug, "gate").then(({ data }) => data && setDisplayName(data.displayName));
+  }, [slug]);
+  const isPublic = shown.updates.length > 0;
+  return (
+    <>
+      <PrivacyBanner text={isPublic ? (shown.notice ?? STANDARD_PUBLIC_NOTICE) : undefined} />
+      <GateBody slug={slug} onJoined={onJoined} />
+      <PublicUpdates displayName={displayName} updates={shown.updates} />
+    </>
+  );
+}
+
+// The community question. A correct answer goes straight to the updates. An invite-only family
+// offers only a sign-in link instead.
+function GateBody({ slug, onJoined }: { slug: string; onJoined: () => void }) {
   const [info, setInfo] = useState<GateInfo | null>(null);
   const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState("");

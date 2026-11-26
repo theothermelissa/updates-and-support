@@ -81,6 +81,8 @@ export function Feed(props: {
   canEdit: boolean;
   photos: PhotoMode;
   inviteOnly: boolean;
+  // An admin of a family with public updates on, who may choose Public.
+  offerPublic: boolean;
   name: string | null;
   onNamed: (name: string) => void;
   onSignedOut: () => void;
@@ -193,6 +195,7 @@ export function Feed(props: {
             allowNotesByDefault={allowNotesByDefault}
             groups={groups}
             inviteOnly={props.inviteOnly}
+            offerPublic={props.offerPublic}
             onPost={(body, settings) => change("updates", "POST", { ...body, ...settings }, true)}
           />
         </div>
@@ -215,6 +218,7 @@ export function Feed(props: {
           photos={props.photos}
           groups={groups}
           inviteOnly={props.inviteOnly}
+          offerPublic={props.offerPublic}
           onEdit={(content, reactions, allowNotes, audience, postedAt, photoDates) =>
             change(`updates/${update.id}`, "PATCH", {
               content,
@@ -244,6 +248,7 @@ function PostForm({
   allowNotesByDefault,
   groups,
   inviteOnly,
+  offerPublic,
   onPost,
 }: {
   slug: string;
@@ -251,6 +256,7 @@ function PostForm({
   allowNotesByDefault: boolean;
   groups: Group[];
   inviteOnly: boolean;
+  offerPublic: boolean;
   onPost: (body: { content?: unknown; video?: string }, settings: PostSettingsValues) => Promise<boolean>;
 }) {
   const [mode, setMode] = useState<"write" | "video">("write");
@@ -262,6 +268,8 @@ function PostForm({
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [audience, setAudience] = useState<AudienceChoice>(EVERYONE);
+  // "I understand", asked whenever Public is chosen.
+  const [understood, setUnderstood] = useState(false);
   const [notify, setNotify] = useState(true);
   const [reactions, setReactions] = useState<string[]>([...USUAL_REACTIONS]);
   // Null until chosen, so it follows the family's default, which arrives after this mounts.
@@ -285,6 +293,7 @@ function PostForm({
       setUploaded(null);
       setEditorKey((k) => k + 1);
       setAudience(EVERYONE);
+      setUnderstood(false);
       setNotify(true);
       setReactions([...USUAL_REACTIONS]);
       setChosenAllowNotes(null);
@@ -328,7 +337,9 @@ function PostForm({
   }
 
   const ready =
-    (mode === "write" ? content !== null && !dating.invalid : file !== null) && canShare(audience, groups);
+    (mode === "write" ? content !== null && !dating.invalid : file !== null) &&
+    canShare(audience, groups) &&
+    (audience.mode !== "public" || understood);
   return (
     <Card>
       <CardHeader>
@@ -336,7 +347,14 @@ function PostForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          <Tabs value={mode} onValueChange={(v) => setMode(v as "write" | "video")}>
+          <Tabs
+            value={mode}
+            onValueChange={(v) => {
+              setMode(v as "write" | "video");
+              // A video can't be public.
+              if (v === "video" && audience.mode === "public") setAudience(EVERYONE);
+            }}
+          >
             <TabsList className="w-full">
               <TabsTrigger value="write" disabled={posting}>
                 Write
@@ -372,7 +390,12 @@ function PostForm({
             groups={groups}
             inviteOnly={inviteOnly}
             audience={audience}
-            onAudience={setAudience}
+            onAudience={(next) => {
+              if (next.mode === "public" && audience.mode !== "public") setUnderstood(false);
+              setAudience(next);
+            }}
+            offerPublic={offerPublic && mode === "write"}
+            publicAck={{ checked: understood, onChange: setUnderstood }}
             notify={notify}
             onNotify={setNotify}
             reactions={reactions}
@@ -411,6 +434,7 @@ function UpdateItem(props: {
   photos: PhotoMode;
   groups: Group[];
   inviteOnly: boolean;
+  offerPublic: boolean;
   // audience and postedAt: undefined when they didn't change.
   onEdit: (
     content: unknown,
@@ -439,6 +463,8 @@ function UpdateItem(props: {
   // The audience the update had when editing started, and the one chosen since.
   const [startAudience, setStartAudience] = useState<AudienceChoice>(EVERYONE);
   const [audience, setAudience] = useState<AudienceChoice>(EVERYONE);
+  // "I understand", asked when Public is newly chosen; an update that's already public needs no asking.
+  const [understood, setUnderstood] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const label = props.canEdit ? audienceLabel(update.audience) : null;
@@ -459,6 +485,7 @@ function UpdateItem(props: {
     setAllowNotes(update.allowNotes);
     setStartAudience(choiceFor(update.audience));
     setAudience(choiceFor(update.audience));
+    setUnderstood(false);
     setEditing(true);
   }
 
@@ -499,7 +526,12 @@ function UpdateItem(props: {
                 groups={props.groups}
                 inviteOnly={props.inviteOnly}
                 audience={audience}
-                onAudience={setAudience}
+                onAudience={(next) => {
+                  if (next.mode === "public" && audience.mode !== "public") setUnderstood(false);
+                  setAudience(next);
+                }}
+                offerPublic={props.offerPublic}
+                publicAck={startAudience.mode === "public" ? undefined : { checked: understood, onChange: setUnderstood }}
                 reactions={reactions}
                 onReactions={setReactions}
                 allowNotes={allowNotes}
@@ -520,7 +552,13 @@ function UpdateItem(props: {
               >
                 <Button
                   onClick={save}
-                  disabled={saving || draft === null || posted.invalid || !canShare(audience, props.groups)}
+                  disabled={
+                    saving ||
+                    draft === null ||
+                    posted.invalid ||
+                    !canShare(audience, props.groups) ||
+                    (audience.mode === "public" && startAudience.mode !== "public" && !understood)
+                  }
                 >
                   Save
                 </Button>

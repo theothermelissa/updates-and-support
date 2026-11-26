@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api, type PeopleData, type PeopleFamilyMember, type PeopleSupporter } from "../api.js";
-import { MAX_PRIVACY_NOTICE, STANDARD_PRIVACY_NOTICE } from "../lib/privacyNotice.js";
+import { MAX_PRIVACY_NOTICE, STANDARD_PRIVACY_NOTICE, STANDARD_PUBLIC_NOTICE } from "../lib/privacyNotice.js";
 import { isUsual } from "../lib/reactionCatalog.js";
 import { followLink } from "../navigate.js";
 import type { FamilyPageProps } from "./FamilyFrame.js";
@@ -45,6 +45,12 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
   // Shown beside the checkbox, since it saves on its own without a button.
   const [notesDefaultStatus, setNotesDefaultStatus] = useState<{ text: string; error: boolean } | null>(null);
   const [privacyNotice, setPrivacyNotice] = useState("");
+  const [publicOn, setPublicOn] = useState(false);
+  const [publicCount, setPublicCount] = useState(0);
+  const [publicNotice, setPublicNotice] = useState("");
+  const [confirmingPublicOff, setConfirmingPublicOff] = useState(false);
+  const [publicStatus, setPublicStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const [publicNoticeStatus, setPublicNoticeStatus] = useState<{ text: string; error: boolean } | null>(null);
   // Shown beside the button, near the box, since the page's own message sits at the top.
   const [privacyNoticeStatus, setPrivacyNoticeStatus] = useState<{ text: string; error: boolean } | null>(null);
 
@@ -59,6 +65,9 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
         setChoosingNoteReactions(!isUsual(data.noteReactions));
         setAllowNotesByDefault(data.allowNotesByDefault);
         setPrivacyNotice(data.privacyNotice ?? "");
+        setPublicOn(data.publicUpdatesOn);
+        setPublicCount(data.publicUpdateCount);
+        setPublicNotice(data.publicNotice ?? "");
       } else setPeople(status === 404 ? "not-found" : status === 403 ? "forbidden" : "signed-out");
     });
   }
@@ -172,6 +181,35 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
       setAllowNotesByDefault(before);
       setNotesDefaultStatus({ text: data?.error ?? "Couldn't save. Please try again.", error: true });
     }
+  }
+
+  // Saves at once. Turning it off asks first, and makes every public update an everyone update.
+  // Reloads who is signed in afterward, so the post form offers (or stops offering) Public.
+  async function savePublicUpdates(on: boolean) {
+    setPublicStatus(null);
+    setConfirmingPublicOff(false);
+    const { status, data } = await api<{ on?: boolean; error?: string }>(slug, "public-updates", {
+      method: "PUT",
+      body: { on },
+    });
+    if (status === 200 && typeof data?.on === "boolean") {
+      setPublicStatus({ text: "Saved", error: false });
+      await load();
+      reloadMe();
+    } else setPublicStatus({ text: data?.error ?? "Couldn't save. Please try again.", error: true });
+  }
+
+  async function savePublicNotice(e: FormEvent) {
+    e.preventDefault();
+    setPublicNoticeStatus(null);
+    const { status, data } = await api<{ publicNotice?: string | null; error?: string }>(slug, "public-updates", {
+      method: "PUT",
+      body: { publicNotice },
+    });
+    if (status === 200 && data?.publicNotice !== undefined) {
+      setPublicNotice(data.publicNotice ?? "");
+      setPublicNoticeStatus({ text: "Saved", error: false });
+    } else setPublicNoticeStatus({ text: data?.error ?? "Couldn't save. Please try again.", error: true });
   }
 
   // Reloads who is signed in afterward, so the banner at the top shows the new wording at once.
@@ -349,6 +387,68 @@ export function People({ slug, home, me, reloadMe }: FamilyPageProps) {
                 {notesDefaultStatus.text}
               </span>
             )}
+          </CardContent>
+        </Card>
+      </Section>
+
+      <Section title="Public updates">
+        <p className="text-muted-foreground">
+          When this is on, an admin can make an update public, so anyone who visits your family's address can read it
+          without signing in. Everything else stays private.
+        </p>
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Label>
+                <Checkbox
+                  checked={publicOn}
+                  onCheckedChange={(checked) => (checked === true ? savePublicUpdates(true) : setConfirmingPublicOff(true))}
+                />
+                Allow public updates
+              </Label>
+              {publicStatus && (
+                <span className={publicStatus.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"} role="status">
+                  {publicStatus.text}
+                </span>
+              )}
+            </div>
+            {confirmingPublicOff && (
+              <Confirm yes="Yes, turn off" onYes={() => savePublicUpdates(false)} onCancel={() => setConfirmingPublicOff(false)}>
+                {publicCount === 0
+                  ? "Turn off public updates?"
+                  : `${publicCount === 1 ? "1 public update" : `${publicCount} public updates`} will become ${
+                      publicCount === 1 ? "an Everyone update" : "Everyone updates"
+                    }, readable only by people signed in.`}
+              </Confirm>
+            )}
+          </CardContent>
+        </Card>
+        <p className="text-muted-foreground">
+          Shown across the top of your family's address while it shows public updates. Leave it empty to use the
+          standard wording: “{STANDARD_PUBLIC_NOTICE}”
+        </p>
+        <Card>
+          <CardContent>
+            <form onSubmit={savePublicNotice} className="space-y-4">
+              <Textarea
+                aria-label="Banner for public updates"
+                value={publicNotice}
+                onChange={(e) => setPublicNotice(e.target.value)}
+                maxLength={MAX_PRIVACY_NOTICE}
+                rows={3}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <Button>Save banner</Button>
+                {publicNoticeStatus && (
+                  <span
+                    className={publicNoticeStatus.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}
+                    role="status"
+                  >
+                    {publicNoticeStatus.text}
+                  </span>
+                )}
+              </div>
+            </form>
           </CardContent>
         </Card>
       </Section>

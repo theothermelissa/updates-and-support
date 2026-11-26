@@ -5,6 +5,7 @@ import {
   lockGroups,
   parseAudience,
   visibleUpdates,
+  audienceColumn,
   writeAudience,
   type AudienceInput,
   type AudienceView,
@@ -14,7 +15,7 @@ import { destroyPhotos, isFamilyPhotoId, photoUrl, type CloudinaryConfig } from 
 import type { Db } from "./db.js";
 import type { SendEmails } from "./email.js";
 import { RequestError } from "./errors.js";
-import type { Person } from "./generated/prisma/client.js";
+import type { Person, Prisma } from "./generated/prisma/client.js";
 import { claimVideo, destroyVideos, lockUnusedVideo, noteReactionSet, noteSelect, noteView, shownVideo, visibleNotes, type NoteView } from "./notes.js";
 import { notifyNewUpdate } from "./notifications.js";
 import { parsePhotoDates, parsePostedAt } from "./postedAt.js";
@@ -146,7 +147,7 @@ export async function createUpdate(
         },
         include: { author: { select: { name: true } } },
       });
-      if (audience !== "everyone") await writeAudience(tx, person.familyId, created.id, audience);
+      if (audience !== "everyone") await writeAudience(tx, person, created.id, audience);
       if (ids.length > 0) {
         const taken = parsePhotoDates(input.photoDates, ids);
         await tx.photo.createMany({
@@ -181,6 +182,7 @@ async function createVideoUpdate(
   if (input.content !== undefined || input.body !== undefined) {
     throw new RequestError(400, "An update is text or a video, not both");
   }
+  if (audience === "public") throw new RequestError(400, "A video update can't be public");
   const videoId = await claimVideo(db, person, input.video, store, { maxBytes: MAX_VIDEO_BYTES });
   let update;
   try {
@@ -207,7 +209,7 @@ async function createVideoUpdate(
         },
         include: { author: { select: { name: true } } },
       });
-      if (audience !== "everyone") await writeAudience(tx, person.familyId, created.id, audience);
+      if (audience !== "everyone") await writeAudience(tx, person, created.id, audience);
       return created;
     });
   } catch (err) {
@@ -247,10 +249,12 @@ export async function editUpdate(
     db.$transaction(async (tx) => {
       // The groups lock comes first, before the update's row lock (see lockGroups).
       if (audience !== undefined) await lockGroups(tx, person.familyId);
-      const [row] = await tx.$queryRaw<{ id: string; videoId: string | null }[]>`
-        SELECT id, "videoId" FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
+      const [row] = await tx.$queryRaw<{ id: string; videoId: string | null; audience: string }[]>`
+        SELECT id, "videoId", "audience"::text AS audience FROM "Update" WHERE id = ${id} AND "familyId" = ${person.familyId} FOR UPDATE`;
       if (!row) throw new RequestError(404, "Update not found");
       if (row.videoId) throw new RequestError(400, "A video update can't be edited");
+      // Any family member edits a public update's text, but only an admin changes who can see it.
+      if (audience !== undefined && row.audience === "public") await requireActiveAdmin(tx, person);
       const existing = await tx.photo.findMany({ where: { updateId: id }, select: { publicId: true } });
       const kept = new Set(existing.map((p) => p.publicId));
       const check: PhotoCheck = { familyId: person.familyId, kept };
@@ -266,7 +270,7 @@ export async function editUpdate(
           data: added.map((publicId) => ({ updateId: id, publicId, takenAt: taken.get(publicId) ?? null })),
         });
       }
-      if (audience !== undefined) await writeAudience(tx, person.familyId, id, audience);
+      if (audience !== undefined) await writeAudience(tx, person, id, audience);
       const updated = await tx.update.update({
         where: { id },
         data: { content, body, reactionKinds, allowNotes, createdAt: postedAt, editedAt: new Date() },
@@ -346,12 +350,6 @@ export async function newUpdateDefaults(
   };
 }
 
-// The stored column for a requested audience; writeAudience then stores its groups.
-// Family members only is groups with none listed.
-function audienceColumn(audience: AudienceInput): "everyone" | "groups" {
-  return audience === "everyone" ? "everyone" : "groups";
-}
-
 // Whether the family is invite-only, which never changes, so it's read outside any lock.
 function inviteOnlyOf(db: Db, familyId: string) {
   return db.family.findUniqueOrThrow({ where: { id: familyId }, select: { inviteOnly: true } });
@@ -396,7 +394,7 @@ function publicIdsIn(doc: Doc): Set<string> {
 
 // A signed link only for a photo row on this update whose id belongs to this family.
 // Anything else, including a placeholder, is a grey box.
-function withPhotoLinks(doc: Doc, familyId: string, allowed: ReadonlySet<string>, config: CloudinaryConfig | null): Doc {
+export function withPhotoLinks(doc: Doc, familyId: string, allowed: ReadonlySet<string>, config: CloudinaryConfig | null): Doc {
   return {
     type: "doc",
     content: doc.content.map((block) => (block.type === "photo" ? linkedPhoto(block, familyId, allowed, config) : block)),
@@ -436,4 +434,16 @@ function view(
     createdAt: update.createdAt,
     editedAt: update.editedAt,
   };
+}
+
+// Under the groups lock: the person is still an active admin, read from the database rather than
+// from the copy of the person the request began with.
+async function requireActiveAdmin(tx: Prisma.TransactionClient, person: Person): Promise<void> {
+  const now = await tx.person.findUnique({
+    where: { id: person.id },
+    select: { familyId: true, role: true, isAdmin: true, removedAt: true },
+  });
+  if (!now || now.familyId !== person.familyId || now.role !== "family" || !now.isAdmin || now.removedAt) {
+    throw new RequestError(403, "Only admins can change who sees a public update.");
+  }
 }

@@ -39,7 +39,7 @@ Pasting from another app or a website keeps only formatting the editor allows (p
 
 A family member writes the update and posts. The form has two tabs, **Write** and **Video**, starting on Write. Write is the editor. Video posts a video instead (see "Video updates"). Under either tab, beside **Post**, is a **Post settings** button that opens and closes a section of settings, closed each time the form opens. Whether it's open or closed, the button shows the settings as icons after its label, so what's about to happen is visible without opening it: a bell with a check when everyone will be emailed, or a bell with a minus when they won't; then a slightly smiling face for the usual reactions, or the same face with a plus for a chosen set, including none; then a speech bubble when the update will allow notes, or the same bubble crossed out when it won't. Screen readers hear each icon's meaning, such as "Emails everyone," "Chosen reactions," or "No notes." The settings apply to either tab:
 
-- **"Who can see this,"** once the family has a group (see "Audience").
+- **"Who can see this,"** once the family has a group, and for an admin once it has turned on public updates (see "Audience").
 - **"Notify everyone by email,"** checked by default, so a small follow-up can go out without emailing everyone.
 - **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
 - **"Allow notes,"** which starts checked or unchecked according to the family's default (see "Allowing notes").
@@ -59,8 +59,9 @@ A family member can delete any update in their family after confirming. Deletion
 
 Each update has an **audience**, the people who can see it:
 
-- **Everyone**: everyone signed in to the family. This is the default, and the only audience a family without groups ever uses.
+- **Everyone**: everyone signed in to the family. This is the default, and the only audience a family without groups or public updates ever uses.
 - **One or more groups** (see [access.md](access.md#groups)): family members, plus the supporters in at least one of those groups who have a verified email and haven't been removed.
+- **Public**: everyone signed in to the family, and anyone who visits the family's address without signing in (see "Public updates"). Only on a family that has turned public updates on, only for text and photo updates, and only an admin can choose it.
 - **Family members only**: on an invite-only family, a choice when posting or editing. Elsewhere, an update gets this audience only when the one group it was shared with is deleted and the family chooses it (see [access.md](access.md#deleting-a-group)), and the post form never offers it.
 
 On an invite-only family (see [access.md](access.md#invite-only-families)), "Everyone" means every supporter the family has added, since no one can read there without being added.
@@ -71,13 +72,35 @@ Family members see every update, whatever its audience. Everything on an update 
 
 An invite-only family always sees "Who can see this," even with no groups yet: **Everyone**, selected by default, **Family members only**, and, once it has groups, **Only these groups**. Family members only shows the padlock, and its email checkbox reads "Notify family members by email."
 
+A family that has turned on public updates always sees "Who can see this" for an admin, with **Public** after the other choices (see "Public updates"). Public shows a globe, which screen readers hear as "Public."
+
 **Changing it.** Editing a text update shows its audience and can change it to Everyone or to any groups. An update shared with family members only shows that as a third choice, selected, until it's changed; an invite-only family always has that choice. Changing an audience never sends emails, even when it widens. Notes and reactions already on the update stay, including ones left by people outside the new audience, and are shown to whoever can now see it. A video update can't be edited, so its audience stays as posted, except when a group is deleted; to change it, delete it and post it again.
 
 If a chosen group is deleted while the form is open, posting or saving is refused with "A group you chose was deleted. Please choose again," and the form keeps the update.
 
-**Telling them apart.** In the feed, family members see a small, muted label under the author and time on every update not shared with everyone, such as "Shared with Investors, Neighbors" or "Family members only." Supporters never see a label, and the server never sends them an update's audience.
+**Telling them apart.** In the feed, family members see a small, muted label under the author and time on every update not shared with everyone, such as "Shared with Investors, Neighbors" "Family members only," or "Public." Supporters never see a label, and the server never sends them an update's audience.
 
 Only family members choose or change an audience; the server refuses anyone else, accepts only the family's own groups, and accepts Family members only as a choice only from an invite-only family.
+
+## Public updates
+
+A family can share some updates with anyone who visits its address, without signing in. It's off until an admin turns it on (see [access.md](access.md#public-updates)), and an update is public only because an admin chose it for that update.
+
+**Choosing it.** An admin of a family with public updates on sees **Public** under "Who can see this" when posting or editing a text update, never selected unless the update already is. Choosing it shows: "Anyone who visits this family's address can read this update without signing in. Once someone has read it, you can't take it back from them," and a checkbox, "I understand," that must be checked to post or save. A video update can't be public, so a video update's form never offers it, and the server refuses it. A family member who isn't an admin sees a public update's audience as Public, can edit its text, and can't change its audience or make another update public; the server refuses both. Making an update public, or not, sends no emails, as with any audience change. Posting a public update emails the same people as posting one for Everyone (see "Notifications").
+
+**Signed-in readers** see a public update exactly as they would an Everyone update, reading it, reacting to it, and leaving notes on it. Family members see the "Public" label (see "Audience").
+
+**The signed-out page.** The page at the family's address, below the gate (or, on an invite-only family, the sign-in box), shows a **Public updates** heading and the family's latest 20 public updates, newest first. Each shows:
+
+- the family's display name in place of an author, never a person's name, and when it was posted,
+- its text, with formatting, and its photos with their captions,
+- its reactions as the summary the feed shows beside the React button (up to three emoji, most-used first) and the total, without names, "and others," or a list.
+
+It shows no notes and no one who left one, no "edited" mark, no audience, no taken dates, and no buttons. A visitor can't react or leave a note: that needs signing in. The page loads them once and doesn't refresh itself. A family with no public updates shows no heading and nothing else. The page's banner is the family's public wording (see [access.md](access.md#public-updates)). The Updates, How to help, and Notes pages, and every other page, stay for signed-in readers only. The pages that show public updates don't block selecting or copying text, since the family chose to publish them.
+
+**Photos.** The server signs a photo's link for a visitor who isn't signed in only when its update is public at that moment, checked on every request. A photo of any other update gets no link, and the request is answered "not found."
+
+**Taking it back.** An admin can change a public update's audience to anything else or turn off public updates (which makes every public update an Everyone update), and any family member can delete it, as with any update. It leaves the signed-out page and the server stops giving out its photo links at once. Anyone who has read it may have copied it, and a photo link already given keeps working until the photo is deleted (see "Stated limits" in [access.md](access.md#stated-limits)).
 
 ## Photos
 
@@ -85,7 +108,7 @@ Photos are available once the operator turns them on with a setting (see the REA
 
 **Adding.** "Add photo" opens the device's photo picker for one photo, including iPhone photos, and puts it where the cursor is, as a card with the photo and a caption field. An X in the photo's upper-right corner removes it. On a device with a pointer the X appears when the photo is hovered; on a phone, where there is no hover, it stays visible. The photo uploads as soon as it's chosen, and its card shows "Uploading…" until it's done; saving waits until every photo has finished uploading. Before it uploads, the device shrinks the photo to at most 1600 pixels wide (see "How they're kept private"), so a photo's original size doesn't matter. A photo that is already 1600 pixels wide or less and 10 MB or less uploads as it is. A browser that can't read the photo's format, such as HEIC in a desktop browser other than Safari, uploads the file as it is when it's 10 MB or less, and otherwise refuses it with a message saying it's too large for this browser and suggesting Safari or a JPEG copy. Photos can't be dragged; to move one, remove it and add it again. Removing a photo deletes it permanently once the update is saved.
 
-**Who sees them.** Photos and captions are seen by exactly the people who can see the update (see [access.md](access.md)). They never appear on the gate or in emails.
+**Who sees them.** Photos and captions are seen by exactly the people who can see the update (see [access.md](access.md)). They never appear on the gate or in emails, except the photos of public updates, which appear on the signed-out page (see "Public updates").
 
 **How they're kept private.** Photos are stored privately with Cloudinary, a photo-hosting service.
 - Before a photo leaves the device, the browser shrinks it to at most 1600 pixels wide and saves it as a JPEG, which also drops its embedded details. Animated GIFs, and photos already 1600 pixels wide or less and 10 MB or less, are the exceptions and upload as they are (Cloudinary removes their embedded details, below). The photo's date is read from the original first (see "Dating an update from its photos").
@@ -119,7 +142,7 @@ A family member can post an update that is a video instead of text. It has no te
 
 The post form's Video tab holds the same recorder as a video note, so opening the tab turns the camera on and shows the live preview with "Start recording" at its bottom. "Start recording" begins a 3, 2, 1 countdown, then records until "Stop." There is no time limit. While recording, the tab shows how long the recording has run. Recording also stops if the page is hidden, and if the recording reaches 100 MB, which can still be posted. Review plays the video back unmirrored, with "Post" and "Re-record." "Re-record" discards it and returns to the live preview. Nothing uploads until "Post." "Upload a video instead" works the same way as for a note, including when the camera can't be used. A file over 100 MB is refused. A file of any length is accepted, as long as it is under 100 MB. If the upload fails, the form keeps the video and offers "Try again."
 
-A video update can't be edited. To change it, delete it and post another. Deleting it deletes the video from Cloudinary first; if that fails, the update stays.
+A video update can't be edited, and can't be public (see "Public updates"). To change it, delete it and post another. Deleting it deletes the video from Cloudinary first; if that fails, the update stays.
 
 The wall's filter bar quotes `[Video]`, the way a photo-only update is quoted as `[Photo]`.
 
@@ -336,7 +359,7 @@ Offering on a numbered request emails the family's other family members that som
 When an update is posted with "Notify everyone by email" (or "Notify these groups by email") checked, one email goes to each person in its audience who has notifications on and has not been removed, except the family member who posted it:
 
 - every family member, whether or not they have signed in yet, since family members are added on purpose by the operator or another family member;
-- every supporter with a verified email (see [access.md](access.md#getting-notification-emails)) who can see the update: all of them for an update shared with everyone, or those in at least one of its groups.
+- every supporter with a verified email (see [access.md](access.md#getting-notification-emails)) who can see the update: all of them for an update shared with everyone, or those in at least one of its groups. A public update goes to the same people as one shared with everyone.
 
 Changing an update's audience, by editing it or deleting a group, sends no emails.
 

@@ -1,11 +1,12 @@
 import { expect, it } from "vitest";
-import { audienceBody, changedAudience, choiceFor, EVERYONE, type AudienceChoice } from "./audience.js";
+import { audienceBody, audienceLabel, changedAudience, choiceFor, EVERYONE, type AudienceChoice } from "./audience.js";
 
 const groups = [
   { id: "g1", name: "Neighbors" },
   { id: "g2", name: "Work" },
 ];
 const FAMILY: AudienceChoice = { mode: "family", ids: [] };
+const PUBLIC: AudienceChoice = { mode: "public", ids: [] };
 
 it("sends each choice as the server expects it", () => {
   expect(audienceBody(EVERYONE, groups)).toBe("everyone");
@@ -33,4 +34,13 @@ it("sends the new audience when an edit leaves family members only", () => {
 it("sends nothing for unchanged groups, in any order", () => {
   expect(changedAudience({ mode: "groups", ids: ["g1", "g2"] }, { mode: "groups", ids: ["g2", "g1"] }, groups)).toBeUndefined();
   expect(changedAudience(EVERYONE, EVERYONE, groups)).toBeUndefined();
+});
+
+it("sends public only when an edit changes to it, and nothing when a public update keeps it", () => {
+  expect(audienceBody(PUBLIC, groups)).toBe("public");
+  expect(choiceFor("public")).toEqual(PUBLIC);
+  expect(changedAudience(EVERYONE, PUBLIC, groups)).toBe("public");
+  expect(changedAudience(PUBLIC, PUBLIC, groups)).toBeUndefined();
+  expect(changedAudience(PUBLIC, EVERYONE, groups)).toBe("everyone");
+  expect(audienceLabel("public")).toBe("Public");
 });

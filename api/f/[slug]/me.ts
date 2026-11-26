@@ -17,6 +17,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       hasHelpMessage: hasHelpMessage(await helpMessage(getDb(), ctx.person)),
       privacyNotice: ctx.family.privacyNotice,
       inviteOnly: ctx.family.inviteOnly,
+      // Only family members choose an audience, so only they need to know whether Public is offered.
+      ...(ctx.person.role === "family" ? { publicUpdates: ctx.family.publicUpdatesOn } : {}),
     },
     person: personView(ctx.person),
   });

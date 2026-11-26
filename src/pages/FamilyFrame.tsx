@@ -51,12 +51,8 @@ export function FamilyFrame({ slug, home, page }: { slug: string; home: string; 
   }
   if (me === "signed-out") {
     if (page !== "updates") return null;
-    return (
-      <>
-        <PrivacyBanner />
-        <Gate slug={slug} onJoined={load} />
-      </>
-    );
+    // The gate places its own banner: the family's public wording while it shows public updates.
+    return <Gate slug={slug} onJoined={load} />;
   }
 
   const props: FamilyPageProps = { slug, home, me, setMe, reloadMe: load, onSignedOut: () => setMe("signed-out") };
