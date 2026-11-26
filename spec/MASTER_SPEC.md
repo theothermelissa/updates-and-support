@@ -27,6 +27,7 @@ A person who is both a supporter and a family member of different families has a
 - Admins add supporters directly, manage the supporter list (including verifying a supporter's email for them), and change the community question. → [access.md](access.md)
 - Family members post, edit, and delete updates with simple formatting (bold, italic, strikethrough, links, lists, and quotes); everyone they're shared with reads them in a feed that stays current without a refresh. → [updates.md](updates.md)
 - Admins sort supporters into groups on the People page, and family members share an update with everyone (the default) or with one or more groups. Supporters never learn that groups, or updates outside their audience, exist. → [access.md](access.md#groups), [updates.md](updates.md#audience)
+- An admin can turn on public updates, and then choose "Public" for a text or photo update: anyone who visits the family's address reads it on the signed-out page, without signing in, as its text, photos, and an unnamed count of reactions, under the family's name and a banner the admin words. → [updates.md](updates.md#public-updates), [access.md](access.md#public-updates)
 - Photos in updates, with optional captions, up to six per update, once the operator turns photos on; test sites can use grey placeholder photos instead. → [updates.md](updates.md#photos)
 - A family member can date an update to when its photos were taken, read from the photos on their device before upload, or to any date they choose; only that date is kept, not the photo's other embedded details. → [updates.md](updates.md#dating-an-update-from-its-photos)
 - A family member posts an update as a video of any length, up to 100 MB, with the same recorder as a video note. A video update has no text and can't be edited. → [updates.md](updates.md#video-updates)
@@ -48,7 +49,6 @@ These are planned but not yet specified. Each gets its own area spec when it bec
 - For the wall of notes: unread markers, filtering by supporter and time, text search, and editing a note.
 - Supporters sharing contact details with each other, and reaching out for their own support.
 - Supporters deleting their own record.
-- Public updates, readable without signing in.
 - Posting one update to more than one family's site.
 - Scheduling an update to post later.
 
@@ -56,7 +56,7 @@ These are planned but not yet specified. Each gets its own area spec when it bec
 
 These apply to every page, endpoint, and feature.
 
-- **Health information is sensitive.** An update, and everything on it, is shown only to people signed in to that family who are in its audience, and only the server decides who that is. See [access.md](access.md).
+- **Health information is sensitive.** An update, and everything on it, is shown only to people signed in to that family who are in its audience, and only the server decides who that is. See [access.md](access.md). The one exception is an update an admin has deliberately made public, which anyone can read without signing in (see [updates.md](updates.md#public-updates)).
 - **Families are isolated.** Being signed in to one family grants nothing in another, and no page or response reveals one family's data to another family's members or supporters.
 - **No third-party tracking.** No analytics, tracking pixels, ad scripts, or third-party embeds on any page. Videos play in the browser's own video player, never Cloudinary's.
 - **Everything is served from the app's own domain, except photos and videos.** Fonts, scripts, styles, and images are bundled with the app. The exceptions are photos in updates and videos, in updates and in notes, which Cloudinary stores and serves (see [updates.md](updates.md#photos), [updates.md](updates.md#video-updates), and [updates.md](updates.md#video-notes)); pages send it no referrer, so Cloudinary never learns which family's page a request came from.
