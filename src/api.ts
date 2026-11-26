@@ -40,6 +40,10 @@ export type PeopleData =
       noteReactions: string[];
       allowNotesByDefault: boolean;
       privacyNotice: string | null;
+      publicUpdatesOn: boolean;
+      publicNotice: string | null;
+      // How many updates are public now, for the confirmation before turning public updates off.
+      publicUpdateCount: number;
       // Sorted by name.
       groups: PeopleGroup[];
       // Invite-only families only; empty otherwise. Oldest first.
@@ -74,6 +78,8 @@ export type Me = {
     // No community question: only people the family added can read, and every update names its
     // audience. Set when the family is created and never changes.
     inviteOnly: boolean;
+    // Family members only: whether an admin may make an update public.
+    publicUpdates?: boolean;
   };
   person: PersonView;
 };

@@ -5,6 +5,7 @@ import {
   ChevronDownIcon,
   FaceSlightlySmilingIcon,
   FaceSlightlySmilingPlusIcon,
+  GlobeIcon,
   LockIcon,
   MessageSquareIcon,
   MessageSquareOffIcon,
@@ -22,13 +23,17 @@ import { inCatalogOrder, isUsual, MAX_REACTIONS, reactionFor, REACTIONS, USUAL_R
 // A button showing an update's settings as icons, which opens them below it.
 // Closed when it mounts; the form remounts it (with a new key) to start fresh. Without
 // onNotify, as when editing, it has no notify setting. "Who can see this" shows once the family
-// has a group or the audience isn't everyone, and always on an invite-only family; without
-// onAudience it never shows.
+// has a group or the audience isn't everyone, always on an invite-only family, and whenever Public
+// is offered (offerPublic: an admin of a family with public updates on); without onAudience it
+// never shows. A public update seen by someone who can't offer Public shows it selected and locked.
+// publicAck: the "I understand" box, given only while the update isn't already public.
 export function PostSettings(props: {
   groups?: Group[];
   inviteOnly?: boolean;
   audience?: AudienceChoice;
   onAudience?: (audience: AudienceChoice) => void;
+  offerPublic?: boolean;
+  publicAck?: { checked: boolean; onChange: (checked: boolean) => void };
   notify?: boolean;
   onNotify?: (notify: boolean) => void;
   reactions: string[];
@@ -49,7 +54,8 @@ export function PostSettings(props: {
   const audience = props.onAudience ? props.audience : undefined;
   const inviteOnly = props.inviteOnly ?? false;
   const choosingAudience =
-    audience !== undefined && (inviteOnly || groups.length > 0 || audience.mode !== "everyone");
+    audience !== undefined &&
+    (inviteOnly || groups.length > 0 || audience.mode !== "everyone" || props.offerPublic === true);
   const toGroups = choosingAudience && audience.mode === "groups";
   const toFamily = choosingAudience && audience.mode === "family";
   // An invite-only family can always choose Family members only. Elsewhere it stays a choice
@@ -70,7 +76,7 @@ export function PostSettings(props: {
           <span className="font-medium text-foreground">Post settings</span>
           {choosingAudience && (
             <SettingIcon label={AUDIENCE_LABELS[audience.mode]}>
-              {audience.mode === "everyone" ? <UsersIcon /> : <LockIcon />}
+              {audience.mode === "everyone" ? <UsersIcon /> : audience.mode === "public" ? <GlobeIcon /> : <LockIcon />}
             </SettingIcon>
           )}
           {props.onNotify && (
@@ -106,6 +112,8 @@ export function PostSettings(props: {
               onAudience={props.onAudience!}
               offerFamily={offerFamily}
               familyFirst={inviteOnly}
+              offerPublic={props.offerPublic === true}
+              publicAck={props.publicAck}
               disabled={disabled}
             />
           )}
@@ -196,6 +204,7 @@ const AUDIENCE_LABELS = {
   everyone: "Everyone",
   groups: "Only some groups",
   family: "Family members only",
+  public: "Public",
 } as const;
 
 // "Who can see this": Everyone, or Only these groups with a checkbox per group, plus Family
@@ -207,9 +216,14 @@ function AudienceChooser(props: {
   onAudience: (audience: AudienceChoice) => void;
   offerFamily: boolean;
   familyFirst: boolean;
+  offerPublic: boolean;
+  publicAck?: { checked: boolean; onChange: (checked: boolean) => void };
   disabled?: boolean;
 }) {
-  const { groups, audience, onAudience, disabled } = props;
+  const { groups, audience, onAudience } = props;
+  // A public update's audience is only an admin's to change, so anyone else sees it locked.
+  const locked = audience.mode === "public" && !props.offerPublic;
+  const disabled = props.disabled || locked;
   const name = useId();
   const choose = (mode: AudienceChoice["mode"]) => onAudience({ ...audience, mode });
   const toggle = (id: string, on: boolean) =>
@@ -250,6 +264,29 @@ function AudienceChooser(props: {
         </div>
       )}
       {!props.familyFirst && family}
+      {(props.offerPublic || audience.mode === "public") && (
+        <Label>
+          <Radio name={name} checked={audience.mode === "public"} onChange={() => choose("public")} disabled={disabled} />
+          Public
+        </Label>
+      )}
+      {audience.mode === "public" && props.publicAck && (
+        <div className="space-y-3 pl-6">
+          <p className="text-sm">
+            Anyone who visits this family's address can read this update without signing in. Once someone has read
+            it, you can't take it back from them.
+          </p>
+          <Label>
+            <Checkbox
+              checked={props.publicAck.checked}
+              onCheckedChange={(checked) => props.publicAck!.onChange(checked === true)}
+              disabled={props.disabled}
+            />
+            I understand
+          </Label>
+        </div>
+      )}
+      {locked && <p className="pl-6 text-sm text-muted-foreground">Only an admin can change who can see a public update.</p>}
     </fieldset>
   );
 }

@@ -47,6 +47,7 @@ export function FamilyHome({ slug, me, setMe, reloadMe, onSignedOut }: FamilyPag
         canEdit={me.person.role === "family"}
         photos={me.family.photos}
         inviteOnly={me.family.inviteOnly}
+        offerPublic={me.person.role === "family" && me.person.isAdmin && me.family.publicUpdates === true}
         name={me.person.name}
         onNamed={(name) => setMe({ ...me, person: { ...me.person, name } })}
         onSignedOut={onSignedOut}
