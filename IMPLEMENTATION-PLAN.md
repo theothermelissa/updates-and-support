@@ -8,7 +8,7 @@ Spec: [spec/updates.md](spec/updates.md#dating-a-video), [spec/MASTER_SPEC.md](s
 - `editUpdate` still refuses videos, unchanged.
 
 ## Client
-- `src/videoDate.ts` (new): `readVideoDate(file: Blob): Promise<Date | null>`. Reads the first and last 1 MB via `file.slice` (never the whole file), walks MP4/MOV boxes to `moov`, then reads `mvhd` creation time (seconds since 1904, UTC; 0 means none). Prefers nothing else, so no Apple-specific keys. Any failure, a zero value, or a date outside 1900 to now is null. Non-MP4 files (webm) give null.
+- `src/videoDate.ts` (new): `readVideoDate(file: Blob): Promise<Date | null>`. Walks the top-level MP4/MOV box headers with small `file.slice` reads (never the whole file) to `moov`, then reads `mvhd` creation time (seconds since 1904, UTC; 0 means none). Prefers nothing else, so no Apple-specific keys. Any failure, a zero value, or a date outside 1900 to now is null. Non-MP4 files (webm) give null.
 - `src/pages/Feed.tsx` `PostForm`: on the Video tab, once `video` is set and `!video.recorded`, read its date and show the existing `posted` setting labelled "Use the date from my video." Reuse `usePostedDate`: feed it the video's date through the same path as a photo date (a fixed id for the one video), instead of a second hook. `settings()` sends `postedAt` for the video tab too and drops the "A video can't be dated" comment.
 - `src/components/postSettings.tsx`: the checkbox label becomes a prop (photos vs video).
 
@@ -20,3 +20,8 @@ Spec: [spec/updates.md](spec/updates.md#dating-a-video), [spec/MASTER_SPEC.md](s
 ## Cut for speed
 - No Apple local-time capture key (`com.apple.quicktime.creationdate`); `mvhd` is UTC and shown in the device's zone, which is right to the day in nearly every case.
 - No fragmented-MP4 support (`moof` files with no `mvhd` date); they show "no date found."
+
+## Progress
+- Done: server, `readVideoDate`, post form, tests (typecheck and `npm test` pass; the date integration test fails with `createdAt` removed).
+- Discovery: movie times start in 1904, so no date can fall before 1900, and the reader has no lower bound.
+- Not done here: the browser check on the preview (cloud sessions can't sign in to Vercel previews).

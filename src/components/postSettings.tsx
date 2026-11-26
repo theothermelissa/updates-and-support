@@ -145,7 +145,7 @@ export function PostSettings(props: {
   );
 }
 
-// "Use the date from my photos", and the Posted date and time it fills in. The field shows
+// "Use the date from my photos" (or video), and the Posted date and time it fills in. The field shows
 // while the box is checked, and always when editing, since an update's date can be changed.
 export type PostedDateProps = {
   on: boolean;
@@ -155,6 +155,8 @@ export type PostedDateProps = {
   onValue: (value: string) => void;
   noneFound: boolean;
   showField: boolean;
+  // What the date comes from; photos when absent.
+  subject?: "photos" | "video";
 };
 
 function PostedDate(props: PostedDateProps & { disabled?: boolean }) {
@@ -167,11 +169,11 @@ function PostedDate(props: PostedDateProps & { disabled?: boolean }) {
           onCheckedChange={(checked) => props.onOn(checked === true)}
           disabled={props.disabled}
         />
-        Use the date from my photos
+        {props.subject === "video" ? "Use the date from my video" : "Use the date from my photos"}
       </Label>
       {props.on && props.noneFound && (
         <p className="text-sm text-muted-foreground" role="status">
-          No photo has a date yet. Set one below.
+          {props.subject === "video" ? "This video has no date. Set one below." : "No photo has a date yet. Set one below."}
         </p>
       )}
       {(props.on || props.showField) && (

@@ -29,6 +29,7 @@ import type { Note } from "../notes.js";
 import type { Reactions as ReactionsData } from "../reactions.js";
 import { RichText } from "../richText.js";
 import { toLocalInput } from "../photoDate.js";
+import { readVideoDate } from "../videoDate.js";
 import { usePostedDate } from "../usePostedDate.js";
 import { uploadVideo } from "../videos.js";
 
@@ -66,6 +67,7 @@ type PostSettingsValues = {
 };
 
 // The width of an update's card when its notes sit beside it on a wide screen.
+const VIDEO_AS_PHOTO = { type: "photo", attrs: { publicId: "video" } };
 const UPDATE_WIDTH = "lg:w-[42rem]";
 // Notes shown beside an update; the rest are a link away, on the wall.
 const NOTES_SHOWN = 6;
@@ -273,6 +275,21 @@ function PostForm({
   // Changing the key starts a fresh, empty editor after posting.
   const [editorKey, setEditorKey] = useState(0);
   const dating = usePostedDate(content, null);
+  // An uploaded video is dated the way one photo is: the hook is given a document holding a
+  // single photo, whose date is the video's. A recorded video has no date to read.
+  const uploadedVideo = video && !video.recorded ? video.file : null;
+  const videoDating = usePostedDate(uploadedVideo ? VIDEO_AS_PHOTO : null, null);
+  const { onPhotoDate } = videoDating;
+  useEffect(() => {
+    if (!uploadedVideo) return;
+    let current = true;
+    readVideoDate(uploadedVideo).then((date) => current && onPhotoDate(VIDEO_AS_PHOTO.attrs.publicId, date));
+    return () => {
+      current = false;
+    };
+    // `onPhotoDate` changes on every render; the file is what matters.
+  }, [uploadedVideo]);
+  const activeDating = mode === "video" ? videoDating : dating;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -289,6 +306,7 @@ function PostForm({
       setReactions([...USUAL_REACTIONS]);
       setChosenAllowNotes(null);
       dating.reset();
+      videoDating.reset();
       setSettingsKey((k) => k + 1);
       setMode("write");
     }
@@ -313,9 +331,9 @@ function PostForm({
     return onPost({ video: publicId }, settings());
   }
 
-  // A video can't be dated, so the date applies to the Write tab only.
+  // The video's date is kept only as the update's posted date; photo dates are for the Write tab.
   function settings(): PostSettingsValues {
-    const postedAt = mode === "write" ? dating.postedAt() : undefined;
+    const postedAt = activeDating.postedAt();
     const photoDates = mode === "write" ? dating.photoDates() : undefined;
     return {
       audience: audienceBody(audience, groups),
@@ -328,7 +346,7 @@ function PostForm({
   }
 
   const ready =
-    (mode === "write" ? content !== null && !dating.invalid : file !== null) && canShare(audience, groups);
+    (mode === "write" ? content !== null : file !== null) && !activeDating.invalid && canShare(audience, groups);
   return (
     <Card>
       <CardHeader>
@@ -380,19 +398,20 @@ function PostForm({
             allowNotes={allowNotes}
             onAllowNotes={setChosenAllowNotes}
             posted={
-              photos === "off" || mode === "video"
+              (mode === "write" ? photos === "off" : !uploadedVideo)
                 ? undefined
                 : {
-                    on: dating.on,
+                    on: activeDating.on,
                     // Dating an update to the past is rarely worth emailing everyone about.
                     onOn: (on) => {
-                      dating.setOn(on);
+                      activeDating.setOn(on);
                       if (on) setNotify(false);
                     },
-                    value: dating.value,
-                    onValue: dating.setValue,
-                    noneFound: dating.noneFound,
+                    value: activeDating.value,
+                    onValue: activeDating.setValue,
+                    noneFound: activeDating.noneFound,
                     showField: false,
+                    subject: mode === "video" ? "video" : "photos",
                   }
             }
             disabled={posting}

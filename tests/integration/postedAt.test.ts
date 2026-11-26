@@ -1,7 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createUpdate, editUpdate, listUpdates } from "../../server/updates.js";
+import type { Person } from "../../server/generated/prisma/client.js";
+import { issueVideoUpload } from "../../server/notes.js";
 import { createTestDb } from "./db.js";
-import { makeFamily, resetDb } from "./fixtures.js";
+import { fakeVideoStore, makeFamily, resetDb } from "./fixtures.js";
 
 const db = createTestDb();
 afterAll(() => db.$disconnect());
@@ -84,12 +86,31 @@ describe("dating an update", () => {
     expect(stored.editedAt).toBeNull();
   });
 
-  it("refuses a date on a video update", async () => {
-    const { people: [ana] } = await makeFamily(db, "Rivera");
-    await expect(createUpdate(db, ana!, { video: "families/x/y", postedAt: PAST })).rejects.toMatchObject({
-      status: 400,
-      message: "Only photo updates can be dated",
+  it("dates a video update, and refuses a date out of range or from a supporter, posting nothing", async () => {
+    const { family, people: [ana] } = await makeFamily(db, "Rivera");
+    const supporter = await db.person.create({
+      data: { familyId: family.id, role: "supporter", name: "Sam Friend", email: "sam@example.com" },
     });
+    const videos = fakeVideoStore();
+    const upload = async (person: Person) => {
+      const { publicId } = await issueVideoUpload(db, person, videos.store);
+      videos.videos.set(publicId, 10);
+      return publicId;
+    };
+
+    for (const postedAt of [TOMORROW(), "1899-12-31T23:59:59.000Z", "last Tuesday"]) {
+      await expect(
+        createUpdate(db, ana!, { video: await upload(ana!), postedAt }, undefined, undefined, videos.store),
+      ).rejects.toMatchObject({ status: 400 });
+    }
+    await expect(
+      createUpdate(db, supporter, { video: "families/x/y", postedAt: PAST }, undefined, undefined, videos.store),
+    ).rejects.toMatchObject({ status: 403 });
     expect(await db.update.count()).toBe(0);
+
+    const recent = await createUpdate(db, ana!, { video: await upload(ana!) }, undefined, undefined, videos.store);
+    const old = await createUpdate(db, ana!, { video: await upload(ana!), postedAt: PAST }, undefined, undefined, videos.store);
+    expect(old.createdAt).toEqual(new Date(PAST));
+    expect((await listUpdates(db, ana!)).map((u) => u.id)).toEqual([recent.id, old.id]);
   });
 });
