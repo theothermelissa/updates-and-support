@@ -50,6 +50,8 @@ type Update = {
   notes: Note[];
   // Sent to family members only.
   audience?: Audience;
+  // Sent to family members only: when each photo was taken, by public ID, for those that have a date.
+  photoDates?: Record<string, string>;
 };
 
 type PostSettingsValues = {
@@ -59,6 +61,8 @@ type PostSettingsValues = {
   allowNotes: boolean;
   // Set only when the update is dated to something other than now.
   postedAt?: string;
+  // Taken dates of the photos in the update, by public ID.
+  photoDates?: Record<string, string>;
 };
 
 // The width of an update's card when its notes sit beside it on a wide screen.
@@ -211,13 +215,14 @@ export function Feed(props: {
           photos={props.photos}
           groups={groups}
           inviteOnly={props.inviteOnly}
-          onEdit={(content, reactions, allowNotes, audience, postedAt) =>
+          onEdit={(content, reactions, allowNotes, audience, postedAt, photoDates) =>
             change(`updates/${update.id}`, "PATCH", {
               content,
               reactions,
               allowNotes,
               ...(audience && { audience }),
               ...(postedAt && { postedAt }),
+              ...(photoDates && { photoDates }),
             })
           }
           onDelete={() => change(`updates/${update.id}`, "DELETE")}
@@ -311,7 +316,15 @@ function PostForm({
   // A video can't be dated, so the date applies to the Write tab only.
   function settings(): PostSettingsValues {
     const postedAt = mode === "write" ? dating.postedAt() : undefined;
-    return { audience: audienceBody(audience, groups), notify, reactions, allowNotes, ...(postedAt && { postedAt }) };
+    const photoDates = mode === "write" ? dating.photoDates() : undefined;
+    return {
+      audience: audienceBody(audience, groups),
+      notify,
+      reactions,
+      allowNotes,
+      ...(postedAt && { postedAt }),
+      ...(photoDates && { photoDates }),
+    };
   }
 
   const ready =
@@ -405,6 +418,7 @@ function UpdateItem(props: {
     allowNotes: boolean,
     audience: AudienceBody | undefined,
     postedAt: string | undefined,
+    photoDates: Record<string, string> | undefined,
   ) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onReact: (kind: string | null) => Promise<boolean>;
@@ -434,12 +448,12 @@ function UpdateItem(props: {
     if (draft === null) return;
     setSaving(true);
     const changed = changedAudience(startAudience, audience, props.groups);
-    if (await props.onEdit(draft, reactions, allowNotes, changed, posted.postedAt())) setEditing(false);
+    if (await props.onEdit(draft, reactions, allowNotes, changed, posted.postedAt(), posted.photoDates())) setEditing(false);
     setSaving(false);
   }
 
   function startEditing() {
-    posted.reset();
+    posted.reset(update.photoDates);
     setDraft(update.content);
     setReactions(update.reactions.allowed);
     setAllowNotes(update.allowNotes);

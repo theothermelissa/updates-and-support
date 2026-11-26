@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { earliest, fromLocalInput, photoIds, toLocalInput } from "./photoDate.js";
+import { datesFromRecord, earliest, fromLocalInput, photoIds, recordFromDates, toLocalInput } from "./photoDate.js";
 
 // The posted-date setting of the post and edit forms (see "Dating an update from its photos" in
 // spec/updates.md). `initial` is an update's current date as a datetime-local value when
@@ -32,13 +32,20 @@ export function usePostedDate(content: unknown, initial: string | null) {
     onPhotoDate(publicId: string, date: Date | null) {
       setDates((current) => new Map(current).set(publicId, date));
     },
+    // The dates of the photos in `content`, to send with the update; the server uses only the
+    // ones for photos it is adding.
+    photoDates(): Record<string, string> | undefined {
+      const record = recordFromDates(content, dates);
+      return Object.keys(record).length > 0 ? record : undefined;
+    },
     // The date to send: only when it's different from where it started.
     postedAt(): string | undefined {
       if (value === (initial ?? "") || date === null) return undefined;
       return date.toISOString();
     },
-    reset() {
-      setDates(new Map());
+    // `known`: the dates stored with the photos already in an update being edited.
+    reset(known?: Record<string, string>) {
+      setDates(datesFromRecord(known));
       setOnState(false);
       setByHand(null);
       setFallback(initial ?? "");

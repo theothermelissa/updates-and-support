@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { earliest, fromLocalInput, parseExifDate, photoIds, readPhotoDate, toLocalInput } from "./photoDate.js";
+import { datesFromRecord, earliest, fromLocalInput, parseExifDate, photoIds, readPhotoDate, recordFromDates, toLocalInput } from "./photoDate.js";
 
 // A minimal JPEG whose Exif holds one DateTimeOriginal ("YYYY:MM:DD HH:MM:SS"), or none.
 function jpeg(dateTimeOriginal?: string): Blob {
@@ -92,5 +92,16 @@ describe("datetime-local values", () => {
     expect(fromLocalInput("")).toBeNull();
     expect(fromLocalInput("2019-02-31T10:00")).toBeNull();
     expect(fromLocalInput("2019-03-03")).toBeNull();
+  });
+});
+
+describe("photo dates sent and received", () => {
+  const doc = { type: "doc", content: [{ type: "photo", attrs: { publicId: "a" } }, { type: "photo", attrs: { publicId: "b" } }] };
+  it("round-trips the dates of the photos in the content, leaving out photos without one", () => {
+    const received = datesFromRecord({ a: "2019-03-03T15:30:00.000Z", gone: "2018-01-01T00:00:00.000Z" });
+    expect(recordFromDates(doc, received)).toEqual({ a: "2019-03-03T15:30:00.000Z" });
+  });
+  it("starts empty when the server sent none", () => {
+    expect(datesFromRecord(undefined).size).toBe(0);
   });
 });

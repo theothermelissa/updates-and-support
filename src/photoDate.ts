@@ -51,6 +51,21 @@ export function photoIds(doc: unknown): string[] {
   return ids;
 }
 
+// The dates stored for an update's photos, as the server sends them (ISO text by public ID).
+export function datesFromRecord(record: Record<string, string> | undefined): Map<string, Date | null> {
+  return new Map(Object.entries(record ?? {}).map(([id, text]) => [id, new Date(text)]));
+}
+
+// The dates of the photos now in `content`, as the server takes them: ISO text by public ID.
+export function recordFromDates(content: unknown, dates: ReadonlyMap<string, Date | null>): Record<string, string> {
+  const record: Record<string, string> = {};
+  for (const id of photoIds(content)) {
+    const date = dates.get(id);
+    if (date) record[id] = date.toISOString();
+  }
+  return record;
+}
+
 // The earliest of the dates found, or null when no photo has one.
 export function earliest(dates: Iterable<Date | null | undefined>): Date | null {
   let found: Date | null = null;

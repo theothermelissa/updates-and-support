@@ -17,7 +17,7 @@ import { RequestError } from "./errors.js";
 import type { Person } from "./generated/prisma/client.js";
 import { claimVideo, destroyVideos, lockUnusedVideo, noteReactionSet, noteSelect, noteView, shownVideo, visibleNotes, type NoteView } from "./notes.js";
 import { notifyNewUpdate } from "./notifications.js";
-import { parsePostedAt } from "./postedAt.js";
+import { parsePhotoDates, parsePostedAt } from "./postedAt.js";
 import { NO_PHOTOS, type PhotoSettings } from "./photoSettings.js";
 import { requireFamilyMember } from "./people.js";
 import { readerScope } from "./readerScope.js";
@@ -41,7 +41,12 @@ export type UpdateView = {
 };
 
 // `audience` only for family members: a supporter is never sent an update's audience.
-export type FeedUpdate = UpdateView & ReactionsView & { notes: NoteView[]; audience?: AudienceView };
+// `photoDates` likewise: the date each photo was taken, by public ID, for those that have one.
+export type FeedUpdate = UpdateView & ReactionsView & {
+  notes: NoteView[];
+  audience?: AudienceView;
+  photoDates?: Record<string, Date>;
+};
 
 type UpdateInput = {
   content?: unknown;
@@ -52,6 +57,8 @@ type UpdateInput = {
   audience?: unknown;
   // An ISO date the update is dated to instead of now (see parsePostedAt).
   postedAt?: unknown;
+  // Taken dates of the photos being added, by public ID (see parsePhotoDates).
+  photoDates?: unknown;
 };
 
 // The updates the person may see (see visibleUpdates), newest first, with their reactions and
@@ -73,7 +80,7 @@ export async function listUpdates(
       // Only loaded for family members, so a supporter's response can't carry a group's name.
       groups: isFamily ? audienceInclude.groups : false,
       author: { select: { name: true } },
-      photos: { select: { publicId: true } },
+      photos: { select: { publicId: true, takenAt: true } },
       reactions: {
         where: visibleReactors(person.familyId),
         orderBy: { createdAt: "asc" },
@@ -91,7 +98,7 @@ export async function listUpdates(
       ...reactionsView(u.reactions, person.id, u.reactionKinds, scope),
       notes: u.notes.map((n) => noteView(n, person.id, store, noteReactions, scope)),
       // Prisma can't type an include that depends on the role; groups are loaded when isFamily.
-      ...(isFamily ? { audience: audienceView(u as typeof u & LoadedAudience) } : {}),
+      ...(isFamily ? { audience: audienceView(u as typeof u & LoadedAudience), photoDates: photoDatesOf(u.photos) } : {}),
     };
   });
 }
@@ -141,7 +148,10 @@ export async function createUpdate(
       });
       if (audience !== "everyone") await writeAudience(tx, person.familyId, created.id, audience);
       if (ids.length > 0) {
-        await tx.photo.createMany({ data: ids.map((publicId) => ({ updateId: created.id, publicId })) });
+        const taken = parsePhotoDates(input.photoDates, ids);
+        await tx.photo.createMany({
+          data: ids.map((publicId) => ({ updateId: created.id, publicId, takenAt: taken.get(publicId) ?? null })),
+        });
       }
       return created;
     }),
@@ -250,7 +260,11 @@ export async function editUpdate(
       const added = [...next].filter((publicId) => !kept.has(publicId));
       if (removed.length > 0) await tx.photo.deleteMany({ where: { updateId: id, publicId: { in: removed } } });
       if (added.length > 0) {
-        await tx.photo.createMany({ data: added.map((publicId) => ({ updateId: id, publicId })) });
+        // Only photos new to the update get a date; a kept photo's never changes.
+        const taken = parsePhotoDates(input.photoDates, added);
+        await tx.photo.createMany({
+          data: added.map((publicId) => ({ updateId: id, publicId, takenAt: taken.get(publicId) ?? null })),
+        });
       }
       if (audience !== undefined) await writeAudience(tx, person.familyId, id, audience);
       const updated = await tx.update.update({
@@ -364,6 +378,12 @@ async function forgetPhotos(settings: PhotoSettings, publicIds: string[], update
   } catch {
     console.error(`Couldn't delete ${publicIds.length} photos from Cloudinary for update ${updateId}`);
   }
+}
+
+function photoDatesOf(photos: { publicId: string; takenAt: Date | null }[]): Record<string, Date> {
+  const dates: Record<string, Date> = {};
+  for (const p of photos) if (p.takenAt) dates[p.publicId] = p.takenAt;
+  return dates;
 }
 
 function publicIdsIn(doc: Doc): Set<string> {

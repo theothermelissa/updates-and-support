@@ -35,6 +35,8 @@ Decided with Melissa for her own family's site; each becomes its own spec, plan,
 
 ## Features and fixes
 
+- **2026-11-26** — Let a family member set one photo's taken date by hand.
+  Photos posted before taken dates were kept have none, and "Use the date from my photos" skips them. Cut for speed when taken dates were stored; add it if editing old updates shows the need.
 - **2026-11-26** — Handle large HEIC photos in desktop browsers other than Safari.
   Photos are shrunk on the device, but Chrome and Firefox on a computer can't decode HEIC, so one over 10 MB is refused ("too large for this browser"). Fixing it needs a server-side conversion or a paid Cloudinary plan. Also cut: an upload progress bar for photos. Add whichever real use shows to be missing.
 - **2026-11-25** — Check whether adding a second photo replaces the first.
