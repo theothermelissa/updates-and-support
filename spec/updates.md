@@ -100,7 +100,7 @@ It shows no notes and no one who left one, no "edited" mark, no audience, no tak
 
 **Photos.** The server signs a photo's link for a visitor who isn't signed in only when its update is public at that moment, checked on every request. A photo of any other update gets no link, and the request is answered "not found."
 
-**Taking it back.** An admin can change a public update's audience to anything else, delete it, or turn off public updates (which makes every public update an Everyone update). It leaves the signed-out page and the server stops giving out its photo links at once. Anyone who has read it may have copied it, and a photo link already given keeps working until the photo is deleted (see "Stated limits" in [access.md](access.md#stated-limits)).
+**Taking it back.** An admin can change a public update's audience to anything else or turn off public updates (which makes every public update an Everyone update), and any family member can delete it, as with any update. It leaves the signed-out page and the server stops giving out its photo links at once. Anyone who has read it may have copied it, and a photo link already given keeps working until the photo is deleted (see "Stated limits" in [access.md](access.md#stated-limits)).
 
 ## Photos
 
