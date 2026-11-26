@@ -13,12 +13,17 @@ Store the date with the photo, validated by the server, and send it back only to
 3. **Write.** In `createUpdate` and `editUpdate`, set `takenAt` only on photo rows being created (`added` ids in edit), from the parsed map. A kept photo's date is never rewritten by a later edit. Video updates ignore it.
 4. **Read.** `listUpdates` selects `takenAt`; for family members only, `FeedUpdate.photoDates: Record<publicId, ISO>` (photos with a date). Supporters' responses carry no such field.
 5. **Client.** `usePostedDate(content, initial, known)` seeds its `dates` map from `update.photoDates` when editing. Add `photoDates()` returning the dates (as ISO) of photos in `content` that have one. `Feed.tsx` sends `photoDates` with post and edit bodies when non-empty. `startEditing` passes the update's dates.
-6. **Copy.** Edit-mode "no photo has a date" note stays accurate as is.
+
 
 ## Tests
 - Integration (real Postgres, `tests/integration`): a family member's post with `photoDates` stores `takenAt`; the list returns `photoDates` to a family member and **no `photoDates` key to a supporter** (prove it fails with the guard removed); edit stores dates only for added photos and leaves a kept photo's date unchanged; out-of-range and malformed entries are dropped, not refused.
-- Unit: `parsePhotoDates` bounds and shapes; `usePostedDate` isn't unit-tested (glue); verify by hand in the preview.
+- Unit: `parsePhotoDates` bounds and shapes; `datesFromRecord` and `recordFromDates` in `src/photoDate.test.ts`. The hook is thin glue, verified by hand in the preview.
 
 ## Cutting for speed
 - No backfill: photos posted before this change have no date. Nobody can recover it, since Cloudinary stripped it.
-- No UI to set a single photo's date by hand.
+
+## Decisions from review
+- `parsePhotoDates(value, ids, now)` looks up only the photos being added, so other keys, arrays, and inherited keys are ignored by construction. It shares the date rules with `parsePostedAt`.
+- `usePostedDate.reset(known)` seeds the stored dates when editing starts, since the hook mounts long before that. `photoDates()` sends every date for photos in the content; the server uses only those for photos it is adding.
+- `photoDates` is on `FeedUpdate` only, built inside the family-member branch, so the key is absent for supporters.
+- Run `npx prisma generate` after the schema change.

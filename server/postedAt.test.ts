@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePostedAt } from "./postedAt.js";
+import { parsePhotoDates, parsePostedAt } from "./postedAt.js";
 
 const now = new Date("2026-11-25T12:00:00Z");
 
@@ -26,5 +26,31 @@ describe("parsePostedAt", () => {
     {},
   ])("refuses %j", (value) => {
     expect(() => parsePostedAt(value, now)).toThrowError(/between 1900 and now/);
+  });
+});
+
+describe("parsePhotoDates", () => {
+  const ids = ["a", "b", "c"];
+  it("keeps in-range dates for the given ids only", () => {
+    const got = parsePhotoDates({ a: "2019-03-03T15:30:00.000Z", z: "2019-03-03T15:30:00.000Z" }, ids, now);
+    expect([...got.keys()]).toEqual(["a"]);
+    expect(got.get("a")).toEqual(new Date("2019-03-03T15:30:00.000Z"));
+  });
+
+  it("drops out-of-range and malformed dates without refusing", () => {
+    const got = parsePhotoDates(
+      { a: "1899-12-31T00:00:00Z", b: "2026-11-26T00:00:00Z", c: "2020" },
+      ids,
+      now,
+    );
+    expect(got.size).toBe(0);
+  });
+
+  it.each([undefined, null, "x", 5, ["2019-03-03T15:30:00Z"]])("ignores %j", (value) => {
+    expect(parsePhotoDates(value, ids, now).size).toBe(0);
+  });
+
+  it("doesn't read inherited keys", () => {
+    expect(parsePhotoDates({}, ["__proto__", "toString"], now).size).toBe(0);
   });
 });

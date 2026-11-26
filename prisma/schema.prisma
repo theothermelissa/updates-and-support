@@ -198,11 +198,13 @@ model UpdateGroup {
 }
 
 // A real photo's Cloudinary public ID. One photo is on one update; deleting the update
-// removes the row. Placeholders are not stored here.
+// removes the row. Placeholders are not stored here. `takenAt` is the date the device read from
+// the photo when it was added, if any; shown only to family members.
 model Photo {
-  id       String @id @default(cuid())
+  id       String    @id @default(cuid())
   updateId String
-  publicId String @unique
+  publicId String    @unique
+  takenAt  DateTime?
 
   update Update @relation(fields: [updateId], references: [id], onDelete: Cascade)
 

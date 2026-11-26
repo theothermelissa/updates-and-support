@@ -475,3 +475,69 @@ describe("the upload endpoint", () => {
     expect(await db.update.count()).toBe(0);
   });
 });
+
+describe("photos' taken dates", () => {
+  const T1 = "2019-03-03T15:30:00.000Z";
+  const T2 = "2020-06-01T09:00:00.000Z";
+
+  it("stores a date for each added photo, and shows it to family members only", async () => {
+    const { family, ana, sam } = await setUp();
+    const { settings } = recorder();
+    const a = idFor(family.id, 1);
+    const b = idFor(family.id, 2);
+    const update = await createUpdate(db, ana, { content: album(shot(a), shot(b)), photoDates: { [a]: T1 } }, undefined, settings);
+    expect(JSON.stringify(update)).not.toMatch(/photoDates|takenAt/);
+
+    const mine = await listUpdates(db, ana, undefined, settings);
+    expect(mine[0]!.photoDates).toEqual({ [a]: new Date(T1) });
+    const theirs = await listUpdates(db, sam, undefined, settings);
+    expect(theirs).toHaveLength(1);
+    expect("photoDates" in theirs[0]!).toBe(false);
+    expect(JSON.stringify(theirs)).not.toContain(T1);
+  });
+
+  it("dates only photos being added: a kept photo's date never changes", async () => {
+    const { family, ana } = await setUp();
+    const { settings } = recorder();
+    const kept = idFor(family.id, 1);
+    const fresh = idFor(family.id, 2);
+    const stray = idFor(family.id, 3);
+    const update = await createUpdate(db, ana, { content: album(shot(kept)), photoDates: { [kept]: T1 } }, undefined, settings);
+
+    await editUpdate(db, ana, update.id, { content: album(shot(kept), shot(fresh)), photoDates: { [kept]: T2, [fresh]: T2, [stray]: T2 } }, settings);
+    const rows = await db.photo.findMany({ orderBy: { publicId: "asc" } });
+    expect(rows.map((r) => [r.publicId, r.takenAt])).toEqual([
+      [kept, new Date(T1)],
+      [fresh, new Date(T2)],
+    ]);
+  });
+
+  it("drops dates that are out of range or not dates, and still posts", async () => {
+    const { family, ana } = await setUp();
+    const { settings } = recorder();
+    const ids = [1, 2, 3, 4].map((n) => idFor(family.id, n));
+    await createUpdate(
+      db,
+      ana,
+      {
+        content: album(...ids.map((id) => shot(id))),
+        photoDates: { [ids[0]!]: "1899-12-31T00:00:00Z", [ids[1]!]: new Date(Date.now() + 86_400_000).toISOString(), [ids[2]!]: "2020", [ids[3]!]: 5 },
+      },
+      undefined,
+      settings,
+    );
+    expect((await db.photo.findMany()).map((r) => r.takenAt)).toEqual([null, null, null, null]);
+    for (const bad of [[T1], "x", 5, null]) {
+      await createUpdate(db, ana, { content: album(shot(idFor(family.id, 9))), photoDates: bad }, undefined, settings);
+      await db.update.deleteMany();
+    }
+  });
+
+  it("refuses a supporter's post with dates, storing nothing", async () => {
+    const { family, sam } = await setUp();
+    const { settings } = recorder();
+    const id = idFor(family.id, 1);
+    await expect(createUpdate(db, sam, { content: album(shot(id)), photoDates: { [id]: T1 } }, undefined, settings)).rejects.toMatchObject({ status: 403 });
+    expect(await db.photo.count()).toBe(0);
+  });
+});
