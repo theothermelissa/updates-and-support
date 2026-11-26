@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import publicHandler from "../../api/f/[slug]/public-updates.js";
 import { lockGroups } from "../../server/audience.js";
 import { photoUrl } from "../../server/cloudinary.js";
@@ -15,6 +15,16 @@ import { fakeMailer, fakeVideoStore, makeFamily, makeGroup, makeNonAdmin, queued
 const db = createTestDb();
 afterAll(() => db.$disconnect());
 beforeEach(() => resetDb(db));
+
+// The handler reads DATABASE_URL, which CI doesn't set; the tests use their own database.
+const savedUrl = process.env.DATABASE_URL;
+beforeAll(() => {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+});
+afterAll(() => {
+  if (savedUrl === undefined) delete process.env.DATABASE_URL;
+  else process.env.DATABASE_URL = savedUrl;
+});
 
 const CLOUD = { cloudName: "demo", apiKey: "1234", apiSecret: "abcd" };
 const PHOTOS: PhotoSettings = { placeholders: false, cloudinary: CLOUD, destroy: async () => {} };
