@@ -124,8 +124,7 @@ export async function createUpdate(
   const allowNotes = allowNotesFrom(input) ?? (await allowNotesByDefault(db, person.familyId));
   const postedAt = parsePostedAt(input.postedAt);
   if (input.video !== undefined) {
-    if (postedAt) throw new RequestError(400, "Only photo updates can be dated");
-    return createVideoUpdate(db, person, input, reactionKinds, allowNotes, audience, notifyWith, store);
+    return createVideoUpdate(db, person, input, reactionKinds, allowNotes, audience, postedAt, notifyWith, store);
   }
   const { content, body } = contentFrom(input, settings, { familyId: person.familyId });
   const ids = [...publicIdsIn(content)];
@@ -175,6 +174,7 @@ async function createVideoUpdate(
   reactionKinds: string[],
   allowNotes: boolean,
   audience: AudienceInput,
+  postedAt: Date | undefined,
   notifyWith: SendEmails | undefined,
   store: VideoStore,
 ): Promise<UpdateView> {
@@ -204,6 +204,7 @@ async function createVideoUpdate(
           reactionKinds,
           allowNotes,
           audience: audienceColumn(audience),
+          createdAt: postedAt,
         },
         include: { author: { select: { name: true } } },
       });

@@ -43,7 +43,7 @@ A family member writes the update and posts. The form has two tabs, **Write** an
 - **"Notify everyone by email,"** checked by default, so a small follow-up can go out without emailing everyone.
 - **"Use the usual reactions,"** checked by default, which gives the update the six usual reactions (see "Reactions"). Unchecking it shows the whole reaction catalog as one grid, in catalog order with no group headings, with the six usual ones already selected. Above the grid, a preview of the tray shows the selected emoji as supporters will see them, or "No reactions" when none are selected; screen readers hear how many of six are chosen. Tapping an emoji selects or deselects it. Up to six can be selected; once six are, the others can't be selected until one is deselected. Zero is allowed and means the update allows no reactions. Checking the box again returns to the usual six.
 - **"Allow notes,"** which starts checked or unchecked according to the family's default (see "Allowing notes").
-- **"Use the date from my photos,"** once photos are on, unchecked by default (see "Dating an update from its photos").
+- **"Use the date from my photos,"** once photos are on, or **"Use the date from my video,"** once a video has been uploaded from the device, unchecked by default (see "Dating an update from its photos" and "Dating a video").
 
 Posting resets the settings to their defaults.
 
@@ -120,6 +120,15 @@ A family member can post an update that is a video instead of text. It has no te
 The post form's Video tab holds the same recorder as a video note, so opening the tab turns the camera on and shows the live preview with "Start recording" at its bottom. "Start recording" begins a 3, 2, 1 countdown, then records until "Stop." There is no time limit. While recording, the tab shows how long the recording has run. Recording also stops if the page is hidden, and if the recording reaches 100 MB, which can still be posted. Review plays the video back unmirrored, with "Post" and "Re-record." "Re-record" discards it and returns to the live preview. Nothing uploads until "Post." "Upload a video instead" works the same way as for a note, including when the camera can't be used. A file over 100 MB is refused. A file of any length is accepted, as long as it is under 100 MB. If the upload fails, the form keeps the video and offers "Try again."
 
 A video update can't be edited. To change it, delete it and post another. Deleting it deletes the video from Cloudinary first; if that fails, the update stays.
+
+### Dating a video
+
+A video uploaded from the device can date its update the way photos do (see "Dating an update from its photos"). Once one is chosen with "Upload a video instead," Post settings shows **"Use the date from my video."** It is unchecked by default, and a recorded video doesn't offer it, because it was made now. Checking it dates the update to when the file says it was recorded, unchecks "Notify everyone by email" (which can be checked again), and shows a **Posted** date and time that can be changed by hand.
+
+- **The date is read on the device** from the file's embedded details, before upload. Only the resulting date is kept, as the update's posted date; nothing else is read or stored. Files that carry no date, or one outside the allowed dates, have none. The file's last-modified time is never used, because a copied or forwarded file would silently take the copy's date.
+- **When the file has no date,** a note under the checkbox says so, and the Posted field starts at the current time, to be set by hand.
+- **Allowed dates and the feed** are the same as for photos. The server refuses a date outside them, and only family members can choose one.
+- **It can't be corrected after posting,** because a video update can't be edited. To change the date, delete the update and post it again.
 
 The wall's filter bar quotes `[Video]`, the way a photo-only update is quoted as `[Photo]`.
 
