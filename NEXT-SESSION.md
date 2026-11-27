@@ -19,6 +19,9 @@ Decided with Melissa for her own family's site; each becomes its own spec, plan,
 - **2026-11-23** — Views: a name, branding, and domain per group.
   A View is a group with its own front door: name, accent color, maybe a logo, and an optional custom domain. On a View's domain a reader sees only updates shared with that View's group, and emails link to that domain under that name. The domain only narrows what's shown and never grants access. Decide whether updates shared with Everyone show on every View. Family members post from an admin domain that also serves the family's own View to close relatives and friends. Each domain is added in Vercel by hand and attached with an operator script; real domains never go in the repo. Don't attach the admin domain to the Vercel project before this ships: `ROOT_FAMILY_SLUG` would show the existing family at its root. If its DNS goes through Cloudflare, keep records DNS-only so no proxy decrypts the app's traffic.
 
+- **2026-11-27** — Improve how a video's date is read, once real uploads show what's missing.
+  Dating a video reads only the MP4/MOV creation time (UTC), so it ignores Apple's local-time capture date and shows "no date found" for fragmented MP4s. A phone's file picker may also strip the date; if uploads often show no date, add those two and reconsider. It was cut for speed and has not been tried on a phone.
+
 ## Privacy and security
 
 - **2026-10-15** — Decide whether to remove a real family's names from `main`'s history.
